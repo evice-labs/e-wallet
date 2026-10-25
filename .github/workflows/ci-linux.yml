@@ -1,0 +1,55 @@
+name: CI (Linux)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Nix Build and QML Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v16
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v9
+
+      - name: Verify Basecamp Metadata & Icon Specifications
+        run: |
+          echo "Validating metadata.json structure..."
+          test -f metadata.json || { echo "metadata.json missing"; exit 1; }
+          grep -q '"name": "e_wallet_ui"' metadata.json || { echo "Invalid module name"; exit 1; }
+          grep -q '"type": "ui_qml"' metadata.json || { echo "Invalid module type"; exit 1; }
+          grep -q '"icon": "assets/eWalletLogo.png"' metadata.json || { echo "Invalid icon reference"; exit 1; }
+          test -f assets/eWalletLogo.png || { echo "assets/eWalletLogo.png missing"; exit 1; }
+          echo "Metadata specifications verified."
+
+      - name: Verify Decoupled QML Architecture (Anti-Monolithic Check)
+        run: |
+          MAIN_LINES=$(wc -l < qml/Main.qml)
+          echo "qml/Main.qml line count: ${MAIN_LINES}"
+          if [ "${MAIN_LINES}" -gt 350 ]; then
+            echo "Error: qml/Main.qml exceeds maximum allowed line threshold (violates decoupled architecture)."
+            exit 1
+          fi
+          echo "Decoupled QML component architecture verified."
+
+      - name: Track Files for Nix Flake
+        run: |
+          git add -N .
+
+      - name: Build QML UI Module Package
+        run: |
+          nix build .# --impure --no-link -L
+
+      - name: Build Portable Package for Basecamp Deployment
+        run: |
+          nix build .#install-portable --impure --no-link -L
