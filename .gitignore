@@ -1,0 +1,5 @@
+result
+build/
+.cache/
+*.tmp
+.DS_Store
