@@ -26,56 +26,6 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 - **Pill-Beveled Action Controls:** Elevated push-buttons with realistic top lighting rims (`rgba(255, 255, 255, 0.4)`), vibrant cerulean primary action fills, dark charcoal secondary containers, and mechanical click depression.
 - **Strict Zero-Icon Policy:** The user interface is completely free of decorative icons, glyph packs, or emoji clutter. All visual cues, statuses, and navigational elements rely on crisp, modern typography (*Inter* / *Roboto*) and semantic text pill badges (e.g., `[ PUBLIC TRANSPARENT ACCOUNT ]`, `[ SHIELDED ZK CIRCUIT ACCOUNT ]`, `[ VERIFIED ]`).
 
-## System Architecture
-
-### Decoupled Component Hierarchy
-To ensure long-term maintainability and modular scalability, `e-wallet-ui` strictly adheres to a decoupled, unidirectional data-flow architecture:
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        LOGOS BASECAMP HOST                             │
-│                                                                        │
-│   ┌────────────────────────────────────────────────────────────────┐   │
-│   │               qml/Main.qml (Clean Root Shell Router)           │   │
-│   │   • Top Navigation Bar       • Global Modal Presenter          │   │
-│   │   • Telemetry Readouts       • Theme Provider Context          │   │
-│   └───────┬────────────────────────────────────────────────┬───────┘   │
-│           │                                                │           │
-│           ▼                                                ▼           │
-│   ┌───────────────────────────┐                    ┌───────────────┐   │
-│   │   qml/views/ (UI Panels)  │                    │ qml/modals/   │   │
-│   │   • DashboardView         │                    │ • Approval    │   │
-│   │   • TransferView          │◄──── Reactive ─────┤ • AccountPick │   │
-│   │   • FundingBridgeView     │      Bindings      │ • KeyExport   │   │
-│   │   • TestimonialsView      │                    └───────────────┘   │
-│   │   • IdentityView          │                            ▲           │
-│   └─────────────┬─────────────┘                            │           │
-│                 │                                          │           │
-│                 ▼                                          │           │
-│   ┌────────────────────────────────────────────────────────┴───────┐   │
-│   │               qml/state/ (Decoupled Controllers)               │   │
-│   │   • WalletBridge (IPC)       • AccountStore (Balances/State)   │   │
-│   │   • TransferController       • FundingBridgeController (PoW)   │   │
-│   │   • ApprovalManager          • TestimonialController           │   │
-│   └──────────────────────────────┬─────────────────────────────────┘   │
-└──────────────────────────────────┼─────────────────────────────────────┘
-                                   │
-                                   ▼ `logos.callModule("e_wallet_core", ...)`
-┌────────────────────────────────────────────────────────────────────────┐
-│               e-wallet-core (Universal C++ Basecamp Module)            │
-│   • wallet_engine   • wallet_accounts   • wallet_transfers             │
-│   • wallet_sessions • wallet_approval   • wallet_identity              │
-│   • wallet_names    • wallet_contracts  • wallet_helpers               │
-└──────────────────────────────────┬─────────────────────────────────────┘
-                                   │
-                                   ▼ C-ABI FFI (`lez_wallet_sdk.h`)
-┌────────────────────────────────────────────────────────────────────────┐
-│               lez-wallet-sdk (Rust Core Engine & Tools)                │
-│   • sdk-engine      • Argon2id/AES-GCM  • Intent Hashing (SHA-256)     │
-│   • LNS Resolver    • EffectSimulator   • Verifier (LP-0023)           │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
 ## Implemented Workspaces & Feature Domains
 
 ### 1. Hardware Keystore & Vault Lifecycle
@@ -127,7 +77,7 @@ e-wallet-ui/
 ├── flake.lock                      # Pinned Nix lockfile
 ├── .gitignore
 ├── qml/
-│   ├── Main.qml                    # Decoupled root shell & router (< 120 lines)
+│   ├── Main.qml                    # Decoupled root shell orchestrator & router
 │   ├── theme/
 │   │   ├── Theme.qml               # Design tokens (colors, bevels, lighting, typography)
 │   │   └── qmldir
@@ -139,9 +89,26 @@ e-wallet-ui/
 │   │   ├── ProgressBar.qml         # Recessed grooved progress track
 │   │   ├── PillBadge.qml           # Semantic text status badge
 │   │   ├── TabButton.qml           # Segmented tactile tab switch
+│   │   ├── ModalOverlay.qml        # Tactile modal dialog backdrop & card
 │   │   └── qmldir
-│   └── state/
-│       ├── WalletBridge.qml        # IPC bridge to e_wallet_core (+ Mock harness)
+│   ├── state/                      # State & IPC controllers
+│   │   ├── WalletBridge.qml        # IPC bridge to e_wallet_core (+ Mock harness)
+│   │   ├── AccountStore.qml        # Reactive multi-account portfolio controller
+│   │   ├── TransferController.qml  # 4-way transfer state & LNS lookup controller
+│   │   └── qmldir
+│   ├── views/                      # Decoupled modular view workspaces
+│   │   ├── DashboardView.qml       # Portfolio overview & account cards
+│   │   ├── TransferView.qml        # 4-way transfer matrix & instant LNS resolver
+│   │   ├── FundingBridgeView.qml   # EmPoWer PoW mining station & L1 bridge
+│   │   ├── TestimonialsView.qml    # LP-0021 on-chain testimonial mini-app
+│   │   ├── SettingsView.qml        # Vault security & dApp session management
+│   │   └── qmldir
+│   └── modals/                     # Interactive modal dialogs
+│       ├── UnlockModal.qml         # Argon2id master password prompt
+│       ├── CreateWalletModal.qml   # 12-word BIP-39 mnemonic generator
+│       ├── RestoreWalletModal.qml  # Seed phrase import & recovery
+│       ├── CreateAccountModal.qml  # Public/Shielded account creator
+│       ├── AccountDetailModal.qml  # 32-byte key inspector & label editor
 │       └── qmldir
 └── .github/workflows/              # Continuous integration pipelines
     ├── ci-linux.yml                # Linux Nix build & QML architecture verification
