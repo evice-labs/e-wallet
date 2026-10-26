@@ -1,2 +1,4 @@
 module state
 WalletBridge 1.0 WalletBridge.qml
+AccountStore 1.0 AccountStore.qml
+TransferController 1.0 TransferController.qml
