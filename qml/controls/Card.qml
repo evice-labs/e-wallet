@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import "../theme"
 
 Rectangle {
@@ -9,7 +10,10 @@ Rectangle {
     default property alias content: contentSlot.data
 
     implicitWidth: 400
-    implicitHeight: 250
+    implicitHeight: Math.max(80, cardMainColumn.implicitHeight + 40)
+    Layout.fillWidth: true
+    Layout.preferredHeight: implicitHeight
+    Layout.minimumHeight: implicitHeight
     radius: theme.radiusCard
 
     color: theme.bgSurface
@@ -28,45 +32,38 @@ Rectangle {
         z: -1
     }
 
-    // Top Specular Highlight Bevel
-    Rectangle {
-        anchors.top: parent.top
-        anchors.topMargin: 1
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - 4
-        height: 1
-        color: theme.bevelHighlightSubtle
-    }
-
     Column {
-        anchors.fill: parent
+        id: cardMainColumn
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
         anchors.margins: 20
         spacing: 16
 
-        // Card Header (Pure Typography, Zero Icon)
-        Row {
+        // Card Header
+        Column {
+            id: headerCol
             width: parent.width
             visible: control.title.length > 0
+            spacing: 4
 
-            Column {
+            Text {
                 width: parent.width
-                spacing: 4
+                text: control.title
+                color: theme.textPrimary
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeTitle
+                font.weight: Font.DemiBold
+            }
 
-                Text {
-                    text: control.title
-                    color: theme.textPrimary
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTitle
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    text: control.subtitle
-                    color: theme.textSecondary
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeSmall
-                    visible: control.subtitle.length > 0
-                }
+            Text {
+                width: parent.width
+                text: control.subtitle
+                color: theme.textSecondary
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeSmall
+                visible: control.subtitle.length > 0
+                wrapMode: Text.WordWrap
             }
         }
 
@@ -74,7 +71,9 @@ Rectangle {
         Item {
             id: contentSlot
             width: parent.width
-            height: parent.height - (control.title.length > 0 ? 50 : 0)
+            implicitHeight: childrenRect.height
+            height: implicitHeight
         }
     }
 }
+

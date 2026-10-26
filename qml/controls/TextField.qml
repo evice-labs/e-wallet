@@ -22,16 +22,6 @@ Rectangle {
 
     Theme { id: theme }
 
-    // Upper Inset Shadow
-    Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 2
-        radius: theme.radiusButton
-        color: theme.innerShadowDark
-    }
-
     Column {
         anchors.fill: parent
         anchors.margins: 8

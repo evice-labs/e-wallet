@@ -15,20 +15,42 @@ Item {
 
     Theme { id: theme }
 
-    ColumnLayout {
+    Flickable {
+        id: flickable
         anchors.fill: parent
-        spacing: 16
+        contentWidth: width
+        contentHeight: contentLayout.implicitHeight + 24
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
 
-        // Usage & Action Hero Section
+        // Sleek Minimalist Scroll Indicator
+        Rectangle {
+            id: scrollIndicator
+            anchors.right: parent.right
+            anchors.rightMargin: 2
+            y: flickable.visibleArea.yPosition * flickable.height
+            width: 4
+            height: Math.max(30, flickable.visibleArea.heightRatio * flickable.height)
+            radius: 2
+            color: theme.borderActive
+            opacity: flickable.moving || flickable.dragging ? 0.7 : 0.3
+            visible: flickable.visibleArea.heightRatio < 1.0
+            z: 10
+        }
+
         ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 12
+            id: contentLayout
+            width: parent.width - (scrollIndicator.visible ? 10 : 0)
+            spacing: 16
 
-            RowLayout {
+            // Usage & Action Hero Section
+            ColumnLayout {
                 Layout.fillWidth: true
+                spacing: 12
 
-                Column {
-                    spacing: 2
+                RowLayout {
+                    Layout.fillWidth: true
+
                     Text {
                         text: "Vault Overview"
                         color: theme.textPrimary
@@ -36,158 +58,145 @@ Item {
                         font.pixelSize: theme.fontSizeHero
                         font.weight: Font.Bold
                     }
-                    Text {
-                        text: bridge.isLocked ? "Vault Locked • Unlock to view and transfer" : "Active Session • Connected to " + bridge.currentNetwork
-                        color: bridge.isLocked ? theme.accentOrange : theme.textSecondary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeSmall
-                    }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                Button {
-                    text: "Create Account"
-                    isPrimary: true
-                    enabled: !bridge.isLocked
-                    onClicked: view.openCreateAccount()
-                }
-
-                Button {
-                    text: "Transfer Assets"
-                    isPrimary: false
-                    enabled: !bridge.isLocked && accountStore.accounts.length > 0
-                    onClicked: view.navigateTab("transfer")
-                }
-            }
-
-            // Recessed Grooved Progress Bar
-            ProgressBar {
-                Layout.fillWidth: true
-                title: "Logos testnet 0.4 epoch quota used"
-                readout: "1 / 3,000"
-                value: 1.0 / 3000.0
-                barColor: theme.accentOrange
-            }
-        }
-
-        // Active Account Hero Card
-        Card {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 180
-            title: "Hardware Keystore Portfolio"
-            subtitle: "Logos Execution Zone • Argon2id Encrypted State"
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 14
-
-                // Two-Column Portfolio Balance Display
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 16
-
-                    InsetPanel {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 78
-
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 4
-
-                            Text {
-                                text: "PUBLIC TRANSPARENT HOLDINGS"
-                                color: theme.textSecondary
-                                font.family: theme.fontMono
-                                font.pixelSize: theme.fontSizeSmall
-                                font.weight: Font.Medium
-                            }
-
-                            Text {
-                                text: accountStore.totalPublicBalance + " LEZ"
-                                color: theme.textPrimary
-                                font.family: theme.fontFamily
-                                font.pixelSize: theme.fontSizeTitle + 2
-                                font.weight: Font.Bold
-                            }
-                        }
-                    }
-
-                    InsetPanel {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 78
-
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 4
-
-                            Text {
-                                text: "SHIELDED ZERO-KNOWLEDGE HOLDINGS"
-                                color: theme.statusShielded
-                                font.family: theme.fontMono
-                                font.pixelSize: theme.fontSizeSmall
-                                font.weight: Font.Medium
-                            }
-
-                            Text {
-                                text: accountStore.totalShieldedBalance + " LEZ"
-                                color: theme.textPrimary
-                                font.family: theme.fontFamily
-                                font.pixelSize: theme.fontSizeTitle + 2
-                                font.weight: Font.Bold
-                            }
-                        }
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 12
-
-                    PillBadge {
-                        text: "Accounts Managed: " + accountStore.accounts.length
-                        badgeColor: theme.statusPublic
-                    }
-
-                    PillBadge {
-                        text: "Program Registry LP-0023 Verified"
-                        badgeColor: theme.statusSuccess
-                    }
 
                     Item { Layout.fillWidth: true }
 
                     Button {
-                        text: "Refresh Balances"
-                        isPrimary: false
-                        isCompact: true
+                        text: "Create Account"
+                        isPrimary: true
                         enabled: !bridge.isLocked
-                        onClicked: accountStore.refreshAccounts()
+                        onClicked: view.openCreateAccount()
+                    }
+
+                    Button {
+                        text: "Transfer Assets"
+                        isPrimary: false
+                        enabled: !bridge.isLocked && accountStore.accounts.length > 0
+                        onClicked: view.navigateTab("transfer")
+                    }
+                }
+
+                // Recessed Grooved Progress Bar
+                ProgressBar {
+                    Layout.fillWidth: true
+                    title: "Logos testnet 0.4 epoch quota used"
+                    readout: "1 / 3,000"
+                    value: 1.0 / 3000.0
+                    barColor: theme.accentOrange
+                }
+            }
+
+            // Active Account Hero Card
+            Card {
+                Layout.fillWidth: true
+                title: "Hardware Keystore Portfolio"
+
+                ColumnLayout {
+                    width: parent.width
+                    height: implicitHeight
+                    spacing: 14
+
+                    // Two-Column Portfolio Balance Display
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 16
+
+                        InsetPanel {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 74
+
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 4
+
+                                Text {
+                                    text: "PUBLIC TRANSPARENT HOLDINGS"
+                                    color: theme.textSecondary
+                                    font.family: theme.fontMono
+                                    font.pixelSize: theme.fontSizeSmall
+                                    font.weight: Font.Medium
+                                }
+
+                                Text {
+                                    text: accountStore.totalPublicBalance + " LEZ"
+                                    color: theme.textPrimary
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: theme.fontSizeTitle + 2
+                                    font.weight: Font.Bold
+                                }
+                            }
+                        }
+
+                        InsetPanel {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 74
+
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 4
+
+                                Text {
+                                    text: "SHIELDED ZERO-KNOWLEDGE HOLDINGS"
+                                    color: theme.statusShielded
+                                    font.family: theme.fontMono
+                                    font.pixelSize: theme.fontSizeSmall
+                                    font.weight: Font.Medium
+                                }
+
+                                Text {
+                                    text: accountStore.totalShieldedBalance + " LEZ"
+                                    color: theme.textPrimary
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: theme.fontSizeTitle + 2
+                                    font.weight: Font.Bold
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        PillBadge {
+                            text: "Accounts Managed: " + accountStore.accounts.length
+                            badgeColor: theme.statusPublic
+                        }
+
+                        PillBadge {
+                            text: "Program Registry LP-0023 Verified"
+                            badgeColor: theme.statusSuccess
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        Button {
+                            text: "Refresh Balances"
+                            isPrimary: false
+                            isCompact: true
+                            enabled: !bridge.isLocked
+                            onClicked: accountStore.refreshAccounts()
+                        }
                     }
                 }
             }
-        }
 
-        // Accounts List Workspace
-        Card {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            title: "Accounts & Privacy Keys"
-            subtitle: "Click an account to select as active sender"
-
-            Flickable {
-                anchors.fill: parent
-                contentHeight: accountsColumn.implicitHeight
-                clip: true
+            // Accounts List Workspace (Adaptive Height for responsive vertical scrolling)
+            Card {
+                Layout.fillWidth: true
+                title: "Accounts & Privacy Keys"
+                subtitle: "Click an account to select as active sender"
 
                 ColumnLayout {
-                    id: accountsColumn
                     width: parent.width
+                    height: implicitHeight
                     spacing: 8
 
                     Repeater {
                         model: accountStore.accounts
                         delegate: Rectangle {
                             Layout.fillWidth: true
+                            Layout.preferredHeight: 62
                             height: 62
                             radius: theme.radiusButton
                             color: (accountStore.activeAccount && accountStore.activeAccount.account_id === modelData.account_id)

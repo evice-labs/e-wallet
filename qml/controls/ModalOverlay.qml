@@ -67,17 +67,6 @@ Item {
             onClicked: {}
         }
 
-        // Top Specular Highlight Edge
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: 1
-            height: 1
-            radius: theme.radiusCard
-            color: Qt.rgba(1, 1, 1, 0.15)
-        }
-
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 24

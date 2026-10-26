@@ -16,16 +16,6 @@ Rectangle {
 
     Theme { id: theme }
 
-    // Upper Inner Shadow for Sunken Tactile Effect
-    Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 4
-        radius: theme.radiusInset
-        color: theme.innerShadowDark
-    }
-
     Item {
         id: contentSlot
         anchors.fill: parent
