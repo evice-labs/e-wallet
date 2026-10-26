@@ -51,16 +51,6 @@ Item {
             border.color: theme.borderSubtle
             border.width: 1
 
-            // Top Inner Shadow (simulates recessed physical trench)
-            Rectangle {
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 2
-                radius: theme.radiusProgress
-                color: theme.innerShadowDark
-            }
-
             // Illuminated Progress Fill
             Rectangle {
                 id: progressFill
@@ -74,16 +64,6 @@ Item {
                 gradient: Gradient {
                     GradientStop { position: 0.0; color: Qt.lighter(control.barColor, 1.15) }
                     GradientStop { position: 1.0; color: control.barColor }
-                }
-
-                // Top Specular Highlight on Fill
-                Rectangle {
-                    anchors.top: parent.top
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    height: 1
-                    color: Qt.rgba(1.0, 1.0, 1.0, 0.4)
-                    visible: progressFill.width > 4
                 }
 
                 Behavior on width {
