@@ -3,6 +3,8 @@ import QtQuick.Layouts
 import "theme"
 import "controls"
 import "state"
+import "views"
+import "modals"
 
 Rectangle {
     id: root
@@ -13,13 +15,15 @@ Rectangle {
 
     Theme { id: theme }
     WalletBridge { id: bridge }
+    AccountStore { id: accountStore; bridge: bridge }
+    TransferController { id: transferCtrl; bridge: bridge; accountStore: accountStore }
 
     property string currentTab: "dashboard"
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 28
-        spacing: 24
+        anchors.margins: 24
+        spacing: 18
 
         // Top Navigation Header Bar
         RowLayout {
@@ -74,9 +78,11 @@ Rectangle {
             Button {
                 text: bridge.isLocked ? "Unlock Vault" : "Lock Vault"
                 isCompact: true
+                isPrimary: bridge.isLocked
+                isDestructive: !bridge.isLocked
                 onClicked: {
                     if (bridge.isLocked) {
-                        bridge.invoke("unlockWallet", ["password123"]);
+                        unlockModal.open();
                     } else {
                         bridge.invoke("lockWallet", []);
                     }
@@ -84,155 +90,56 @@ Rectangle {
             }
         }
 
-        // Usage & Action Hero Section (Reference Matched)
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 14
-
-            RowLayout {
-                Layout.fillWidth: true
-
-                Text {
-                    text: "Vault Overview"
-                    color: theme.textPrimary
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeHero
-                    font.weight: Font.Bold
-                }
-
-                Item { Layout.fillWidth: true }
-
-                // Action Buttons with Bevel Specular Highlights
-                Button {
-                    text: "Documentation"
-                    isPrimary: false
-                    onClicked: console.log("Documentation opened")
-                }
-
-                Button {
-                    text: "Create Account"
-                    isPrimary: true
-                    onClicked: {
-                        bridge.invoke("createPublicAccount", ["Secondary Account"]);
-                    }
-                }
-            }
-
-            // Tactile Recessed Grooved Progress Bar (Reference Matched)
-            ProgressBar {
-                Layout.fillWidth: true
-                title: "Logos testnet 0.4 epoch quota used"
-                readout: "1 / 3,000"
-                value: 1.0 / 3000.0
-                barColor: theme.accentOrange
-            }
-        }
-
-        // Main View Workspace Panel
-        Card {
+        // Active View Container (Decoupled Modular Architecture)
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            title: "Hardware Keystore & Active Balance"
-            subtitle: "Logos Execution Zone • Pinned to devnet & testnet 0.4 standard"
 
-            ColumnLayout {
+            DashboardView {
                 anchors.fill: parent
-                spacing: 16
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 16
-
-                    InsetPanel {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 90
-
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 6
-
-                            Text {
-                                text: "PRIMARY VAULT BALANCE"
-                                color: theme.textSecondary
-                                font.family: theme.fontMono
-                                font.pixelSize: theme.fontSizeSmall
-                                font.weight: Font.Medium
-                            }
-
-                            Text {
-                                text: "12,500.00 LEZ"
-                                color: theme.textPrimary
-                                font.family: theme.fontFamily
-                                font.pixelSize: theme.fontSizeTitle + 4
-                                font.weight: Font.Bold
-                            }
-                        }
-                    }
-
-                    InsetPanel {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 90
-
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 6
-
-                            Text {
-                                text: "SHIELDED ZERO-KNOWLEDGE BALANCE"
-                                color: theme.statusShielded
-                                font.family: theme.fontMono
-                                font.pixelSize: theme.fontSizeSmall
-                                font.weight: Font.Medium
-                            }
-
-                            Text {
-                                text: "8,400.00 LEZ"
-                                color: theme.textPrimary
-                                font.family: theme.fontFamily
-                                font.pixelSize: theme.fontSizeTitle + 4
-                                font.weight: Font.Bold
-                            }
-                        }
-                    }
+                visible: root.currentTab === "dashboard"
+                bridge: bridge
+                accountStore: accountStore
+                onOpenCreateAccount: createAccountModal.open()
+                onOpenAccountDetail: function(acc) {
+                    accountDetailModal.account = acc;
+                    accountDetailModal.open();
                 }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 12
-
-                    PillBadge {
-                        text: "Public Transparent Account"
-                        badgeColor: theme.statusPublic
-                    }
-
-                    PillBadge {
-                        text: "Shielded ZK Circuit Account"
-                        badgeColor: theme.statusShielded
-                    }
-
-                    PillBadge {
-                        text: "Program Registry LP-0023 Verified"
-                        badgeColor: theme.statusSuccess
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    Button {
-                        text: "Transfer Assets"
-                        isPrimary: true
-                        isCompact: true
-                        onClicked: root.currentTab = "transfer"
-                    }
-
-                    Button {
-                        text: "Mine EmPoWer"
-                        isPrimary: false
-                        isCompact: true
-                        onClicked: root.currentTab = "funding"
-                    }
+                onNavigateTab: function(tabName) {
+                    root.currentTab = tabName;
                 }
+            }
 
-                Item { Layout.fillHeight: true }
+            TransferView {
+                anchors.fill: parent
+                visible: root.currentTab === "transfer"
+                bridge: bridge
+                accountStore: accountStore
+                transferCtrl: transferCtrl
+            }
+
+            FundingBridgeView {
+                anchors.fill: parent
+                visible: root.currentTab === "funding"
+                bridge: bridge
+                accountStore: accountStore
+            }
+
+            TestimonialsView {
+                anchors.fill: parent
+                visible: root.currentTab === "testimonials"
+                bridge: bridge
+                accountStore: accountStore
+            }
+
+            SettingsView {
+                anchors.fill: parent
+                visible: root.currentTab === "settings"
+                bridge: bridge
+                accountStore: accountStore
+                onOpenUnlockModal: unlockModal.open()
+                onOpenCreateWalletModal: createWalletModal.open()
+                onOpenRestoreWalletModal: restoreWalletModal.open()
             }
         }
 
@@ -256,5 +163,33 @@ Rectangle {
                 font.pixelSize: theme.fontSizeSmall
             }
         }
+    }
+
+    // Global Modal Presenters
+    UnlockModal {
+        id: unlockModal
+        bridge: bridge
+    }
+
+    CreateWalletModal {
+        id: createWalletModal
+        bridge: bridge
+        accountStore: accountStore
+    }
+
+    RestoreWalletModal {
+        id: restoreWalletModal
+        bridge: bridge
+        accountStore: accountStore
+    }
+
+    CreateAccountModal {
+        id: createAccountModal
+        accountStore: accountStore
+    }
+
+    AccountDetailModal {
+        id: accountDetailModal
+        accountStore: accountStore
     }
 }

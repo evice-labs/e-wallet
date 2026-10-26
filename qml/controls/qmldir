@@ -6,3 +6,4 @@ TextField 1.0 TextField.qml
 ProgressBar 1.0 ProgressBar.qml
 PillBadge 1.0 PillBadge.qml
 TabButton 1.0 TabButton.qml
+ModalOverlay 1.0 ModalOverlay.qml
