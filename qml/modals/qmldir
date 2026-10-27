@@ -4,3 +4,4 @@ CreateWalletModal 1.0 CreateWalletModal.qml
 RestoreWalletModal 1.0 RestoreWalletModal.qml
 CreateAccountModal 1.0 CreateAccountModal.qml
 AccountDetailModal 1.0 AccountDetailModal.qml
+SettingsModal 1.0 SettingsModal.qml
