@@ -22,8 +22,10 @@
 It presents a tactile, secure, and intuitive graphical interface that integrates seamlessly with the underlying [Core Module](https://github.com/evice-labs/e-wallet-core) (C++20 Universal Core Module) and the [SDK](https://github.com/evice-labs/e-wallet-sdk) (pure Rust cryptographic engine).
 
 ### Core Design Philosophy: Modern Neo-Skeuomorphism
-- **Tactile Materiality:** Deep black canvases (`#050508`), recessed OLED/LCD bays with inner shadows, and multi-layered specular edge highlights.
-- **Pill-Beveled Action Controls:** Elevated push-buttons with realistic top lighting rims (`rgba(255, 255, 255, 0.4)`), vibrant cerulean primary action fills, dark charcoal secondary containers, and mechanical click depression.
+- **Tactile Materiality:** Deep charcoal canvas (`#171717`), physical card containers (`#262626`) with dual ambient/directional drop shadows, recessed OLED/LCD display bays (`#141414`), and 1px chiseled top specular highlights.
+- **Unified Bento-Grid Layout:** A streamlined, non-fragmented single-screen architecture replacing legacy multi-tab navbars with high-density, responsive modular card workspaces.
+- **Cascaded Profile & Multi-Account Switcher:** Interactive cascaded avatar component embedded directly in the Hero Balance Card header. Features real-time initial badges, sliding reveal micro-animations, 1-click account switching (`⇄`), and a contextual profile drawer for wallet settings and vault controls.
+- **Vault Security & Automated Idle Auto-Lock:** Keystore encryption protected by memory-hard key derivation and authenticated cipher suites. Window-level user inactivity detection automatically engages a 15-minute idle timer that purges volatile secrets and locks the wallet.
 - **Strict Zero-Icon Policy:** The user interface is completely free of decorative icons, glyph packs, or emoji clutter. All visual cues, statuses, and navigational elements rely on crisp, modern typography (*Inter* / *Roboto*) and semantic text pill badges (e.g., `[ PUBLIC TRANSPARENT ACCOUNT ]`, `[ SHIELDED ZK CIRCUIT ACCOUNT ]`, `[ VERIFIED ]`).
 
 ## Implemented Workspaces & Feature Domains
@@ -31,11 +33,11 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 ### 1. Hardware Keystore & Vault Lifecycle
 - **BIP-39 Mnemonic Management:** Create fresh 12/24-word recovery phrases or restore existing vaults with interactive seed verification.
 - **Argon2id Vault Protection:** Authenticated encryption using AES-256-GCM. Features instant tactile lock and unlock flows.
-- **Session Auto-Lock:** Automatic timeout clearing volatile cryptographic credentials from memory.
+- **Session Auto-Lock:** Automatic 15-minute idle timeout clearing volatile cryptographic credentials and sessions from memory.
 
 ### 2. Multi-Account Portfolio (Transparent Public vs Shielded Private)
 - **Account Switcher:** Seamlessly toggle between transparent accounts and shielded zero-knowledge accounts with distinct visual badges.
-- **Asset Balances:** Real-time balance queries for both native LEZ coin and custom Fungible Token Program definitions.
+- **Asset Balances:** Real-time balance queries across Public Transparent, Shielded Zero-Knowledge, and Testnet Faucet pools.
 - **Account Detail Modal:** Inspect full 32-byte account IDs, generate QR representations, and export View/Spend keys protected by password re-entry.
 
 ### 3. 4-Way Asset Transfers & Instant LNS Domain Resolution
@@ -49,22 +51,15 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 ### 4. Canonical Funding Path: EmPoWer PoW Mining & L1 &rarr; LEZ Bridge
 *Aligned with the Logos network architecture and EmPoWer L1-to-LEZ bridging specification:*
 - **EmPoWer Mining Station:** Direct REST integration with the Logos Blockchain node (`/pow/status`, `/pow/mining/start`, `/pow/mining/stop`, `/pow/claim`). Enables users to generate testnet tokens via local Proof-of-Work without relying on external centralized faucets.
-- **L1 &rarr; LEZ Channel Deposit:** One-click bridging terminal moving mined L1 notes into the user's active LEZ account via on-chain `ChannelDeposit` transactions.
+- **Testnet Faucet:** One-click automated faucet request claiming 100 LEZ for active testnet accounts.
 
 ### 5. On-Chain Testimonials Mini-App
 - **Adoption Engine (LP-0021):** Built-in workspace enabling users to publish on-chain testimonials directly to the testnet zkVM `testimonial-program`.
-- **Submission Safeguards:** Strict client-side validation ensuring $\le 280$ UTF-8 bytes for testimonial text and $\le 64$ bytes for optional monikers.
-- **Attribution Invariant:** Automatically embeds the unique `SUBMISSION_ID` into the transaction payload, linking directly to the live testnet block explorer (`https://explorer.testnet.lez.logos.co/`).
+- **Submission Safeguards:** Strict client-side validation ensuring $\le 280$ UTF-8 bytes for testimonial text and $\le 64$ bytes for optional monikers with live character counters.
 
-### 6. Informed Consent Approval UX & Program Verification (LP-0023)
-- **Granular Session Security:** Interactive account picker allowing users to grant scoped permissions (`GrantKind::Read` vs `GrantKind::Propose`) to connecting dApps.
-- **Plain-Language Effect Simulation:** Decodes raw calldata into human-readable balance deltas (`simulatePromptEffect`), preventing blind signing.
-- **Program Source Verification Badge:** Inspects smart contract bytecode against the LP-0023 registry, rendering `[ VERIFIED ]`, `[ UNVERIFIED ]`, or `[ UNTRUSTED ]` alert banners.
-
-### 7. Identity Accountability Hub
-- **Master Identity Commitment:** Derives deterministic public commitments from the root seed for on-chain identity registry verification.
-- **Cross-dApp Scoped Nullifiers:** Computes unlinkable pseudonymous nullifiers per dApp domain.
-- **BIP-340 Schnorr Attestations:** Cryptographically signs arbitrary message payloads with scoped identity credentials.
+### 6. Activity Feed & Transaction Ledger
+- **Segmented Filter Tabs:** Real-time chronological transaction history filterable by *All*, *Transfers*, *Shields*, and *Testimonials*.
+- **Monospace Telemetry:** High-contrast transaction rows detailing direction, status tags, timestamps, and transfer amounts.
 
 ## Directory Structure
 
@@ -75,15 +70,15 @@ e-wallet-ui/
 ├── metadata.json                   # Basecamp module manifest (type: ui_qml)
 ├── flake.nix                       # Nix flake packaging (mkLogosQmlModule)
 ├── flake.lock                      # Pinned Nix lockfile
-├── .gitignore
+├── .gitignore                      # Git ignore file (build, caches, local dev runner)
 ├── qml/
-│   ├── Main.qml                    # Decoupled root shell orchestrator & router
+│   ├── Main.qml                    # Decoupled root shell orchestrator (Bento Grid + Auto-Lock)
 │   ├── theme/
-│   │   ├── Theme.qml               # Design tokens (colors, bevels, lighting, typography)
+│   │   ├── Theme.qml               # Design tokens (#171717 canvas, #262626 card, #141414 inset)
 │   │   └── qmldir
 │   ├── controls/                   # Reusable tactile components (Zero Icon)
 │   │   ├── Button.qml              # Tactile pill button (Primary Blue & Charcoal)
-│   │   ├── Card.qml                # Beveled physical container with drop shadow
+│   │   ├── Card.qml                # Beveled physical container with headerRight slot & drop shadows
 │   │   ├── InsetPanel.qml          # Sunken OLED/LCD display panel
 │   │   ├── TextField.qml           # Recessed input field with focus glow
 │   │   ├── ProgressBar.qml         # Recessed grooved progress track
@@ -96,19 +91,20 @@ e-wallet-ui/
 │   │   ├── AccountStore.qml        # Reactive multi-account portfolio controller
 │   │   ├── TransferController.qml  # 4-way transfer state & LNS lookup controller
 │   │   └── qmldir
-│   ├── views/                      # Decoupled modular view workspaces
-│   │   ├── DashboardView.qml       # Portfolio overview & account cards
-│   │   ├── TransferView.qml        # 4-way transfer matrix & instant LNS resolver
-│   │   ├── FundingBridgeView.qml   # EmPoWer PoW mining station & L1 bridge
-│   │   ├── TestimonialsView.qml    # LP-0021 on-chain testimonial mini-app
-│   │   ├── SettingsView.qml        # Vault security & dApp session management
+│   ├── views/                      # Decoupled modular Bento-Grid card components
+│   │   ├── BalanceView.qml         # Hero balance card, pool breakdown, cascaded avatar & menu
+│   │   ├── TransferView.qml        # Quick transfer card (To, Amount + Max, Public/Shielded)
+│   │   ├── FundingBridgeView.qml   # Testnet faucet claim & local PoW validator station
+│   │   ├── TestimonialsView.qml    # LP-0021 on-chain testimonial broadcast card
+│   │   ├── ActivityLedgerView.qml  # Filterable transaction ledger & real-time telemetry
 │   │   └── qmldir
 │   └── modals/                     # Interactive modal dialogs
 │       ├── UnlockModal.qml         # Argon2id master password prompt
-│       ├── CreateWalletModal.qml   # 12-word BIP-39 mnemonic generator
+│       ├── CreateWalletModal.qml   # 12-word BIP-39 mnemonic generator & backup
 │       ├── RestoreWalletModal.qml  # Seed phrase import & recovery
 │       ├── CreateAccountModal.qml  # Public/Shielded account creator
 │       ├── AccountDetailModal.qml  # 32-byte key inspector & label editor
+│       ├── SettingsModal.qml       # Keystore security info, network sequencer, and vault locks
 │       └── qmldir
 └── .github/workflows/              # Continuous integration pipelines
     ├── ci-linux.yml                # Linux Nix build & QML architecture verification
@@ -123,13 +119,13 @@ e-wallet-ui/
 - Pinned `e-wallet-core` module located in the parent directory (`../e-wallet-core`).
 
 ### 1. Local Development Preview
-Run the standalone preview harness without launching Basecamp:
+Run the standalone preview harness with live hot-reloading:
 ```bash
-# Using standard QML runner
-qml6 -I qml qml/Main.qml
+# Build standalone launcher (one-time setup)
+nix build .#ui-dev
 
-# Or using Nix application runner
-nix run . --impure
+# Launch standalone UI with active real-time QML hot-reloading
+./result/bin/run-logos-standalone-ui
 ```
 
 ### 2. Building the Production Nix Package
