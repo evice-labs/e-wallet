@@ -57,17 +57,6 @@ Item {
         border.color: control.isPrimary ? theme.btnPrimaryBorderSides : theme.btnSecondaryBorderSides
         border.width: 1
 
-        // Top Specular Highlight (The signature skeuomorphic bevel edge)
-        Rectangle {
-            anchors.top: parent.top
-            anchors.topMargin: 1
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: parent.width - 4
-            height: 1
-            color: control.isPrimary ? theme.btnPrimaryBorderTop : theme.btnSecondaryBorderTop
-            opacity: mouseArea.pressed ? 0.2 : 1.0
-        }
-
         // Pure Typographic Text (Strict Zero-Icon Rule)
         Text {
             id: labelText

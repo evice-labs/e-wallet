@@ -21,17 +21,6 @@ Item {
         border.color: control.isActive ? theme.borderCard : "transparent"
         border.width: 1
 
-        // Top Specular Highlight if active
-        Rectangle {
-            anchors.top: parent.top
-            anchors.topMargin: 1
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: parent.width - 4
-            height: 1
-            color: theme.bevelHighlightSubtle
-            visible: control.isActive
-        }
-
         Text {
             id: tabLabel
             anchors.centerIn: parent

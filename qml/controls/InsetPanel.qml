@@ -16,14 +16,16 @@ Rectangle {
 
     Theme { id: theme }
 
-    // Upper Inner Shadow for Sunken Tactile Effect
+    // Skeuomorphic Sunken Inner Top Shadow
     Rectangle {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 4
-        radius: theme.radiusInset
-        color: theme.innerShadowDark
+        anchors.topMargin: 1
+        anchors.leftMargin: control.radius
+        anchors.rightMargin: control.radius
+        height: 1
+        color: Qt.rgba(0.0, 0.0, 0.0, 0.40)
     }
 
     Item {

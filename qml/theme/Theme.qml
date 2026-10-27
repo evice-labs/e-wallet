@@ -4,21 +4,22 @@ QtObject {
     id: theme
 
     // ── Surfaces & Backgrounds ────────────────────────────────
-    readonly property color bgCanvas: "#050508"
-    readonly property color bgSurface: "#0E1015"
-    readonly property color bgSurfaceElevated: "#15171F"
-    readonly property color bgSurfaceSubtle: "#1B1D26"
-    readonly property color bgInsetTrough: "#121319"
-    readonly property color bgGlassOverlay: Qt.rgba(0.02, 0.02, 0.03, 0.85)
+    // Aligned with Logos Design System (logos-storage-ui)
+    readonly property color bgCanvas: "#171717"          // Matches Theme.palette.background (gray900)
+    readonly property color bgSurface: "#262626"         // Matches Theme.palette.backgroundSecondary (gray850)
+    readonly property color bgSurfaceElevated: "#2F2F2F" // Matches Theme.palette.backgroundButton (gray340)
+    readonly property color bgSurfaceSubtle: "#343434"   // Matches Theme.palette.surface (gray320)
+    readonly property color bgInsetTrough: "#141414"     // Matches Theme.palette.backgroundInset (gray925)
+    readonly property color bgGlassOverlay: Qt.rgba(0.09, 0.09, 0.09, 0.85)
 
     // ── Borders, Bevels & Lighting ────────────────────────────
-    readonly property color borderSubtle: "#222530"
-    readonly property color borderCard: "#2B2E3C"
+    readonly property color borderSubtle: "#333333"       // Matches Theme.palette.borderSubtle (gray330)
+    readonly property color borderCard: "#3D3D3D"         // Matches Theme.palette.border (gray300 / gray330)
     readonly property color borderActive: "#0A70F5"
-    readonly property color bevelHighlightTop: Qt.rgba(1.0, 1.0, 1.0, 0.22)
-    readonly property color bevelHighlightSubtle: Qt.rgba(1.0, 1.0, 1.0, 0.12)
-    readonly property color innerShadowDark: Qt.rgba(0.0, 0.0, 0.0, 0.65)
-    readonly property color shadowDropDark: Qt.rgba(0.0, 0.0, 0.0, 0.50)
+    readonly property color bevelHighlightTop: Qt.rgba(1.0, 1.0, 1.0, 0.16)
+    readonly property color bevelHighlightSubtle: Qt.rgba(1.0, 1.0, 1.0, 0.08)
+    readonly property color innerShadowDark: Qt.rgba(0.0, 0.0, 0.0, 0.55)
+    readonly property color shadowDropDark: Qt.rgba(0.0, 0.0, 0.0, 0.40)
 
     // ── Primary Tactile Blue Button (Reference) ───────────────
     readonly property color btnPrimaryTop: "#0E76FA"
@@ -31,14 +32,14 @@ QtObject {
     readonly property color btnPrimaryShadow: Qt.rgba(0.04, 0.44, 0.96, 0.35)
 
     // ── Secondary Tactile Charcoal Button (Reference) ─────────
-    readonly property color btnSecondaryTop: "#1F212B"
-    readonly property color btnSecondaryBottom: "#15171F"
-    readonly property color btnSecondaryHoverTop: "#282A36"
-    readonly property color btnSecondaryHoverBottom: "#1B1D26"
-    readonly property color btnSecondaryPressed: "#0E1015"
+    readonly property color btnSecondaryTop: "#363636"
+    readonly property color btnSecondaryBottom: "#2A2A2A"
+    readonly property color btnSecondaryHoverTop: "#424242"
+    readonly property color btnSecondaryHoverBottom: "#323232"
+    readonly property color btnSecondaryPressed: "#222222"
     readonly property color btnSecondaryBorderTop: Qt.rgba(1.0, 1.0, 1.0, 0.18)
-    readonly property color btnSecondaryBorderSides: "#2A2D3A"
-    readonly property color btnSecondaryShadow: Qt.rgba(0.0, 0.0, 0.0, 0.45)
+    readonly property color btnSecondaryBorderSides: "#434343"
+    readonly property color btnSecondaryShadow: Qt.rgba(0.0, 0.0, 0.0, 0.35)
 
     // ── Accent & Semantic Status Colors (Zero Icon) ───────────
     readonly property color accentOrange: "#FF8438"
@@ -50,9 +51,9 @@ QtObject {
 
     // ── Typography ────────────────────────────────────────────
     readonly property color textPrimary: "#FFFFFF"
-    readonly property color textSecondary: "#8E92A0"
-    readonly property color textMuted: "#5F6372"
-    readonly property color textDisabled: "#3D404D"
+    readonly property color textSecondary: "#A4A4A4"    // Matches Theme.palette.textSecondary (gray400)
+    readonly property color textMuted: "#717784"        // Matches Theme.palette.textPlaceholder (gray600)
+    readonly property color textDisabled: "#5C5C5C"     // Matches Theme.palette.textMuted (gray700)
 
     readonly property string fontFamily: "Inter, -apple-system, Roboto, sans-serif"
     readonly property string fontMono: "JetBrains Mono, SF Mono, Menlo, monospace"
