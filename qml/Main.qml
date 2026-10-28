@@ -18,11 +18,11 @@ Rectangle {
     AccountStore { id: accountStore; bridge: bridge }
     TransferController { id: transferCtrl; bridge: bridge; accountStore: accountStore }
 
-    // ── Auto-Lock Idle Timer (15 Minutes) ─────────────────────
+    // AUTO-LOCK IDLE TIMER (15 MINUTES)
     Timer {
         id: idleTimer
         interval: 15 * 60 * 1000 // 15 minutes
-        running: !bridge.isLocked
+        running: bridge.isInitialized && !bridge.isLocked
         repeat: false
         onTriggered: {
             console.log("[AutoLock] 15 minutes idle timeout reached, locking wallet keystore");
@@ -44,148 +44,160 @@ Rectangle {
         }
     }
 
+    // ONBOARDING LIFECYCLE VIEW
+    OnboardingView {
+        id: onboardingView
+        anchors.fill: parent
+        visible: !bridge.isInitialized
+        bridge: bridge
+        accountStore: accountStore
+        onOpenRestoreModal: restoreWalletModal.open()
+    }
+
+    // LOCK SCREEN LIFECYCLE VIEW
+    LockScreenView {
+        id: lockScreenView
+        anchors.fill: parent
+        visible: bridge.isInitialized && bridge.isLocked
+        bridge: bridge
+        accountStore: accountStore
+        onOpenRestoreModal: restoreWalletModal.open()
+    }
+
+    // RESPONSIVE BENTO-GRID DASHBOARD VIEW
     ColumnLayout {
+        id: dashboardContainer
         anchors.fill: parent
         anchors.margins: 20
-        spacing: 16
+        spacing: 0
+        visible: bridge.isInitialized && !bridge.isLocked
 
-        // ── Unified Bento-Grid Dashboard Container ────────────────
-        Item {
+        readonly property int responsiveBreakpoint: 880
+        readonly property real availH: dashboardContainer.height
+        readonly property bool isFlexible: availH >= 700
+        readonly property real computedRow1H: isFlexible ? (availH - 12) * 0.40 : 285
+        readonly property real computedRow2H: isFlexible ? (availH - 12) * 0.60 : 410
+
+        Flickable {
+            id: flickable
             Layout.fillWidth: true
             Layout.fillHeight: true
+            contentWidth: Math.max(width, dashboardContainer.responsiveBreakpoint)
+            contentHeight: Math.max(height, mainCol.implicitHeight)
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
 
-            Flickable {
-                id: flickable
+            // Minimalist Scroll Indicator
+            Rectangle {
+                id: scrollIndicator
+                anchors.right: parent.right
+                anchors.rightMargin: 2
+                y: flickable.visibleArea.yPosition * flickable.height
+                width: 4
+                height: Math.max(30, flickable.visibleArea.heightRatio * flickable.height)
+                radius: 2
+                color: theme.borderActive
+                opacity: flickable.moving || flickable.dragging ? 0.7 : 0.3
+                visible: flickable.visibleArea.heightRatio < 1.0
+                z: 10
+            }
+
+            // Global Dismiss Overlay for Balance Profile Dropdown
+            MouseArea {
                 anchors.fill: parent
-                contentWidth: width
-                contentHeight: mainCol.implicitHeight + 24
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-
-                // Minimalist Scroll Indicator
-                Rectangle {
-                    id: scrollIndicator
-                    anchors.right: parent.right
-                    anchors.rightMargin: 2
-                    y: flickable.visibleArea.yPosition * flickable.height
-                    width: 4
-                    height: Math.max(30, flickable.visibleArea.heightRatio * flickable.height)
-                    radius: 2
-                    color: theme.borderActive
-                    opacity: flickable.moving || flickable.dragging ? 0.7 : 0.3
-                    visible: flickable.visibleArea.heightRatio < 1.0
-                    z: 10
+                z: 50
+                visible: balanceView.isProfileMenuOpen
+                onClicked: {
+                    balanceView.isProfileMenuOpen = false;
+                    balanceView.isCascadeExpanded = false;
                 }
+            }
 
-                // Global Dismiss Overlay for Balance Profile Dropdown
-                MouseArea {
-                    anchors.fill: parent
-                    z: 50
-                    visible: balanceView.isProfileMenuOpen
-                    onClicked: {
-                        balanceView.isProfileMenuOpen = false;
-                        balanceView.isCascadeExpanded = false;
+            ColumnLayout {
+                id: mainCol
+                width: Math.max(parent.width - (scrollIndicator.visible ? 10 : 0), dashboardContainer.responsiveBreakpoint)
+                spacing: 12
+
+                // ROW 1: HERO BALANCE CARD & QUICK TRANSFER CARD
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: dashboardContainer.computedRow1H
+                    implicitHeight: dashboardContainer.computedRow1H
+                    spacing: 12
+
+                    BalanceView {
+                        id: balanceView
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        bridge: bridge
+                        accountStore: accountStore
+                        onOpenCreateAccount: createAccountModal.open()
+                        onOpenSettingsModal: settingsModal.open()
+                        onOpenUnlockModal: unlockModal.open()
+                    }
+
+                    TransferView {
+                        id: transferView
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        bridge: bridge
+                        accountStore: accountStore
+                        transferCtrl: transferCtrl
+                        ledgerViewRef: ledgerView
+                        onOpenUnlockModal: unlockModal.open()
                     }
                 }
 
-                ColumnLayout {
-                    id: mainCol
-                    width: parent.width - (scrollIndicator.visible ? 10 : 0)
-                    spacing: 16
+                // ROW 2: ECOSYSTEM STACK (LEFT) & ACTIVITY LEDGER (RIGHT)
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: dashboardContainer.computedRow2H
+                    implicitHeight: dashboardContainer.computedRow2H
+                    spacing: 12
 
-                    // ══════════════════════════════════════════════════════════
-                    // ROW 1: 1. HERO BALANCE CARD & 2. QUICK TRANSFER CARD
-                    // ══════════════════════════════════════════════════════════
-                    RowLayout {
+                    // LEFT COLUMN: Stacked Faucet/Mining & Testimonials
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 16
-
-                        BalanceView {
-                            id: balanceView
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            Layout.alignment: Qt.AlignTop
-                            bridge: bridge
-                            accountStore: accountStore
-                            onOpenCreateAccount: createAccountModal.open()
-                            onOpenSettingsModal: settingsModal.open()
-                            onOpenUnlockModal: unlockModal.open()
-                        }
-
-                        TransferView {
-                            id: transferView
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            Layout.alignment: Qt.AlignTop
-                            bridge: bridge
-                            accountStore: accountStore
-                            transferCtrl: transferCtrl
-                            onOpenUnlockModal: unlockModal.open()
-                        }
-                    }
-
-                    // ══════════════════════════════════════════════════════════
-                    // ROW 2: 3. FAUCET & MINING & 4. TESTIMONIAL WIDGET
-                    // ══════════════════════════════════════════════════════════
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 16
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        spacing: 12
 
                         FundingBridgeView {
                             id: faucetView
                             Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            Layout.alignment: Qt.AlignTop
+                            Layout.fillHeight: true
                             bridge: bridge
                             accountStore: accountStore
+                            ledgerViewRef: ledgerView
                         }
 
                         TestimonialsView {
                             id: testimonialView
                             Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            Layout.alignment: Qt.AlignTop
+                            Layout.fillHeight: true
                             bridge: bridge
                             accountStore: accountStore
+                            ledgerViewRef: ledgerView
                         }
                     }
 
-                    // ══════════════════════════════════════════════════════════
-                    // ROW 3: 5. ACTIVITY FEED & TRANSACTION LEDGER (Full Width)
-                    // ══════════════════════════════════════════════════════════
+                    // RIGHT COLUMN: Activity Feed & Transaction History
                     ActivityLedgerView {
                         id: ledgerView
                         Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
                         bridge: bridge
                         accountStore: accountStore
                     }
                 }
             }
         }
-
-        // ── Tactile Footer Telemetry Bar ──────────────────────────
-        RowLayout {
-            Layout.fillWidth: true
-
-            Text {
-                text: "LEZ Sequencer: https://testnet.lez.logos.co"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
-            }
-
-            Item { Layout.fillWidth: true }
-
-            Text {
-                text: "BIP-39 Keystore: AES-256-GCM (Argon2id Encrypted)"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
-            }
-        }
     }
 
-    // ── Global Modal Dialogs ──────────────────────────────────
+    // GLOBAL MODAL DIALOGS
     SettingsModal {
         id: settingsModal
         bridge: bridge
