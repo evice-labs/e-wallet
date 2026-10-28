@@ -16,18 +16,6 @@ Rectangle {
 
     Theme { id: theme }
 
-    // Skeuomorphic Sunken Inner Top Shadow
-    Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.topMargin: 1
-        anchors.leftMargin: control.radius
-        anchors.rightMargin: control.radius
-        height: 1
-        color: Qt.rgba(0.0, 0.0, 0.0, 0.40)
-    }
-
     Item {
         id: contentSlot
         anchors.fill: parent
