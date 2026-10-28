@@ -9,12 +9,15 @@ Card {
     required property var bridge
     required property var accountStore
 
+    implicitHeight: 295
+
     signal openCreateAccount()
     signal openSettingsModal()
     signal openUnlockModal()
 
     property bool isCascadeExpanded: false
     property bool isProfileMenuOpen: false
+    property string activeAssetTab: "native" // "native" | "tokens"
 
     function getSecondaryAccount() {
         if (!accountStore || !accountStore.accounts || accountStore.accounts.length < 2) return null;
@@ -28,7 +31,7 @@ Card {
     }
 
     z: isProfileMenuOpen ? 60 : 1
-    title: "YOUR BALANCE"
+    title: "Your Balance"
 
     headerRight: Component {
         RowLayout {
@@ -67,7 +70,7 @@ Card {
                             if (bridge.isLocked) return "Vault Locked";
                             var isPriv = accountStore.activeAccount && accountStore.activeAccount.is_private;
                             var count = (accountStore.accounts && accountStore.accounts.length) || 1;
-                            return (isPriv ? "Shielded ZK" : "Public") + (count > 1 ? " • " + count + " Accounts" : " • Active");
+                            return (isPriv ? "Shielded ZK" : "Public") + (count > 1 ? " • " + count + " Accounts" : "");
                         }
                         color: theme.textSecondary
                         font.family: theme.fontFamily
@@ -76,7 +79,7 @@ Card {
                 }
             }
 
-            // Cascaded Avatar Container (Exact IdentityModal.qml#319 pattern)
+            // Cascaded Avatar Container
             Item {
                 id: cascadedAvatarContainer
                 width: balanceCard.isCascadeExpanded ? 80 : 46
@@ -246,15 +249,15 @@ Card {
         }
     }
 
-    // ── Profile Contextual Dropdown Menu ────────────────────────
+    // PROFILE CONTEXTUAL DROPDOWN MENU
     Rectangle {
         id: profileMenu
         visible: balanceCard.isProfileMenuOpen
         z: 100
-        anchors.top: balanceCard.top
-        anchors.topMargin: 56
-        anchors.right: balanceCard.right
-        anchors.rightMargin: 16
+        anchors.top: parent.top
+        anchors.topMargin: 0
+        anchors.right: parent.right
+        anchors.rightMargin: 0
         width: 250
         implicitHeight: profileMenuCol.implicitHeight + 24
         height: implicitHeight
@@ -304,15 +307,18 @@ Card {
                     elide: Text.ElideRight
                 }
 
-                PillBadge {
-                    text: accountStore.activeAccount && accountStore.activeAccount.is_private ? "Shielded" : "Public"
-                    badgeColor: accountStore.activeAccount && accountStore.activeAccount.is_private ? theme.statusShielded : theme.statusPublic
+                Text {
+                    text: (accountStore.activeAccount && accountStore.activeAccount.is_private) ? "SHIELDED" : "PUBLIC"
+                    color: (accountStore.activeAccount && accountStore.activeAccount.is_private) ? theme.statusShielded : theme.statusPublic
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                    font.weight: Font.Bold
                 }
             }
 
             Rectangle {
                 Layout.fillWidth: true
-                height: 1
+                implicitHeight: 1
                 color: theme.borderSubtle
             }
 
@@ -415,7 +421,7 @@ Card {
 
             Rectangle {
                 Layout.fillWidth: true
-                height: 1
+                implicitHeight: 1
                 color: theme.borderSubtle
             }
 
@@ -454,45 +460,114 @@ Card {
     }
 
     ColumnLayout {
-        width: parent.width
-        spacing: 16
+        anchors.fill: parent
+        spacing: 12
 
-        // Total Balance Section
+        // BODY: Total Balance, Asset Switcher & Allocations
+
+        // Asset View Selector & Total Balance (Responsive Layout)
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
 
-            Text {
-                text: "Total Balance"
-                color: theme.textSecondary
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeSmall
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                ColumnLayout {
+                    spacing: 2
+                    Layout.fillWidth: true
+
+                    Text {
+                        text: balanceCard.activeAssetTab === "native" ? "Total LEZ Balance" : "Fungible Token Holdings"
+                        color: theme.textSecondary
+                        font.family: theme.fontFamily
+                        font.pixelSize: theme.fontSizeSmall
+                    }
+
+                    Text {
+                        text: {
+                            if (balanceCard.activeAssetTab === "native") {
+                                var pub = parseFloat(accountStore.totalPublicBalance.replace(/,/g, "")) || 0;
+                                var priv = parseFloat(accountStore.totalShieldedBalance.replace(/,/g, "")) || 0;
+                                var total = pub + priv;
+                                if (total === 0) return "1,250.00 LEZ";
+                                return Number(total).toFixed(2) + " LEZ";
+                            } else {
+                                var count = (accountStore.tokens && accountStore.tokens.length) || 0;
+                                return count + " Registered Token" + (count === 1 ? "" : "s");
+                            }
+                        }
+                        color: theme.textPrimary
+                        font.family: theme.fontFamily
+                        font.pixelSize: balanceCard.width < 460 ? (theme.fontSizeHero) : (theme.fontSizeHero + 6)
+                        font.weight: Font.Bold
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    visible: balanceCard.width >= 500
+                }
+
+                // Desktop / Wide mode: Tabs beside balance
+                Row {
+                    visible: balanceCard.width >= 500
+                    spacing: 6
+                    Layout.alignment: Qt.AlignVCenter
+
+                    TabButton {
+                        text: "LEZ Native"
+                        isActive: balanceCard.activeAssetTab === "native"
+                        onClicked: balanceCard.activeAssetTab = "native"
+                    }
+
+                    TabButton {
+                        text: "Token Program"
+                        isActive: balanceCard.activeAssetTab === "tokens"
+                        onClicked: {
+                            balanceCard.activeAssetTab = "tokens";
+                            accountStore.refreshTokens();
+                        }
+                    }
+                }
             }
 
-            Text {
-                text: {
-                    var pub = parseFloat(accountStore.totalPublicBalance.replace(/,/g, "")) || 0;
-                    var priv = parseFloat(accountStore.totalShieldedBalance.replace(/,/g, "")) || 0;
-                    var total = pub + priv;
-                    if (total === 0) return "1,250.00 LEZ";
-                    return total.toLocaleString(Qt.locale(), "f", 2) + " LEZ";
+            // Compact / Narrow mode: Tabs below balance to prevent horizontal overflow
+            Row {
+                visible: balanceCard.width < 500
+                spacing: 6
+                Layout.fillWidth: true
+
+                TabButton {
+                    text: "LEZ Native"
+                    isActive: balanceCard.activeAssetTab === "native"
+                    onClicked: balanceCard.activeAssetTab = "native"
                 }
-                color: theme.textPrimary
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeHero + 10
-                font.weight: Font.Bold
+
+                TabButton {
+                    text: "Token Program"
+                    isActive: balanceCard.activeAssetTab === "tokens"
+                    onClicked: {
+                        balanceCard.activeAssetTab = "tokens";
+                        accountStore.refreshTokens();
+                    }
+                }
             }
         }
 
         // Line Divider
         Rectangle {
             Layout.fillWidth: true
-            height: 1
+            implicitHeight: 1
             color: theme.borderSubtle
         }
 
-        // Public vs Private Balance Split
+        // VIEW 1: Native LEZ Split (Public, Private, Faucet)
         RowLayout {
+            visible: balanceCard.activeAssetTab === "native"
             Layout.fillWidth: true
             spacing: 16
 
@@ -566,8 +641,10 @@ Card {
                           : "750.00 LEZ"
                     color: theme.textPrimary
                     font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTitle
+                    font.pixelSize: balanceCard.width < 450 ? theme.fontSizeBody : theme.fontSizeTitle
                     font.weight: Font.Bold
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
             }
 
@@ -599,9 +676,123 @@ Card {
                           : "400.00 LEZ"
                     color: theme.textPrimary
                     font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTitle
+                    font.pixelSize: balanceCard.width < 450 ? theme.fontSizeBody : theme.fontSizeTitle
                     font.weight: Font.Bold
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
+            }
+        }
+
+        // VIEW 2: Token Program Holdings List
+        ColumnLayout {
+            visible: balanceCard.activeAssetTab === "tokens"
+            Layout.fillWidth: true
+            spacing: 8
+
+            Repeater {
+                model: accountStore.tokens || []
+                delegate: Rectangle {
+                    Layout.fillWidth: true
+                    height: 46
+                    radius: theme.radiusSmall
+                    color: theme.bgSurfaceElevated
+                    border.color: theme.borderSubtle
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 12
+
+                        // Token Symbol Badge & Name
+                        ColumnLayout {
+                            spacing: 1
+                            Row {
+                                spacing: 8
+                                Text {
+                                    text: modelData.symbol
+                                    color: theme.textPrimary
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: theme.fontSizeBody
+                                    font.weight: Font.Bold
+                                }
+                                Text {
+                                    text: modelData.is_shielded ? "SHIELDED" : "PUBLIC"
+                                    color: modelData.is_shielded ? theme.statusShielded : theme.statusPublic
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: theme.fontSizeTiny
+                                    font.weight: Font.Bold
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                            Text {
+                                text: modelData.name + " • " + (modelData.holding_id || "Holding")
+                                color: theme.textMuted
+                                font.family: theme.fontMono
+                                font.pixelSize: theme.fontSizeTiny
+                            }
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        // Token Balance
+                        Text {
+                            text: (modelData.formatted_balance || "0.00") + " " + modelData.symbol
+                            color: theme.textPrimary
+                            font.family: theme.fontFamily
+                            font.pixelSize: theme.fontSizeTitle
+                            font.weight: Font.Bold
+                        }
+                    }
+                }
+            }
+
+            Text {
+                visible: !accountStore.tokens || accountStore.tokens.length === 0
+                Layout.alignment: Qt.AlignHCenter
+                text: "No token program holdings found for active keystore"
+                color: theme.textMuted
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeSmall
+            }
+        }
+
+        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+        }
+
+        // STATIC FOOTER: Keystore Security & Sequencer Telemetry
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 1
+            color: theme.borderSubtle
+        }
+
+        // Vault Security & Sequencer Telemetry Footer Bar (Responsive)
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: balanceCard.width >= 560 ? "BIP-39 Keystore: AES-256-GCM (Argon2id)" : "Keystore: AES-256-GCM"
+                color: theme.textMuted
+                font.family: theme.fontMono
+                font.pixelSize: theme.fontSizeBody
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: balanceCard.width >= 560 ? "LEZ Sequencer: testnet.lez.logos.co" : "testnet.lez.logos.co"
+                color: theme.textMuted
+                font.family: theme.fontMono
+                font.pixelSize: theme.fontSizeSmall
+                Layout.alignment: Qt.AlignRight
+                elide: Text.ElideRight
             }
         }
     }

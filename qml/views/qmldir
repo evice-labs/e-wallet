@@ -1,4 +1,6 @@
 module views
+OnboardingView 1.0 OnboardingView.qml
+LockScreenView 1.0 LockScreenView.qml
 BalanceView 1.0 BalanceView.qml
 TransferView 1.0 TransferView.qml
 FundingBridgeView 1.0 FundingBridgeView.qml
