@@ -110,7 +110,7 @@ Item {
             // Divider Line
             Rectangle {
                 Layout.fillWidth: true
-                height: 1
+                implicitHeight: 1
                 color: theme.borderSubtle
             }
 

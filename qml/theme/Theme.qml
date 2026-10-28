@@ -66,8 +66,9 @@ QtObject {
 
     // ── Metrics & Geometry ────────────────────────────────────
     readonly property int radiusPill: 10
-    readonly property int radiusButton: 8
-    readonly property int radiusCard: 14
-    readonly property int radiusInset: 8
-    readonly property int radiusProgress: 5
+    readonly property int radiusButton: 6
+    readonly property int radiusCard: 8
+    readonly property int radiusInset: 6
+    readonly property int radiusSmall: 4
+    readonly property int radiusProgress: 4
 }

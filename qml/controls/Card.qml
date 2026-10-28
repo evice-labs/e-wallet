@@ -11,73 +11,27 @@ Rectangle {
     default property alias content: contentSlot.data
 
     implicitWidth: 400
-    implicitHeight: Math.max(80, cardMainColumn.implicitHeight + 40)
+    implicitHeight: Math.max(80, cardMainLayout.implicitHeight + 32)
     Layout.fillWidth: true
-    Layout.preferredHeight: implicitHeight
-    Layout.minimumHeight: implicitHeight
-    radius: theme.radiusCard
+    radius: 0
 
     Theme { id: theme }
 
-    // Skeuomorphic Surface Gradient (Subtle 3D depth centered on theme.bgSurface #262626)
-    gradient: Gradient {
-        GradientStop { position: 0.0; color: Qt.lighter(theme.bgSurface, 1.05) }
-        GradientStop { position: 0.5; color: theme.bgSurface }
-        GradientStop { position: 1.0; color: Qt.darker(theme.bgSurface, 1.04) }
-    }
-
-    border.color: theme.borderCard
+    color: theme.bgSurface
+    border.color: theme.borderSubtle
     border.width: 1
 
-    // Skeuomorphic Ambient Drop Shadow (Layer 1 - Soft Spread)
-    Rectangle {
+    ColumnLayout {
+        id: cardMainLayout
         anchors.fill: parent
-        anchors.margins: -1
-        anchors.topMargin: 2
-        anchors.bottomMargin: -2
-        radius: control.radius + 1
-        color: theme.shadowDropDark
-        opacity: 0.35
-        z: -2
-    }
-
-    // Skeuomorphic Directional Drop Shadow (Layer 2 - Deep Downward Drop)
-    Rectangle {
-        anchors.fill: parent
-        anchors.topMargin: 5
-        anchors.bottomMargin: -5
-        radius: control.radius
-        color: Qt.rgba(0.0, 0.0, 0.0, 0.45)
-        z: -1
-    }
-
-    // Skeuomorphic Top Specular Chiseled Highlight (1px Rim Light)
-    Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.topMargin: 1
-        anchors.leftMargin: control.radius
-        anchors.rightMargin: control.radius
-        height: 1
-        color: theme.bevelHighlightTop
-        z: 2
-    }
-
-    Column {
-        id: cardMainColumn
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.margins: 20
-        spacing: 16
+        anchors.margins: 16
+        spacing: 10
 
         // Card Header
         Item {
             id: headerContainer
-            width: parent.width
+            Layout.fillWidth: true
             implicitHeight: Math.max(headerCol.implicitHeight, headerRightLoader.implicitHeight)
-            height: implicitHeight
             visible: control.title.length > 0 || (headerRightLoader.item !== null)
 
             Column {
@@ -116,12 +70,13 @@ Rectangle {
             }
         }
 
-        // Child Content Slot
+        // Child Content Slot (Fills available vertical space)
         Item {
             id: contentSlot
-            width: parent.width
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             implicitHeight: childrenRect.height
-            height: implicitHeight
+            clip: true
         }
     }
 }
