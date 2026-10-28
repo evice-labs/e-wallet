@@ -61,9 +61,10 @@ ModalOverlay {
                     Item { Layout.fillWidth: true }
                     Text {
                         text: {
-                            var addr = modal.accountStore.activeAccount ? modal.accountStore.activeAccount.address : "lez1alice89q7v2..."
-                            if (addr.length > 20) return addr.substring(0, 8) + "..." + addr.substring(addr.length - 8);
-                            return addr;
+                            var acc = modal.accountStore.activeAccount;
+                            var addr = acc ? (acc.address || acc.account_id || "lez1alice89q7v2...") : "lez1alice89q7v2...";
+                            if (addr && addr.length > 20) return addr.substring(0, 8) + "..." + addr.substring(addr.length - 8);
+                            return addr || "";
                         }
                         color: theme.textPrimary
                         font.family: theme.fontMono
@@ -80,9 +81,12 @@ ModalOverlay {
                         font.pixelSize: theme.fontSizeSmall
                     }
                     Item { Layout.fillWidth: true }
-                    PillBadge {
+                    Text {
                         text: modal.bridge.isLocked ? "LOCKED" : "UNLOCKED"
-                        badgeColor: modal.bridge.isLocked ? theme.statusDanger : theme.statusSuccess
+                        color: modal.bridge.isLocked ? theme.statusDanger : theme.statusSuccess
+                        font.family: theme.fontFamily
+                        font.pixelSize: theme.fontSizeTiny
+                        font.weight: Font.Bold
                     }
                 }
             }
@@ -124,9 +128,12 @@ ModalOverlay {
                         font.pixelSize: theme.fontSizeSmall
                     }
                     Item { Layout.fillWidth: true }
-                    PillBadge {
-                        text: "ONLINE • 14ms"
-                        badgeColor: theme.statusSuccess
+                    Text {
+                        text: "ONLINE • 14MS"
+                        color: theme.statusSuccess
+                        font.family: theme.fontFamily
+                        font.pixelSize: theme.fontSizeTiny
+                        font.weight: Font.Bold
                     }
                 }
             }
