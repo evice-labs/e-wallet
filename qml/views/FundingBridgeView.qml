@@ -4,229 +4,324 @@ import "../theme"
 import "../controls"
 
 Card {
-    id: faucetMiningCard
+    id: bridgeCard
 
     required property var bridge
     required property var accountStore
+    property var bridgeCtrl: null
     property var ledgerViewRef: null
+    property string activeAction: "mining" // "mining" | "bridge"
 
-    implicitHeight: 195
+    implicitHeight: 186
+    title: "EmPoWer Mining & L1 → LEZ Bridge"
 
-    property bool isMining: false
-    property bool isClaiming: false
-    property int hashrate: 24
-    property string faucetStatus: ""
-    property int blocksMined: 0
-    readonly property int actionButtonWidth: Math.max(115, Math.max(claimButton.implicitWidth, miningButton.implicitWidth))
-
-    title: "Faucet & Mining"
-
-    headerRight: Component {
-        RowLayout {
-            spacing: 6
-
-            Rectangle {
-                implicitWidth: 6
-                implicitHeight: 6
-                radius: 3
-                color: faucetMiningCard.isMining ? theme.statusSuccess : theme.textMuted
+    Connections {
+        target: bridgeCtrl
+        function onDepositSuccess(amount, txHash) {
+            if (bridgeCard.ledgerViewRef) {
+                var acc = accountStore.activeAccount;
+                var label = acc ? acc.label : "Primary Account";
+                bridgeCard.ledgerViewRef.addActivity(
+                    label,
+                    "Channel Bridge",
+                    "Transfers",
+                    "+" + amount + " LEZ",
+                    "L1 → LEZ Channel Deposit",
+                    true
+                );
             }
-
-            Text {
-                text: faucetMiningCard.isMining ? ("NODE ACTIVE • " + faucetMiningCard.hashrate + " H/S") : "NODE IDLE"
-                color: faucetMiningCard.isMining ? theme.statusSuccess : theme.textMuted
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTiny
-                font.weight: Font.Bold
-            }
+            resetActionTimer.restart();
         }
     }
 
     Timer {
-        id: miningTimer
-        interval: 1200
-        repeat: true
-        running: faucetMiningCard.isMining
+        id: resetActionTimer
+        interval: 1800
+        repeat: false
         onTriggered: {
-            faucetMiningCard.hashrate = Math.floor(22 + Math.random() * 5);
-            if (Math.random() < 0.2) {
-                faucetMiningCard.blocksMined += 1;
-            }
+            bridgeCard.activeAction = "mining";
         }
     }
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 6
+        spacing: 10
 
-        // BODY: Faucet Info & PoW Mining Telemetry
-        ColumnLayout {
+        // BODY: DUAL METRIC PANELS
+        RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: 10
 
-            // Faucet Section
-            RowLayout {
+            // Panel 1: Miner Status & Telemetry
+            InsetPanel {
                 Layout.fillWidth: true
-                spacing: 10
+                Layout.preferredHeight: 64
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    Text {
-                        text: "Testnet Faucet"
-                        color: theme.textPrimary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeBody
-                        font.weight: Font.DemiBold
-                    }
+                Column {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
 
                     Text {
-                        text: "Claim 100 LEZ liquidity for testnet transfers and smart contracts"
+                        text: "MINER STATUS & HASHRATE"
                         color: theme.textSecondary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeSmall
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
+                        font.family: theme.fontMono
+                        font.pixelSize: theme.fontSizeTiny
                     }
 
                     Text {
-                        visible: faucetMiningCard.faucetStatus.length > 0
-                        text: faucetMiningCard.faucetStatus
+                        text: (bridgeCtrl && bridgeCtrl.isMining) ?
+                              (bridgeCtrl.hashrate + " H/s (ACTIVE)") : "OFFLINE"
+                        color: (bridgeCtrl && bridgeCtrl.isMining) ? theme.statusSuccess : theme.textMuted
+                        font.family: theme.fontFamily
+                        font.pixelSize: theme.fontSizeBody + 2
+                        font.weight: Font.Bold
+                    }
+                }
+            }
+
+            // Panel 2: Unbridged Mined L1 Notes
+            InsetPanel {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 64
+
+                Column {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
+
+                    Text {
+                        text: "UNBRIDGED L1 MINED BALANCE"
                         color: theme.accentOrange
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeSmall
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
+                        font.family: theme.fontMono
+                        font.pixelSize: theme.fontSizeTiny
                     }
-                }
-
-                Button {
-                    id: claimButton
-                    text: faucetMiningCard.isClaiming ? "Claiming..." : "Claim 100 LEZ"
-                    isCompact: true
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.preferredWidth: faucetMiningCard.actionButtonWidth
-                    enabled: !faucetMiningCard.isClaiming
-                    onClicked: {
-                        faucetMiningCard.isClaiming = true;
-                        faucetMiningCard.faucetStatus = "Requesting faucet liquidity...";
-                        var accId = accountStore.activeAccount ? accountStore.activeAccount.account_id : "";
-                        bridge.invoke("requestFaucet", [accId], function(res) {
-                            faucetMiningCard.isClaiming = false;
-                            if (res && res.ok) {
-                                faucetMiningCard.faucetStatus = "Faucet request confirmed! +100.00 LEZ credited.";
-                                accountStore.refreshAccounts();
-                                if (faucetMiningCard.ledgerViewRef) {
-                                    faucetMiningCard.ledgerViewRef.addActivity("Faucet", "Faucet", "Transfers", "+100.00 LEZ", "Testnet Faucet Claim", true);
-                                }
-                            } else {
-                                faucetMiningCard.faucetStatus = "Faucet claim error: " + (res && res.error ? res.error : "Unknown");
-                            }
-                        });
-                    }
-                }
-            }
-
-            // Divider
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: 1
-                color: theme.borderSubtle
-            }
-
-            // Mining Section (Info on Left, Action Button on Right)
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 3
 
                     Text {
-                        text: "PoW Mining & Validator"
+                        text: bridgeCtrl ? bridgeCtrl.unbridgedL1Tokens : "0.00 LOGOS"
                         color: theme.textPrimary
                         font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeBody
-                        font.weight: Font.DemiBold
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 6
-
-                        Text {
-                            text: faucetMiningCard.isMining ? ("RUNNING (" + faucetMiningCard.hashrate + " H/S)") : "STOPPED"
-                            color: faucetMiningCard.isMining ? theme.statusSuccess : theme.textMuted
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeTiny
-                            font.weight: Font.Bold
-                        }
-
-                        Text {
-                            text: faucetMiningCard.isMining ? "• Validating block transactions" : "• Node consensus idle"
-                            color: theme.textMuted
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeSmall
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
-                    }
-                }
-
-                Button {
-                    id: miningButton
-                    text: faucetMiningCard.isMining ? "Stop Mining" : "Start Mining"
-                    isCompact: true
-                    isPrimary: !faucetMiningCard.isMining
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.preferredWidth: faucetMiningCard.actionButtonWidth
-                    onClicked: {
-                        faucetMiningCard.isMining = !faucetMiningCard.isMining;
+                        font.pixelSize: theme.fontSizeBody + 2
+                        font.weight: Font.Bold
                     }
                 }
             }
         }
 
-        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        // FLEXIBLE EXPANDING SPACER
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
         }
 
-        // STATIC FOOTER: Node Consensus & Faucet Quota Telemetry
+        // SKEUOMORPHIC DIVIDER
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 1
             color: theme.borderSubtle
         }
 
+        // FOOTER: PoW Telemetry Status (Left) & Segmented Dark Action Console (Right)
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 10
 
-            Text {
-                text: faucetMiningCard.width >= 480 ? "Faucet Quota: 100 LEZ / 24h • Cooldown: Ready" : "Quota: 100 LEZ / 24h"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
+            // Left: Real-Time PoW Node Telemetry
+            RowLayout {
+                spacing: 6
                 Layout.fillWidth: true
-                elide: Text.ElideRight
+
+                Rectangle {
+                    implicitWidth: 6
+                    implicitHeight: 6
+                    radius: 3
+                    color: (bridgeCtrl && bridgeCtrl.isMining) ? theme.statusSuccess : theme.textMuted
+                }
+
+                Text {
+                    text: (bridgeCtrl && bridgeCtrl.isMining) ?
+                          ("POW ACTIVE • " + bridgeCtrl.hashrate + " H/S") :
+                          "NODE IDLE • SHA-256"
+                    color: (bridgeCtrl && bridgeCtrl.isMining) ? theme.statusSuccess : theme.textMuted
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                    font.weight: (bridgeCtrl && bridgeCtrl.isMining) ? Font.Bold : Font.Normal
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
             }
 
-            Text {
-                text: {
-                    if (faucetMiningCard.isMining) {
-                        return faucetMiningCard.width >= 480 ? ("PoW Active • Mined: " + faucetMiningCard.blocksMined + " Blocks") : ("Mined: " + faucetMiningCard.blocksMined + " Blk");
+            // Right: Tactile Segmented Pill Console
+            Rectangle {
+                id: actionConsole
+                implicitHeight: 34
+                implicitWidth: 236
+                color: theme.bgInsetTrough
+                radius: 8
+                border.color: theme.borderSubtle
+                border.width: 1
+
+                readonly property int segmentWidth: Math.floor((actionConsole.width - 6) / 2)
+                readonly property bool isDestructiveActive: (bridgeCtrl && bridgeCtrl.isMining) && bridgeCard.activeAction === "mining"
+
+                // Drop shadow beneath active pill to produce the "timbul" physical elevation
+                Rectangle {
+                    x: activePill.x
+                    y: activePill.y + 1
+                    width: activePill.width
+                    height: activePill.height
+                    radius: 6
+                    color: actionConsole.isDestructiveActive ? Qt.rgba(0.9, 0.1, 0.1, 0.28) : theme.btnPrimaryShadow
+                    opacity: 0.9
+
+                    Behavior on x {
+                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
                     }
-                    return faucetMiningCard.width >= 480 ? "Consensus: SHA-256 PoW (Testnet)" : "SHA-256 PoW";
                 }
-                color: faucetMiningCard.isMining ? theme.statusSuccess : theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
-                Layout.alignment: Qt.AlignRight
-                elide: Text.ElideRight
+
+                // Raised Active Pill
+                Rectangle {
+                    id: activePill
+                    x: bridgeCard.activeAction === "mining" ? 3 : (3 + actionConsole.segmentWidth)
+                    y: 3
+                    width: actionConsole.segmentWidth
+                    height: actionConsole.height - 6
+                    radius: 6
+
+                    gradient: Gradient {
+                        GradientStop {
+                            position: 0.0
+                            color: {
+                                if (actionConsole.isDestructiveActive) {
+                                    return miningMouse.pressed ? "#991B1B" : (miningMouse.containsMouse ? "#DC2626" : "#B91C1C");
+                                }
+                                var isPressed = (bridgeCard.activeAction === "mining" && miningMouse.pressed) ||
+                                                (bridgeCard.activeAction === "bridge" && bridgeMouse.pressed);
+                                var isHovered = (bridgeCard.activeAction === "mining" && miningMouse.containsMouse) ||
+                                                (bridgeCard.activeAction === "bridge" && bridgeMouse.containsMouse);
+                                return isPressed ? theme.btnPrimaryPressed : (isHovered ? theme.btnPrimaryHoverTop : theme.btnPrimaryTop);
+                            }
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: {
+                                if (actionConsole.isDestructiveActive) {
+                                    return miningMouse.pressed ? "#7F1D1D" : (miningMouse.containsMouse ? "#B91C1C" : "#991B1B");
+                                }
+                                var isPressed = (bridgeCard.activeAction === "mining" && miningMouse.pressed) ||
+                                                (bridgeCard.activeAction === "bridge" && bridgeMouse.pressed);
+                                var isHovered = (bridgeCard.activeAction === "mining" && miningMouse.containsMouse) ||
+                                                (bridgeCard.activeAction === "bridge" && bridgeMouse.containsMouse);
+                                return isPressed ? theme.btnPrimaryPressed : (isHovered ? theme.btnPrimaryHoverBottom : theme.btnPrimaryBottom);
+                            }
+                        }
+                    }
+
+                    border.color: actionConsole.isDestructiveActive ? "#EF4444" : theme.btnPrimaryBorderSides
+                    border.width: 1
+
+                    // Top bevel highlight line
+                    Rectangle {
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.margins: 1
+                        height: 1
+                        color: "#FFFFFF"
+                        opacity: 0.22
+                        radius: 5
+                    }
+
+                    Behavior on x {
+                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    }
+                }
+
+                // Interactive Segments
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 3
+
+                    // Segment 1: Mining
+                    Item {
+                        id: miningSegment
+                        width: actionConsole.segmentWidth
+                        height: parent.height
+
+                        Text {
+                            id: miningLabel
+                            anchors.centerIn: parent
+                            text: (bridgeCtrl && bridgeCtrl.isMining) ? "Stop Mining" : "Start Mining"
+                            color: bridgeCard.activeAction === "mining" ?
+                                   theme.textPrimary :
+                                   (miningMouse.containsMouse ? theme.textPrimary : theme.textSecondary)
+                            font.family: theme.fontFamily
+                            font.pixelSize: theme.fontSizeSmall
+                            font.weight: bridgeCard.activeAction === "mining" ? Font.DemiBold : Font.Medium
+                        }
+
+                        MouseArea {
+                            id: miningMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                bridgeCard.activeAction = "mining";
+                                if (bridgeCtrl) {
+                                    if (bridgeCtrl.isMining) {
+                                        bridgeCtrl.stopMining();
+                                    } else {
+                                        bridgeCtrl.startMining();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Segment 2: Bridge Tokens
+                    Item {
+                        id: bridgeSegment
+                        width: actionConsole.segmentWidth
+                        height: parent.height
+
+                        readonly property bool canBridge: !bridge.isLocked &&
+                                                          accountStore.activeAccount !== null &&
+                                                          bridgeCtrl !== null &&
+                                                          bridgeCtrl.hasUnbridgedTokens &&
+                                                          !bridgeCtrl.isDepositing
+
+                        opacity: bridgeCard.activeAction === "bridge" ? 1.0 : (bridgeSegment.canBridge ? 1.0 : 0.45)
+
+                        Text {
+                            id: bridgeLabel
+                            anchors.centerIn: parent
+                            text: (bridgeCtrl && bridgeCtrl.isDepositing) ? "Bridging..." : "Bridge Tokens"
+                            color: bridgeCard.activeAction === "bridge" ?
+                                   theme.textPrimary :
+                                   (bridgeMouse.containsMouse && bridgeSegment.canBridge ? theme.textPrimary : theme.textSecondary)
+                            font.family: theme.fontFamily
+                            font.pixelSize: theme.fontSizeSmall
+                            font.weight: bridgeCard.activeAction === "bridge" ? Font.DemiBold : Font.Medium
+                        }
+
+                        MouseArea {
+                            id: bridgeMouse
+                            anchors.fill: parent
+                            hoverEnabled: bridgeSegment.canBridge
+                            cursorShape: bridgeSegment.canBridge ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: {
+                                if (bridgeSegment.canBridge) {
+                                    bridgeCard.activeAction = "bridge";
+                                    if (bridgeCtrl) {
+                                        bridgeCtrl.depositToLez();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

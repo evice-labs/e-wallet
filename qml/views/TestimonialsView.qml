@@ -8,25 +8,25 @@ Card {
 
     required property var bridge
     required property var accountStore
+    property var testimonialCtrl: null
     property var ledgerViewRef: null
 
-    implicitHeight: 195
-
-    property string broadcastText: ""
-    property string broadcastStatus: ""
-    property bool isBroadcasting: false
-
+    implicitHeight: 200
     title: "Testimonial & Broadcast"
 
-    headerRight: Component {
-        RowLayout {
-            spacing: 6
-            Text {
-                text: "ZK-PROGRAM 43466"
-                color: theme.statusPublic
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTiny
-                font.weight: Font.Bold
+    Connections {
+        target: testimonialCtrl
+        function onBroadcastSuccess(txHash, message) {
+            if (testimonialCard.ledgerViewRef) {
+                var previewText = message.length > 20 ? "\"" + message.substring(0, 18) + "...\"" : "\"" + message + "\"";
+                testimonialCard.ledgerViewRef.addActivity(
+                    testimonialCtrl ? testimonialCtrl.activeAuthor : "Active Account",
+                    "zkVM Broadcast",
+                    "Testimonials",
+                    previewText,
+                    "On-Chain Broadcast (0.1 LEZ)",
+                    false
+                );
             }
         }
     }
@@ -35,13 +35,13 @@ Card {
         anchors.fill: parent
         spacing: 8
 
-        // BODY: Target Program & On-Chain Message Input
-        ColumnLayout {
+        // Target Contract Info & Automatic Active Account Author Readout
+        RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: 8
 
             Text {
-                text: "Target zkVM Contract: Public/D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV"
+                text: "Target: Public/D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV"
                 color: theme.textMuted
                 font.family: theme.fontMono
                 font.pixelSize: theme.fontSizeTiny
@@ -49,45 +49,73 @@ Card {
                 Layout.fillWidth: true
             }
 
-            TextField {
-                id: msgInput
-                Layout.fillWidth: true
-                placeholder: "Say something on-chain..."
-                text: testimonialCard.broadcastText
-                onAccepted: testimonialCard.broadcastText = text
-            }
-
-            Text {
-                visible: testimonialCard.broadcastStatus.length > 0
-                text: testimonialCard.broadcastStatus
-                color: theme.statusSuccess
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeSmall
-                wrapMode: Text.WordWrap
-                Layout.fillWidth: true
+            // System-derived Author Affordance (Zero Manual Input)
+            RowLayout {
+                spacing: 4
+                Text {
+                    text: "Posting as:"
+                    color: theme.textSecondary
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                }
+                Text {
+                    text: testimonialCtrl ? testimonialCtrl.activeAuthor : (accountStore.activeAccount ? accountStore.activeAccount.label : "alice.lez")
+                    color: theme.statusPublic
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeSmall
+                    font.weight: Font.DemiBold
+                }
             }
         }
 
-        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        // Single Intuitive Message Input Field
+        TextField {
+            id: msgInput
+            Layout.fillWidth: true
+            placeholder: "Say something on-chain..."
+            text: testimonialCtrl ? testimonialCtrl.messageInput : ""
+            onTextChanged: {
+                if (testimonialCtrl && testimonialCtrl.messageInput !== text) {
+                    testimonialCtrl.messageInput = text;
+                }
+            }
+        }
+
+        // Status Feedback Readout
+        Text {
+            visible: !!(testimonialCtrl && testimonialCtrl.statusMessage.length > 0)
+            Layout.fillWidth: true
+            text: testimonialCtrl ? testimonialCtrl.statusMessage : ""
+            color: (testimonialCtrl && testimonialCtrl.isSuccessStatus) ? theme.statusSuccess : theme.accentOrange
+            font.family: theme.fontFamily
+            font.pixelSize: theme.fontSizeSmall
+            elide: Text.ElideRight
+        }
+
+        // Flexible Expanding Spacer
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
         }
 
-        // STATIC FOOTER: Character Counter & Broadcast Button
+        // Skeuomorphic Divider
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 1
             color: theme.borderSubtle
         }
 
+        // Footer Action Row
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
 
             Text {
-                text: (280 - msgInput.text.length) + " chars remaining"
-                color: (280 - msgInput.text.length) < 0 ? theme.statusDanger : theme.textMuted
+                text: {
+                    if (!testimonialCtrl) return "280 bytes remaining";
+                    return testimonialCtrl.remainingBytes + " bytes remaining (" + testimonialCtrl.currentByteLength + "/280)";
+                }
+                color: (testimonialCtrl && testimonialCtrl.remainingBytes < 0) ? theme.statusDanger : theme.textMuted
                 font.family: theme.fontMono
                 font.pixelSize: theme.fontSizeSmall
             }
@@ -95,44 +123,18 @@ Card {
             Item { Layout.fillWidth: true }
 
             Button {
-                text: testimonialCard.isBroadcasting ? "Broadcasting..." : "Broadcast (0.1 LEZ)"
+                id: broadcastBtn
+                text: (testimonialCtrl && testimonialCtrl.isBroadcasting) ? "Broadcasting..." : "Broadcast (0.1 LEZ)"
                 isCompact: true
                 isPrimary: true
-                enabled: msgInput.text.trim().length > 0 && (280 - msgInput.text.length) >= 0 && !testimonialCard.isBroadcasting
+                customHeight: 34
+                enabled: testimonialCtrl !== null && testimonialCtrl.isValid
                 onClicked: {
-                    var msg = msgInput.text.trim();
-                    testimonialCard.isBroadcasting = true;
-                    testimonialCard.broadcastStatus = "Broadcasting to zkVM contract...";
-                    bridge.invoke("proposeTransaction", [
-                        "Public/D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV",
-                        msg,
-                        "4f793e86-5a23-4d20-969b-b993291caf59"
-                    ], function(res) {
-                        testimonialCard.isBroadcasting = false;
-                        if (res && res.ok) {
-                            var shortHash = res.tx_hash ? (res.tx_hash.substring(0, 10) + "..." + res.tx_hash.substring(res.tx_hash.length - 6)) : "0x9f53...af184";
-                            testimonialCard.broadcastStatus = "Broadcasted to Logos zkVM! Tx: " + shortHash;
-                            msgInput.text = "";
-                            if (testimonialCard.ledgerViewRef) {
-                                var previewText = msg.length > 20 ? "\"" + msg.substring(0, 18) + "...\"" : "\"" + msg + "\"";
-                                testimonialCard.ledgerViewRef.addActivity("Testimonial", "Ledger", "Testimonials", previewText, "On-Chain Broadcast (0.1 LEZ)", false);
-                            }
-                        } else {
-                            testimonialCard.broadcastStatus = "Broadcast error: " + (res && res.error ? res.error : "Unknown");
-                        }
-                    });
+                    if (testimonialCtrl) {
+                        testimonialCtrl.broadcast();
+                    }
                 }
             }
-        }
-
-        Text {
-            visible: testimonialCard.broadcastStatus.length > 0
-            text: testimonialCard.broadcastStatus
-            color: theme.statusSuccess
-            font.family: theme.fontFamily
-            font.pixelSize: theme.fontSizeSmall
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
         }
     }
 }

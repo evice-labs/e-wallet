@@ -9,11 +9,11 @@ Card {
     required property var bridge
     required property var accountStore
 
-    implicitHeight: 402
+    implicitHeight: 520
 
     property string activeFilter: "All" // "All" | "Transfers" | "Shields" | "Testimonials"
     property int currentPage: 0
-    readonly property int pageSize: 5
+    readonly property int pageSize: 7
 
     property var rawTransactions: [
         {
@@ -49,7 +49,7 @@ Card {
             category: "Testimonials",
             time: "2 days ago",
             amount: "\"Hello Logos\"",
-            detail: "On-Chain Broadcast (0.1 LEZ)",
+            detail: "On-Chain Broadcast",
             isIncoming: true
         },
         {
@@ -69,6 +69,78 @@ Card {
             amount: "-5.00 LEZ",
             detail: "Zero-Knowledge Transfer",
             isIncoming: false
+        },
+        {
+            name: "Mining Station",
+            status: "Faucet",
+            category: "Transfers",
+            time: "5 days ago",
+            amount: "+142.50 LEZ",
+            detail: "L1 → LEZ Channel Deposit",
+            isIncoming: true
+        },
+        {
+            name: "Testimonial",
+            status: "Ledger",
+            category: "Testimonials",
+            time: "6 days ago",
+            amount: "\"Decentralized zkVM\"",
+            detail: "On-Chain Broadcast",
+            isIncoming: true
+        },
+        {
+            name: "alice.lez",
+            status: "Shield",
+            category: "Shields",
+            time: "1 week ago",
+            amount: "+50.00 LEZ",
+            detail: "ZK Note Deposit",
+            isIncoming: true
+        },
+        {
+            name: "charlie.lez",
+            status: "Public",
+            category: "Transfers",
+            time: "1 week ago",
+            amount: "-12.00 LEZ",
+            detail: "Public Transfer",
+            isIncoming: false
+        },
+        {
+            name: "dave.lez",
+            status: "Public",
+            category: "Transfers",
+            time: "2 weeks ago",
+            amount: "-8.50 LEZ",
+            detail: "Public Transfer",
+            isIncoming: false
+        },
+        {
+            name: "Testimonial",
+            status: "Ledger",
+            category: "Testimonials",
+            time: "2 weeks ago",
+            amount: "\"Privacy is Normal\"",
+            detail: "On-Chain Broadcast",
+            isIncoming: true
+        },
+        {
+            name: "Mining Station",
+            status: "Faucet",
+            category: "Transfers",
+            time: "3 weeks ago",
+            amount: "+210.00 LEZ",
+            detail: "L1 → LEZ Channel Deposit",
+            isIncoming: true
+        },
+        {
+            name: "eve.lez",
+            status: "Shield",
+            category: "Shields",
+            time: "1 month ago",
+            amount: "+75.00 LEZ",
+            detail: "Shield Asset to Private Pool",
+            isIncoming: true
         }
     ]
 
@@ -123,61 +195,65 @@ Card {
 
     title: "Activity Feed & Transaction Ledger"
 
-    headerRight: Component {
-        Button {
-            text: "Refresh"
-            isCompact: true
-            onClicked: {
-                bridge.invoke("fetchHistory", []);
-            }
-        }
-    }
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 8
 
         // BODY: Filter Tabs & Transaction Items List
 
-        // Segmented Filter Tabs
+        // Segmented Filter Tabs & Actions
         RowLayout {
             Layout.fillWidth: true
             spacing: 6
 
-            TabButton {
-                text: "All"
-                isActive: ledgerCard.activeFilter === "All"
-                onClicked: {
-                    ledgerCard.activeFilter = "All";
-                    ledgerCard.currentPage = 0;
+            SegmentedBar {
+                TabButton {
+                    text: "All"
+                    isActive: ledgerCard.activeFilter === "All"
+                    onClicked: {
+                        ledgerCard.activeFilter = "All";
+                        ledgerCard.currentPage = 0;
+                    }
                 }
-            }
-            TabButton {
-                text: "Transfers"
-                isActive: ledgerCard.activeFilter === "Transfers"
-                onClicked: {
-                    ledgerCard.activeFilter = "Transfers";
-                    ledgerCard.currentPage = 0;
+                TabButton {
+                    text: "Transfers"
+                    isActive: ledgerCard.activeFilter === "Transfers"
+                    onClicked: {
+                        ledgerCard.activeFilter = "Transfers";
+                        ledgerCard.currentPage = 0;
+                    }
                 }
-            }
-            TabButton {
-                text: "Shields"
-                isActive: ledgerCard.activeFilter === "Shields"
-                onClicked: {
-                    ledgerCard.activeFilter = "Shields";
-                    ledgerCard.currentPage = 0;
+                TabButton {
+                    text: "Shields"
+                    isActive: ledgerCard.activeFilter === "Shields"
+                    onClicked: {
+                        ledgerCard.activeFilter = "Shields";
+                        ledgerCard.currentPage = 0;
+                    }
                 }
-            }
-            TabButton {
-                text: "Testimonials"
-                isActive: ledgerCard.activeFilter === "Testimonials"
-                onClicked: {
-                    ledgerCard.activeFilter = "Testimonials";
-                    ledgerCard.currentPage = 0;
+                TabButton {
+                    text: "Testimonials"
+                    isActive: ledgerCard.activeFilter === "Testimonials"
+                    onClicked: {
+                        ledgerCard.activeFilter = "Testimonials";
+                        ledgerCard.currentPage = 0;
+                    }
                 }
             }
 
             Item { Layout.fillWidth: true }
+
+            // Refresh History Action Button (Pure White Icon, 34x34)
+            Button {
+                iconSource: "../assets/icons/Refresh.png"
+                isCompact: true
+                customWidth: 34
+                customHeight: 34
+                Layout.alignment: Qt.AlignVCenter
+                onClicked: {
+                    bridge.invoke("fetchHistory", []);
+                }
+            }
         }
 
         // Divider
@@ -187,7 +263,7 @@ Card {
             color: theme.borderSubtle
         }
 
-        // Activity Items List (Window of 5 items)
+        // Activity Items List (Window of 10 items)
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 0
@@ -208,7 +284,7 @@ Card {
                     Rectangle {
                         id: rowContainer
                         Layout.fillWidth: true
-                        height: 44
+                        height: 40
                         radius: theme.radiusButton
                         color: rowHover.containsMouse ? theme.bgSurfaceSubtle : "transparent"
 

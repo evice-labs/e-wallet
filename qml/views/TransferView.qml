@@ -65,22 +65,24 @@ Card {
                 font.pixelSize: theme.fontSizeSmall
             }
 
-            TabButton {
-                text: "Native LEZ"
-                isActive: !transferCtrl || transferCtrl.selectedAsset === "native"
-                onClicked: {
-                    if (transferCtrl) transferCtrl.selectedAsset = "native";
+            SegmentedBar {
+                TabButton {
+                    text: "Native LEZ"
+                    isActive: !transferCtrl || transferCtrl.selectedAsset === "native"
+                    onClicked: {
+                        if (transferCtrl) transferCtrl.selectedAsset = "native";
+                    }
                 }
-            }
 
-            TabButton {
-                text: "Tokens"
-                isActive: transferCtrl && transferCtrl.selectedAsset === "token"
-                onClicked: {
-                    if (transferCtrl) {
-                        transferCtrl.selectedAsset = "token";
-                        if (!transferCtrl.selectedToken && accountStore.tokens && accountStore.tokens.length > 0) {
-                            transferCtrl.selectedToken = accountStore.tokens[0];
+                TabButton {
+                    text: "Tokens"
+                    isActive: transferCtrl && transferCtrl.selectedAsset === "token"
+                    onClicked: {
+                        if (transferCtrl) {
+                            transferCtrl.selectedAsset = "token";
+                            if (!transferCtrl.selectedToken && accountStore.tokens && accountStore.tokens.length > 0) {
+                                transferCtrl.selectedToken = accountStore.tokens[0];
+                            }
                         }
                     }
                 }
@@ -173,6 +175,43 @@ Card {
                     elide: Text.ElideRight
                 }
             }
+
+            // Quick Recipient Selection for User's Other Accounts
+            RowLayout {
+                visible: accountStore.accounts && accountStore.accounts.length > 1
+                spacing: 6
+
+                Text {
+                    text: "Your Accounts:"
+                    color: theme.textSecondary
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                }
+
+                Repeater {
+                    model: {
+                        if (!accountStore || !accountStore.accounts) return [];
+                        var list = [];
+                        var active = accountStore.activeAccount;
+                        for (var i = 0; i < accountStore.accounts.length; i++) {
+                            var a = accountStore.accounts[i];
+                            if (!active || a.account_id !== active.account_id) {
+                                list.push(a);
+                            }
+                        }
+                        return list;
+                    }
+                    delegate: Button {
+                        isCompact: true
+                        text: (modelData.label || "Account") + (modelData.is_private ? " (Shielded)" : "")
+                        onClicked: {
+                            if (transferCtrl) {
+                                transferCtrl.destinationInput = modelData.account_id;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Amount and Max Button
@@ -203,20 +242,48 @@ Card {
             }
         }
 
-        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        // Automatic Route Indicator
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 5
+
+            Text {
+                text: "Route:"
+                color: theme.textPrimary
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeTiny
+                font.weight: Font.Medium
+            }
+
+            Text {
+                text: {
+                    if (!transferCtrl) return "Public ➝ Public";
+                    if (transferCtrl.transferMode === "pub_to_priv") return "Public ➝ Shield";
+                    if (transferCtrl.transferMode === "priv_to_pub") return "Shield ➝ Public";
+                    if (transferCtrl.transferMode === "priv_to_priv") return "Shield ➝ Shield";
+                    return "Public ➝ Public";
+                }
+                color: (transferCtrl && (transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv")) ? theme.statusShielded : theme.statusPublic
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeTiny
+                font.weight: Font.Bold
+            }
+        }
+
+        // FLEXIBLE EXPANDING SPACER
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
         }
 
-        // STATIC FOOTER: Telemetry, Route & Action Button
+        // STATIC FOOTER: Telemetry & Action Button
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 1
             color: theme.borderSubtle
         }
 
-        // Telemetry, Route Indicator & Submit Action (Inline)
+        // Telemetry & Submit Action (Inline)
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -232,23 +299,7 @@ Card {
 
             Item { Layout.fillWidth: true }
 
-            // 2. Automatic Route Indicator
-            Text {
-                text: {
-                    if (!transferCtrl) return "Route: Public ➝ Public";
-                    if (transferCtrl.transferMode === "pub_to_priv") return "Route: Public ➝ Shield";
-                    if (transferCtrl.transferMode === "priv_to_pub") return "Route: Shield ➝ Public";
-                    if (transferCtrl.transferMode === "priv_to_priv") return "Route: Shield ➝ Shield";
-                    return "Route: Public ➝ Public";
-                }
-                color: (transferCtrl && (transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv")) ? theme.statusShielded : theme.statusPublic
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTiny
-                font.weight: Font.Bold
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            // 3. Submit Action Button
+            // 2. Submit Action Button
             Button {
                 text: {
                     if (transferCtrl && transferCtrl.isSubmitting) return "Submitting...";
@@ -257,6 +308,7 @@ Card {
                 }
                 isPrimary: true
                 isCompact: true
+                customHeight: 34
                 Layout.alignment: Qt.AlignVCenter
                 enabled: !transferCtrl || (!transferCtrl.isSubmitting)
                 onClicked: {
