@@ -141,9 +141,12 @@ ModalOverlay {
             RowLayout {
                 Layout.fillWidth: true
 
-                PillBadge {
-                    text: "BIP-39 Standalone Seed"
-                    badgeColor: theme.statusSuccess
+                Text {
+                    text: "BIP-39 STANDALONE SEED"
+                    color: theme.statusSuccess
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                    font.weight: Font.Bold
                 }
 
                 Item { Layout.fillWidth: true }

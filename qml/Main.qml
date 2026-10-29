@@ -18,154 +18,194 @@ Rectangle {
     AccountStore { id: accountStore; bridge: bridge }
     TransferController { id: transferCtrl; bridge: bridge; accountStore: accountStore }
 
-    property string currentTab: "dashboard"
+    // AUTO-LOCK IDLE TIMER (15 MINUTES)
+    Timer {
+        id: idleTimer
+        interval: 15 * 60 * 1000 // 15 minutes
+        running: bridge.isInitialized && !bridge.isLocked
+        repeat: false
+        onTriggered: {
+            console.log("[AutoLock] 15 minutes idle timeout reached, locking wallet keystore");
+            bridge.invoke("lockWallet", []);
+        }
+    }
 
-    ColumnLayout {
+    MouseArea {
         anchors.fill: parent
-        anchors.margins: 24
-        spacing: 18
+        z: -1
+        hoverEnabled: true
+        propagateComposedEvents: true
+        onPositionChanged: (mouse) => {
+            if (idleTimer.running) idleTimer.restart();
+        }
+        onPressed: (mouse) => {
+            if (idleTimer.running) idleTimer.restart();
+            mouse.accepted = false;
+        }
+    }
 
-        // Top Navigation Header Bar
-        RowLayout {
+    // ONBOARDING LIFECYCLE VIEW
+    OnboardingView {
+        id: onboardingView
+        anchors.fill: parent
+        visible: !bridge.isInitialized
+        bridge: bridge
+        accountStore: accountStore
+        onOpenRestoreModal: restoreWalletModal.open()
+    }
+
+    // LOCK SCREEN LIFECYCLE VIEW
+    LockScreenView {
+        id: lockScreenView
+        anchors.fill: parent
+        visible: bridge.isInitialized && bridge.isLocked
+        bridge: bridge
+        accountStore: accountStore
+        onOpenRestoreModal: restoreWalletModal.open()
+    }
+
+    // RESPONSIVE BENTO-GRID DASHBOARD VIEW
+    ColumnLayout {
+        id: dashboardContainer
+        anchors.fill: parent
+        anchors.margins: 20
+        spacing: 0
+        visible: bridge.isInitialized && !bridge.isLocked
+
+        readonly property int responsiveBreakpoint: 880
+        readonly property real availH: dashboardContainer.height
+        readonly property bool isFlexible: availH >= 700
+        readonly property real computedRow1H: isFlexible ? (availH - 12) * 0.40 : 285
+        readonly property real computedRow2H: isFlexible ? (availH - 12) * 0.60 : 410
+
+        Flickable {
+            id: flickable
             Layout.fillWidth: true
-            spacing: 16
+            Layout.fillHeight: true
+            contentWidth: Math.max(width, dashboardContainer.responsiveBreakpoint)
+            contentHeight: Math.max(height, mainCol.implicitHeight)
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
 
-            Text {
-                text: "Evice Vault"
-                color: theme.textPrimary
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTitle
-                font.weight: Font.Bold
+            // Minimalist Scroll Indicator
+            Rectangle {
+                id: scrollIndicator
+                anchors.right: parent.right
+                anchors.rightMargin: 2
+                y: flickable.visibleArea.yPosition * flickable.height
+                width: 4
+                height: Math.max(30, flickable.visibleArea.heightRatio * flickable.height)
+                radius: 2
+                color: theme.borderActive
+                opacity: flickable.moving || flickable.dragging ? 0.7 : 0.3
+                visible: flickable.visibleArea.heightRatio < 1.0
+                z: 10
             }
 
-            PillBadge {
-                text: bridge.isHostAvailable ? "Basecamp Connected" : "Local Standalone Preview"
-                badgeColor: bridge.isHostAvailable ? theme.statusSuccess : theme.statusPublic
-            }
-
-            Item { Layout.fillWidth: true }
-
-            // Segmented Top Navigation (Strict Zero-Icon Rule)
-            Row {
-                spacing: 6
-                TabButton {
-                    text: "Dashboard"
-                    isActive: root.currentTab === "dashboard"
-                    onClicked: root.currentTab = "dashboard"
-                }
-                TabButton {
-                    text: "Transfer"
-                    isActive: root.currentTab === "transfer"
-                    onClicked: root.currentTab = "transfer"
-                }
-                TabButton {
-                    text: "Funding & Bridge"
-                    isActive: root.currentTab === "funding"
-                    onClicked: root.currentTab = "funding"
-                }
-                TabButton {
-                    text: "Testimonials"
-                    isActive: root.currentTab === "testimonials"
-                    onClicked: root.currentTab = "testimonials"
-                }
-                TabButton {
-                    text: "Settings"
-                    isActive: root.currentTab === "settings"
-                    onClicked: root.currentTab = "settings"
-                }
-            }
-
-            Button {
-                text: bridge.isLocked ? "Unlock Vault" : "Lock Vault"
-                isCompact: true
-                isPrimary: bridge.isLocked
-                isDestructive: !bridge.isLocked
+            // Global Dismiss Overlay for Balance Profile Dropdown
+            MouseArea {
+                anchors.fill: parent
+                z: 50
+                visible: balanceView.isProfileMenuOpen
                 onClicked: {
-                    if (bridge.isLocked) {
-                        unlockModal.open();
-                    } else {
-                        bridge.invoke("lockWallet", []);
+                    balanceView.isProfileMenuOpen = false;
+                    balanceView.isCascadeExpanded = false;
+                }
+            }
+
+            ColumnLayout {
+                id: mainCol
+                width: Math.max(parent.width - (scrollIndicator.visible ? 10 : 0), dashboardContainer.responsiveBreakpoint)
+                spacing: 12
+
+                // ROW 1: HERO BALANCE CARD & QUICK TRANSFER CARD
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: dashboardContainer.computedRow1H
+                    implicitHeight: dashboardContainer.computedRow1H
+                    spacing: 12
+
+                    BalanceView {
+                        id: balanceView
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        bridge: bridge
+                        accountStore: accountStore
+                        onOpenCreateAccount: createAccountModal.open()
+                        onOpenSettingsModal: settingsModal.open()
+                        onOpenUnlockModal: unlockModal.open()
+                    }
+
+                    TransferView {
+                        id: transferView
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        bridge: bridge
+                        accountStore: accountStore
+                        transferCtrl: transferCtrl
+                        ledgerViewRef: ledgerView
+                        onOpenUnlockModal: unlockModal.open()
+                    }
+                }
+
+                // ROW 2: ECOSYSTEM STACK (LEFT) & ACTIVITY LEDGER (RIGHT)
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: dashboardContainer.computedRow2H
+                    implicitHeight: dashboardContainer.computedRow2H
+                    spacing: 12
+
+                    // LEFT COLUMN: Stacked Faucet/Mining & Testimonials
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        spacing: 12
+
+                        FundingBridgeView {
+                            id: faucetView
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            bridge: bridge
+                            accountStore: accountStore
+                            ledgerViewRef: ledgerView
+                        }
+
+                        TestimonialsView {
+                            id: testimonialView
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            bridge: bridge
+                            accountStore: accountStore
+                            ledgerViewRef: ledgerView
+                        }
+                    }
+
+                    // RIGHT COLUMN: Activity Feed & Transaction History
+                    ActivityLedgerView {
+                        id: ledgerView
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        bridge: bridge
+                        accountStore: accountStore
                     }
                 }
             }
         }
-
-        // Active View Container (Decoupled Modular Architecture)
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-
-            DashboardView {
-                anchors.fill: parent
-                visible: root.currentTab === "dashboard"
-                bridge: bridge
-                accountStore: accountStore
-                onOpenCreateAccount: createAccountModal.open()
-                onOpenAccountDetail: function(acc) {
-                    accountDetailModal.account = acc;
-                    accountDetailModal.open();
-                }
-                onNavigateTab: function(tabName) {
-                    root.currentTab = tabName;
-                }
-            }
-
-            TransferView {
-                anchors.fill: parent
-                visible: root.currentTab === "transfer"
-                bridge: bridge
-                accountStore: accountStore
-                transferCtrl: transferCtrl
-            }
-
-            FundingBridgeView {
-                anchors.fill: parent
-                visible: root.currentTab === "funding"
-                bridge: bridge
-                accountStore: accountStore
-            }
-
-            TestimonialsView {
-                anchors.fill: parent
-                visible: root.currentTab === "testimonials"
-                bridge: bridge
-                accountStore: accountStore
-            }
-
-            SettingsView {
-                anchors.fill: parent
-                visible: root.currentTab === "settings"
-                bridge: bridge
-                accountStore: accountStore
-                onOpenUnlockModal: unlockModal.open()
-                onOpenCreateWalletModal: createWalletModal.open()
-                onOpenRestoreWalletModal: restoreWalletModal.open()
-            }
-        }
-
-        // Tactile Footer Telemetry Bar
-        RowLayout {
-            Layout.fillWidth: true
-
-            Text {
-                text: "LEZ Sequencer: https://testnet.lez.logos.co"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
-            }
-
-            Item { Layout.fillWidth: true }
-
-            Text {
-                text: "BIP-39 Keystore: AES-256-GCM (Argon2id Encrypted)"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
-            }
-        }
     }
 
-    // Global Modal Presenters
+    // GLOBAL MODAL DIALOGS
+    SettingsModal {
+        id: settingsModal
+        bridge: bridge
+        accountStore: accountStore
+        onOpenRestoreWalletModal: restoreWalletModal.open()
+        onOpenUnlockModal: unlockModal.open()
+    }
+
     UnlockModal {
         id: unlockModal
         bridge: bridge

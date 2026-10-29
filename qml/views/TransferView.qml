@@ -3,302 +3,287 @@ import QtQuick.Layouts
 import "../theme"
 import "../controls"
 
-Item {
-    id: view
+Card {
+    id: transferCard
 
     required property var bridge
     required property var accountStore
-    required property var transferCtrl
+    property var transferCtrl: null
+    property var ledgerViewRef: null
 
-    Theme { id: theme }
+    implicitHeight: 295
 
-    Flickable {
-        id: flickable
-        anchors.fill: parent
-        contentWidth: width
-        contentHeight: contentLayout.implicitHeight + 24
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
+    signal openUnlockModal()
 
-        // Minimalist Scroll Indicator
-        Rectangle {
-            id: scrollIndicator
-            anchors.right: parent.right
-            anchors.rightMargin: 2
-            y: flickable.visibleArea.yPosition * flickable.height
-            width: 4
-            height: Math.max(30, flickable.visibleArea.heightRatio * flickable.height)
-            radius: 2
-            color: theme.borderActive
-            opacity: flickable.moving || flickable.dragging ? 0.7 : 0.3
-            visible: flickable.visibleArea.heightRatio < 1.0
-            z: 10
-        }
+    property string feedbackMessage: ""
+    property bool isSuccessFeedback: false
 
-        ColumnLayout {
-            id: contentLayout
-            width: parent.width - (scrollIndicator.visible ? 10 : 0)
-            spacing: 16
-
-            // Header Title
-            RowLayout {
-                Layout.fillWidth: true
-
-                Column {
-                    spacing: 2
-                    Text {
-                        text: "4-Way Asset Transfers"
-                        color: theme.textPrimary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeHero
-                        font.weight: Font.Bold
-                    }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                PillBadge {
-                    text: "4-Way Privacy Matrix Supported"
-                    badgeColor: theme.statusSuccess
-                }
-            }
-
-            // Transfer Card Form
-            Card {
-                Layout.fillWidth: true
-                title: "Transaction Composer"
-                subtitle: "Compose native transfers or shield/unshield notes"
-
-                ColumnLayout {
-                    width: parent.width
-                    height: implicitHeight
-                    spacing: 14
-
-                    // Privacy Direction Selector
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8
-
-                        TabButton {
-                            text: "Public → Public"
-                            isActive: transferCtrl.transferMode === "pub_to_pub"
-                            onClicked: transferCtrl.transferMode = "pub_to_pub"
-                        }
-
-                        TabButton {
-                            text: "Public → Private (Shield)"
-                            isActive: transferCtrl.transferMode === "pub_to_priv"
-                            onClicked: transferCtrl.transferMode = "pub_to_priv"
-                        }
-
-                        TabButton {
-                            text: "Private → Public (Unshield)"
-                            isActive: transferCtrl.transferMode === "priv_to_pub"
-                            onClicked: transferCtrl.transferMode = "priv_to_pub"
-                        }
-
-                        TabButton {
-                            text: "Private → Private"
-                            isActive: transferCtrl.transferMode === "priv_to_priv"
-                            onClicked: transferCtrl.transferMode = "priv_to_priv"
-                        }
-                    }
-
-                    // Source Account Inset
-                    InsetPanel {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 64
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 16
-                            spacing: 12
-
-                            Column {
-                                spacing: 2
-                                Text {
-                                    text: "FROM SENDER ACCOUNT"
-                                    color: theme.textSecondary
-                                    font.family: theme.fontMono
-                                    font.pixelSize: theme.fontSizeSmall
-                                }
-                                Text {
-                                    text: accountStore.activeAccount ? accountStore.activeAccount.label : "No Account Selected"
-                                    color: theme.textPrimary
-                                    font.family: theme.fontFamily
-                                    font.pixelSize: theme.fontSizeBody
-                                    font.weight: Font.Bold
-                                }
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            PillBadge {
-                                text: accountStore.activeAccount && accountStore.activeAccount.is_private ? "SHIELDED" : "PUBLIC"
-                                badgeColor: accountStore.activeAccount && accountStore.activeAccount.is_private ? theme.statusShielded : theme.statusPublic
-                            }
-
-                            Text {
-                                text: "Available: " + (accountStore.activeAccount ? accountStore.activeAccount.formatted_balance || "0.00" : "0.00") + " LEZ"
-                                color: theme.textPrimary
-                                font.family: theme.fontFamily
-                                font.pixelSize: theme.fontSizeBody
-                                font.weight: Font.Bold
-                            }
-                        }
-                    }
-
-                    // Destination Address / LNS Name Input
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 6
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Text {
-                                text: "RECIPIENT ADDRESS OR LNS NAME"
-                                color: theme.textSecondary
-                                font.family: theme.fontMono
-                                font.pixelSize: theme.fontSizeSmall
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            PillBadge {
-                                visible: transferCtrl.lnsStatus !== "idle"
-                                text: transferCtrl.lnsMessage
-                                badgeColor: transferCtrl.lnsStatus === "resolved" ? theme.statusSuccess : (transferCtrl.lnsStatus === "resolving" ? theme.statusPublic : theme.statusShielded)
-                            }
-                        }
-
-                        TextField {
-                            id: destField
-                            Layout.fillWidth: true
-                            placeholder: "e.g. alice.lez or Public/891ae258f92c..."
-                            text: transferCtrl.destinationInput
-                            onTextChanged: transferCtrl.destinationInput = text
-                        }
-                    }
-
-                    // Amount Input & MAX Button
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 6
-
-                        Text {
-                            text: "TRANSFER AMOUNT (LEZ)"
-                            color: theme.textSecondary
-                            font.family: theme.fontMono
-                            font.pixelSize: theme.fontSizeSmall
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-
-                            TextField {
-                                id: amtField
-                                Layout.fillWidth: true
-                                placeholder: "0.00"
-                                text: transferCtrl.amountInput
-                                onTextChanged: transferCtrl.amountInput = text
-                            }
-
-                            Button {
-                                text: "MAX"
-                                isCompact: true
-                                isPrimary: false
-                                onClicked: {
-                                    if (accountStore.activeAccount) {
-                                        amtField.text = accountStore.activeAccount.formatted_balance || "0.00";
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Fee & Telemetry Readout
-                    RowLayout {
-                        Layout.fillWidth: true
-
-                        Text {
-                            text: "Estimated Gas: " + transferCtrl.estimatedGas
-                            color: theme.textMuted
-                            font.family: theme.fontMono
-                            font.pixelSize: theme.fontSizeSmall
-                        }
-
-                        Item { Layout.fillWidth: true }
-
-                        Text {
-                            text: "Intent Binding: 32-Byte SHA-256 (Anti-TOCTOU)"
-                            color: theme.textMuted
-                            font.family: theme.fontMono
-                            font.pixelSize: theme.fontSizeSmall
-                        }
-                    }
-
-                    // Status Message Banner
-                    Rectangle {
-                        visible: statusText.text.length > 0
-                        Layout.fillWidth: true
-                        height: 38
-                        radius: theme.radiusButton
-                        color: isErrorBanner ? Qt.rgba(0.9, 0.2, 0.2, 0.15) : Qt.rgba(0.2, 0.8, 0.4, 0.15)
-                        border.color: isErrorBanner ? theme.statusShielded : theme.statusSuccess
-                        border.width: 1
-
-                        property bool isErrorBanner: false
-
-                        Text {
-                            id: statusText
-                            anchors.centerIn: parent
-                            text: ""
-                            color: parent.isErrorBanner ? theme.statusShielded : theme.statusSuccess
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeSmall
-                            font.weight: Font.Bold
-                        }
-                    }
-
-                    // Action Dispatch Button
-                    RowLayout {
-                        Layout.fillWidth: true
-
-                        Button {
-                            text: "Clear Fields"
-                            isPrimary: false
-                            onClicked: {
-                                destField.text = "";
-                                amtField.text = "";
-                                statusText.text = "";
-                            }
-                        }
-
-                        Item { Layout.fillWidth: true }
-
-                        Button {
-                            text: transferCtrl.isSubmitting ? "Broadcasting..." : "Propose Transfer"
-                            isPrimary: true
-                            enabled: !transferCtrl.isSubmitting && !bridge.isLocked
-                            onClicked: transferCtrl.submitTransfer()
-                        }
-                    }
-                }
-            }
-        }
-    }
+    title: "Quick Transfer"
 
     Connections {
         target: transferCtrl
-        function onTransferSuccess(requestId) {
-            statusText.parent.isErrorBanner = false;
-            statusText.text = "Transfer proposed successfully! Request ID: " + requestId;
+        function onTransferSuccess(txHash) {
+            transferCard.isSuccessFeedback = true;
+            var shortHash = txHash.length > 20 ? txHash.substring(0, 10) + "..." + txHash.substring(txHash.length - 8) : txHash;
+            transferCard.feedbackMessage = "Transfer proposal submitted successfully! Ref: " + shortHash;
+            if (transferCard.ledgerViewRef && transferCtrl) {
+                var isPriv = transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv";
+                var modeLabel = isPriv ? "Shield" : (transferCtrl.transferMode === "priv_to_pub" ? "Unshield" : "Public");
+                var cat = (isPriv || transferCtrl.transferMode === "priv_to_pub") ? "Shields" : "Transfers";
+                var symbol = transferCtrl.selectedAsset === "token" ? (transferCtrl.selectedToken ? transferCtrl.selectedToken.symbol : "TOKEN") : "LEZ";
+                transferCard.ledgerViewRef.addActivity(
+                    transferCtrl.destinationInput || "Recipient",
+                    modeLabel,
+                    cat,
+                    "-" + transferCtrl.amountInput + " " + symbol,
+                    isPriv ? "Zero-Knowledge Transfer" : "Public Transfer",
+                    false
+                );
+            }
         }
         function onTransferFailed(reason) {
-            statusText.parent.isErrorBanner = true;
-            statusText.text = "Transfer Failed: " + reason;
+            transferCard.isSuccessFeedback = false;
+            transferCard.feedbackMessage = "Transfer failed: " + reason;
+        }
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 8
+
+        // BODY: Asset, Recipient & Amount Inputs
+
+        // Asset Selector (Native LEZ vs Token Program)
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: "Asset:"
+                color: theme.textSecondary
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeSmall
+            }
+
+            TabButton {
+                text: "Native LEZ"
+                isActive: !transferCtrl || transferCtrl.selectedAsset === "native"
+                onClicked: {
+                    if (transferCtrl) transferCtrl.selectedAsset = "native";
+                }
+            }
+
+            TabButton {
+                text: "Tokens"
+                isActive: transferCtrl && transferCtrl.selectedAsset === "token"
+                onClicked: {
+                    if (transferCtrl) {
+                        transferCtrl.selectedAsset = "token";
+                        if (!transferCtrl.selectedToken && accountStore.tokens && accountStore.tokens.length > 0) {
+                            transferCtrl.selectedToken = accountStore.tokens[0];
+                        }
+                    }
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+        }
+
+        // Token Holding Selector (Visible when Asset == Token)
+        RowLayout {
+            visible: transferCtrl && transferCtrl.selectedAsset === "token"
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: "Holding:"
+                color: theme.textSecondary
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeSmall
+            }
+
+            Repeater {
+                model: accountStore.tokens || []
+                delegate: Button {
+                    isCompact: true
+                    text: modelData.symbol + " (" + (modelData.formatted_balance || "0") + ")"
+                    isPrimary: transferCtrl && transferCtrl.selectedToken && transferCtrl.selectedToken.holding_id === modelData.holding_id
+                    onClicked: {
+                        if (transferCtrl) transferCtrl.selectedToken = modelData;
+                    }
+                }
+            }
+        }
+
+        // Recipient Field with LNS Resolution Status
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 3
+
+            TextField {
+                id: destField
+                Layout.fillWidth: true
+                placeholder: "To: bob.lez or Address"
+                text: transferCtrl ? transferCtrl.destinationInput : ""
+                onTextChanged: {
+                    if (transferCtrl && transferCtrl.destinationInput !== text) {
+                        transferCtrl.destinationInput = text;
+                    }
+                }
+            }
+
+            Connections {
+                target: transferCtrl
+                function onDestinationInputChanged() {
+                    if (destField.text !== (transferCtrl ? transferCtrl.destinationInput : "")) {
+                        destField.text = transferCtrl ? transferCtrl.destinationInput : "";
+                    }
+                }
+            }
+
+            // Real-Time LNS / Account Validation Typographic Text
+            RowLayout {
+                visible: transferCtrl && transferCtrl.lnsStatus !== "idle"
+                spacing: 6
+
+                Text {
+                    text: {
+                        if (!transferCtrl) return "";
+                        if (transferCtrl.lnsStatus === "resolving") return "RESOLVING LNS...";
+                        if (transferCtrl.lnsStatus === "resolved") return "RESOLVED";
+                        if (transferCtrl.lnsStatus === "invalid") return "INVALID DOMAIN";
+                        return "";
+                    }
+                    color: {
+                        if (!transferCtrl) return theme.textMuted;
+                        if (transferCtrl.lnsStatus === "resolving") return theme.accentOrange;
+                        if (transferCtrl.lnsStatus === "resolved") return theme.statusSuccess;
+                        return theme.statusDanger;
+                    }
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                    font.weight: Font.Bold
+                }
+
+                Text {
+                    text: transferCtrl ? transferCtrl.lnsMessage : ""
+                    color: transferCtrl && transferCtrl.lnsStatus === "invalid" ? theme.statusDanger : theme.textSecondary
+                    font.family: theme.fontMono
+                    font.pixelSize: theme.fontSizeSmall
+                    elide: Text.ElideRight
+                }
+            }
+        }
+
+        // Amount and Max Button
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            TextField {
+                id: amtField
+                Layout.fillWidth: true
+                placeholder: "Amount: 0.00"
+                text: transferCtrl ? transferCtrl.amountInput : ""
+                onTextChanged: {
+                    if (transferCtrl && transferCtrl.amountInput !== text) {
+                        transferCtrl.amountInput = text;
+                    }
+                }
+            }
+
+            Button {
+                text: "Max"
+                isCompact: true
+                onClicked: {
+                    if (transferCtrl) {
+                        transferCtrl.setMaxAmount();
+                    }
+                }
+            }
+        }
+
+        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+        }
+
+        // STATIC FOOTER: Telemetry, Route & Action Button
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 1
+            color: theme.borderSubtle
+        }
+
+        // Telemetry, Route Indicator & Submit Action (Inline)
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            // 1. Est. Gas Telemetry
+            Text {
+                text: "Est. Gas: " + (transferCtrl ? transferCtrl.estimatedGas : "0.00015 LEZ")
+                color: theme.textMuted
+                font.family: theme.fontMono
+                font.pixelSize: theme.fontSizeSmall
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Item { Layout.fillWidth: true }
+
+            // 2. Automatic Route Indicator
+            Text {
+                text: {
+                    if (!transferCtrl) return "Route: Public ➝ Public";
+                    if (transferCtrl.transferMode === "pub_to_priv") return "Route: Public ➝ Shield";
+                    if (transferCtrl.transferMode === "priv_to_pub") return "Route: Shield ➝ Public";
+                    if (transferCtrl.transferMode === "priv_to_priv") return "Route: Shield ➝ Shield";
+                    return "Route: Public ➝ Public";
+                }
+                color: (transferCtrl && (transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv")) ? theme.statusShielded : theme.statusPublic
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeTiny
+                font.weight: Font.Bold
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            // 3. Submit Action Button
+            Button {
+                text: {
+                    if (transferCtrl && transferCtrl.isSubmitting) return "Submitting...";
+                    if (bridge.isLocked) return "Unlock Vault";
+                    return "Send Transfer";
+                }
+                isPrimary: true
+                isCompact: true
+                Layout.alignment: Qt.AlignVCenter
+                enabled: !transferCtrl || (!transferCtrl.isSubmitting)
+                onClicked: {
+                    if (bridge.isLocked) {
+                        transferCard.feedbackMessage = "Vault is locked. Please unlock your keystore.";
+                        transferCard.isSuccessFeedback = false;
+                        transferCard.openUnlockModal();
+                        return;
+                    }
+
+                    if (transferCtrl) {
+                        transferCard.feedbackMessage = "";
+                        transferCtrl.submitTransfer();
+                    }
+                }
+            }
+        }
+
+        // Feedback / Error Telemetry
+        Text {
+            visible: transferCard.feedbackMessage.length > 0
+            text: transferCard.feedbackMessage
+            color: transferCard.isSuccessFeedback ? theme.statusSuccess : theme.statusDanger
+            font.family: theme.fontFamily
+            font.pixelSize: theme.fontSizeSmall
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
         }
     }
 }

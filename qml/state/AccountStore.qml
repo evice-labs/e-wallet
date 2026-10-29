@@ -9,22 +9,30 @@ Item {
     property var activeAccount: null
     property string totalPublicBalance: "0.00"
     property string totalShieldedBalance: "0.00"
+    property var tokens: []
+    property string selectedAssetType: "native" // "native" | "token"
+    property var selectedToken: null
     property bool isLoading: false
 
     signal accountSelected(var account)
     signal accountsUpdated()
+    signal tokensUpdated()
 
     Connections {
         target: bridge
         function onWalletStateChanged() {
             if (!bridge.isLocked) {
                 store.refreshAccounts();
+                store.refreshTokens();
             } else {
                 store.accounts = [];
                 store.activeAccount = null;
+                store.tokens = [];
+                store.selectedToken = null;
                 store.totalPublicBalance = "0.00";
                 store.totalShieldedBalance = "0.00";
                 store.accountsUpdated();
+                store.tokensUpdated();
             }
         }
     }
@@ -32,6 +40,7 @@ Item {
     Component.onCompleted: {
         if (!bridge.isLocked) {
             refreshAccounts();
+            refreshTokens();
         }
     }
 
@@ -63,8 +72,8 @@ Item {
                     }
                 }
 
-                store.totalPublicBalance = pubTotal.toLocaleString(Qt.locale(), "f", 2);
-                store.totalShieldedBalance = privTotal.toLocaleString(Qt.locale(), "f", 2);
+                store.totalPublicBalance = Number(pubTotal).toFixed(2);
+                store.totalShieldedBalance = Number(privTotal).toFixed(2);
 
                 if (!foundActive && res.accounts.length > 0) {
                     store.activeAccount = res.accounts[0];
@@ -93,5 +102,22 @@ Item {
             store.refreshAccounts();
             if (callback) callback(res);
         });
+    }
+
+    function refreshTokens() {
+        bridge.invoke("listTokenHoldings", [], function(res) {
+            if (res && res.ok && Array.isArray(res.tokens)) {
+                store.tokens = res.tokens;
+                if (!store.selectedToken && res.tokens.length > 0) {
+                    store.selectedToken = res.tokens[0];
+                }
+                store.tokensUpdated();
+            }
+        });
+    }
+
+    function selectToken(token) {
+        store.selectedToken = token;
+        store.tokensUpdated();
     }
 }

@@ -13,8 +13,7 @@ Rectangle {
     signal accepted()
 
     implicitWidth: 320
-    implicitHeight: control.label.length > 0 ? 66 : 42
-    radius: theme.radiusButton
+    implicitHeight: control.label.length > 0 ? 58 : 36
 
     color: theme.bgInsetTrough
     border.color: input.activeFocus ? theme.borderActive : theme.borderSubtle
@@ -24,8 +23,11 @@ Rectangle {
 
     Column {
         anchors.fill: parent
-        anchors.margins: 8
-        spacing: 4
+        anchors.leftMargin: 10
+        anchors.rightMargin: 10
+        anchors.topMargin: control.label.length > 0 ? 6 : 6
+        anchors.bottomMargin: control.label.length > 0 ? 6 : 6
+        spacing: 2
 
         Text {
             text: control.label

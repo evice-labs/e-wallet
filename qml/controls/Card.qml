@@ -7,72 +7,76 @@ Rectangle {
 
     property string title: ""
     property string subtitle: ""
+    property Component headerRight: null
     default property alias content: contentSlot.data
 
     implicitWidth: 400
-    implicitHeight: Math.max(80, cardMainColumn.implicitHeight + 40)
+    implicitHeight: Math.max(80, cardMainLayout.implicitHeight + 32)
     Layout.fillWidth: true
-    Layout.preferredHeight: implicitHeight
-    Layout.minimumHeight: implicitHeight
-    radius: theme.radiusCard
-
-    color: theme.bgSurface
-    border.color: theme.borderCard
-    border.width: 1
+    radius: 0
 
     Theme { id: theme }
 
-    // Drop Shadow for Card Elevation
-    Rectangle {
-        anchors.fill: parent
-        anchors.topMargin: 4
-        anchors.bottomMargin: -4
-        radius: control.radius
-        color: theme.shadowDropDark
-        z: -1
-    }
+    color: theme.bgSurface
+    border.color: theme.borderSubtle
+    border.width: 1
 
-    Column {
-        id: cardMainColumn
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.margins: 20
-        spacing: 16
+    ColumnLayout {
+        id: cardMainLayout
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
 
         // Card Header
-        Column {
-            id: headerCol
-            width: parent.width
-            visible: control.title.length > 0
-            spacing: 4
+        Item {
+            id: headerContainer
+            Layout.fillWidth: true
+            implicitHeight: Math.max(headerCol.implicitHeight, headerRightLoader.implicitHeight)
+            visible: control.title.length > 0 || (headerRightLoader.item !== null)
 
-            Text {
-                width: parent.width
-                text: control.title
-                color: theme.textPrimary
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTitle
-                font.weight: Font.DemiBold
+            Column {
+                id: headerCol
+                anchors.left: parent.left
+                anchors.right: (headerRightLoader.item !== null) ? headerRightLoader.left : parent.right
+                anchors.rightMargin: (headerRightLoader.item !== null) ? 12 : 0
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+
+                Text {
+                    width: parent.width
+                    text: control.title
+                    color: theme.textPrimary
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTitle
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    width: parent.width
+                    text: control.subtitle
+                    color: theme.textSecondary
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeSmall
+                    visible: control.subtitle.length > 0
+                    wrapMode: Text.WordWrap
+                }
             }
 
-            Text {
-                width: parent.width
-                text: control.subtitle
-                color: theme.textSecondary
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeSmall
-                visible: control.subtitle.length > 0
-                wrapMode: Text.WordWrap
+            Loader {
+                id: headerRightLoader
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                sourceComponent: control.headerRight
             }
         }
 
-        // Child Content Slot
+        // Child Content Slot (Fills available vertical space)
         Item {
             id: contentSlot
-            width: parent.width
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             implicitHeight: childrenRect.height
-            height: implicitHeight
+            clip: true
         }
     }
 }

@@ -3,244 +3,230 @@ import QtQuick.Layouts
 import "../theme"
 import "../controls"
 
-Item {
-    id: view
+Card {
+    id: faucetMiningCard
 
     required property var bridge
     required property var accountStore
+    property var ledgerViewRef: null
+
+    implicitHeight: 195
 
     property bool isMining: false
-    property int hashrate: 0
-    property string minedL1Tokens: "142.50 LOGOS"
+    property bool isClaiming: false
+    property int hashrate: 24
+    property string faucetStatus: ""
+    property int blocksMined: 0
+    readonly property int actionButtonWidth: Math.max(115, Math.max(claimButton.implicitWidth, miningButton.implicitWidth))
 
-    Theme { id: theme }
+    title: "Faucet & Mining"
 
-    Timer {
-        id: miningTimer
-        interval: 1000
-        repeat: true
-        running: view.isMining
-        onTriggered: {
-            view.hashrate = Math.floor(1800 + Math.random() * 400);
+    headerRight: Component {
+        RowLayout {
+            spacing: 6
+
+            Rectangle {
+                implicitWidth: 6
+                implicitHeight: 6
+                radius: 3
+                color: faucetMiningCard.isMining ? theme.statusSuccess : theme.textMuted
+            }
+
+            Text {
+                text: faucetMiningCard.isMining ? ("NODE ACTIVE • " + faucetMiningCard.hashrate + " H/S") : "NODE IDLE"
+                color: faucetMiningCard.isMining ? theme.statusSuccess : theme.textMuted
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeTiny
+                font.weight: Font.Bold
+            }
         }
     }
 
-    Flickable {
-        id: flickable
-        anchors.fill: parent
-        contentWidth: width
-        contentHeight: contentLayout.implicitHeight + 24
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-
-        // Minimalist Scroll Indicator
-        Rectangle {
-            id: scrollIndicator
-            anchors.right: parent.right
-            anchors.rightMargin: 2
-            y: flickable.visibleArea.yPosition * flickable.height
-            width: 4
-            height: Math.max(30, flickable.visibleArea.heightRatio * flickable.height)
-            radius: 2
-            color: theme.borderActive
-            opacity: flickable.moving || flickable.dragging ? 0.7 : 0.3
-            visible: flickable.visibleArea.heightRatio < 1.0
-            z: 10
+    Timer {
+        id: miningTimer
+        interval: 1200
+        repeat: true
+        running: faucetMiningCard.isMining
+        onTriggered: {
+            faucetMiningCard.hashrate = Math.floor(22 + Math.random() * 5);
+            if (Math.random() < 0.2) {
+                faucetMiningCard.blocksMined += 1;
+            }
         }
+    }
 
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 6
+
+        // BODY: Faucet Info & PoW Mining Telemetry
         ColumnLayout {
-            id: contentLayout
-            width: parent.width - (scrollIndicator.visible ? 10 : 0)
-            spacing: 16
+            Layout.fillWidth: true
+            spacing: 6
 
+            // Faucet Section
             RowLayout {
                 Layout.fillWidth: true
+                spacing: 10
 
-                Column {
+                ColumnLayout {
+                    Layout.fillWidth: true
                     spacing: 2
+
                     Text {
-                        text: "EmPoWer Mining & L1 → LEZ Bridge"
+                        text: "Testnet Faucet"
                         color: theme.textPrimary
                         font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeHero
-                        font.weight: Font.Bold
+                        font.pixelSize: theme.fontSizeBody
+                        font.weight: Font.DemiBold
                     }
+
                     Text {
-                        text: "Logos Blockchain L1 Proof-of-Work & Trustless Channel Bridge"
+                        text: "Claim 100 LEZ liquidity for testnet transfers and smart contracts"
                         color: theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
-                    }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                PillBadge {
-                    text: "Canonical Funding Path"
-                    badgeColor: theme.statusPublic
-                }
-            }
-
-            // Mining Station Card
-            Card {
-                Layout.fillWidth: true
-                title: "EmPoWer L1 Mining Station"
-                subtitle: "Generate native testnet tokens via local Proof-of-Work"
-
-                ColumnLayout {
-                    width: parent.width
-                    height: implicitHeight
-                    spacing: 14
-
-                    RowLayout {
+                        elide: Text.ElideRight
                         Layout.fillWidth: true
-                        spacing: 16
-
-                        InsetPanel {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 74
-
-                            Column {
-                                anchors.centerIn: parent
-                                spacing: 4
-
-                                Text {
-                                    text: "MINER STATUS & HASHRATE"
-                                    color: theme.textSecondary
-                                    font.family: theme.fontMono
-                                    font.pixelSize: theme.fontSizeSmall
-                                }
-
-                                Text {
-                                    text: view.isMining ? (view.hashrate + " H/s (ACTIVE)") : "OFFLINE"
-                                    color: view.isMining ? theme.statusSuccess : theme.textMuted
-                                    font.family: theme.fontFamily
-                                    font.pixelSize: theme.fontSizeTitle
-                                    font.weight: Font.Bold
-                                }
-                            }
-                        }
-
-                        InsetPanel {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 74
-
-                            Column {
-                                anchors.centerIn: parent
-                                spacing: 4
-
-                                Text {
-                                    text: "UNBRIDGED L1 MINED BALANCE"
-                                    color: theme.accentOrange
-                                    font.family: theme.fontMono
-                                    font.pixelSize: theme.fontSizeSmall
-                                }
-
-                                Text {
-                                    text: view.minedL1Tokens
-                                    color: theme.textPrimary
-                                    font.family: theme.fontFamily
-                                    font.pixelSize: theme.fontSizeTitle
-                                    font.weight: Font.Bold
-                                }
-                            }
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-
-                        PillBadge {
-                            text: "REST: http://127.0.0.1:8080/pow/mining"
-                            badgeColor: theme.statusPublic
-                        }
-
-                        Item { Layout.fillWidth: true }
-
-                        Button {
-                            text: view.isMining ? "Stop Mining" : "Start EmPoWer Mining"
-                            isPrimary: !view.isMining
-                            isDestructive: view.isMining
-                            onClicked: {
-                                view.isMining = !view.isMining;
-                                if (!view.isMining) view.hashrate = 0;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Bridging Terminal Card
-            Card {
-                Layout.fillWidth: true
-                title: "L1 → LEZ Channel Deposit Bridge"
-                subtitle: "Deposit mined L1 notes into your active LEZ account"
-
-                ColumnLayout {
-                    width: parent.width
-                    height: implicitHeight
-                    spacing: 14
-
-                    InsetPanel {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 64
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 16
-
-                            Column {
-                                spacing: 2
-                                Text {
-                                    text: "TARGET LEZ RECIPIENT ACCOUNT"
-                                    color: theme.textSecondary
-                                    font.family: theme.fontMono
-                                    font.pixelSize: theme.fontSizeSmall
-                                }
-                                Text {
-                                    text: accountStore.activeAccount ? accountStore.activeAccount.label + " (" + accountStore.activeAccount.account_id.substring(0, 18) + "...)" : "No active account"
-                                    color: theme.textPrimary
-                                    font.family: theme.fontFamily
-                                    font.pixelSize: theme.fontSizeBody
-                                    font.weight: Font.Bold
-                                }
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            PillBadge {
-                                text: "Channel Deposit V1"
-                                badgeColor: theme.statusSuccess
-                            }
-                        }
                     }
 
                     Text {
+                        visible: faucetMiningCard.faucetStatus.length > 0
+                        text: faucetMiningCard.faucetStatus
+                        color: theme.accentOrange
+                        font.family: theme.fontFamily
+                        font.pixelSize: theme.fontSizeSmall
+                        elide: Text.ElideRight
                         Layout.fillWidth: true
-                        text: "The bridge executes an on-chain ChannelDeposit transaction that locks L1 notes and credits equivalent native LEZ coin directly into your selected account without relying on centralized faucets."
-                        color: theme.textSecondary
+                    }
+                }
+
+                Button {
+                    id: claimButton
+                    text: faucetMiningCard.isClaiming ? "Claiming..." : "Claim 100 LEZ"
+                    isCompact: true
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.preferredWidth: faucetMiningCard.actionButtonWidth
+                    enabled: !faucetMiningCard.isClaiming
+                    onClicked: {
+                        faucetMiningCard.isClaiming = true;
+                        faucetMiningCard.faucetStatus = "Requesting faucet liquidity...";
+                        var accId = accountStore.activeAccount ? accountStore.activeAccount.account_id : "";
+                        bridge.invoke("requestFaucet", [accId], function(res) {
+                            faucetMiningCard.isClaiming = false;
+                            if (res && res.ok) {
+                                faucetMiningCard.faucetStatus = "Faucet request confirmed! +100.00 LEZ credited.";
+                                accountStore.refreshAccounts();
+                                if (faucetMiningCard.ledgerViewRef) {
+                                    faucetMiningCard.ledgerViewRef.addActivity("Faucet", "Faucet", "Transfers", "+100.00 LEZ", "Testnet Faucet Claim", true);
+                                }
+                            } else {
+                                faucetMiningCard.faucetStatus = "Faucet claim error: " + (res && res.error ? res.error : "Unknown");
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Divider
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: 1
+                color: theme.borderSubtle
+            }
+
+            // Mining Section (Info on Left, Action Button on Right)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 3
+
+                    Text {
+                        text: "PoW Mining & Validator"
+                        color: theme.textPrimary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeBody
-                        wrapMode: Text.WordWrap
+                        font.weight: Font.DemiBold
                     }
 
                     RowLayout {
                         Layout.fillWidth: true
+                        spacing: 6
 
-                        Item { Layout.fillWidth: true }
+                        Text {
+                            text: faucetMiningCard.isMining ? ("RUNNING (" + faucetMiningCard.hashrate + " H/S)") : "STOPPED"
+                            color: faucetMiningCard.isMining ? theme.statusSuccess : theme.textMuted
+                            font.family: theme.fontFamily
+                            font.pixelSize: theme.fontSizeTiny
+                            font.weight: Font.Bold
+                        }
 
-                        Button {
-                            text: "Bridge All Mined Tokens to LEZ"
-                            isPrimary: true
-                            enabled: !bridge.isLocked && accountStore.activeAccount !== null
-                            onClicked: {
-                                view.minedL1Tokens = "0.00 LOGOS";
-                                accountStore.refreshAccounts();
-                            }
+                        Text {
+                            text: faucetMiningCard.isMining ? "• Validating block transactions" : "• Node consensus idle"
+                            color: theme.textMuted
+                            font.family: theme.fontFamily
+                            font.pixelSize: theme.fontSizeSmall
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
                         }
                     }
                 }
+
+                Button {
+                    id: miningButton
+                    text: faucetMiningCard.isMining ? "Stop Mining" : "Start Mining"
+                    isCompact: true
+                    isPrimary: !faucetMiningCard.isMining
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.preferredWidth: faucetMiningCard.actionButtonWidth
+                    onClicked: {
+                        faucetMiningCard.isMining = !faucetMiningCard.isMining;
+                    }
+                }
+            }
+        }
+
+        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+        }
+
+        // STATIC FOOTER: Node Consensus & Faucet Quota Telemetry
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 1
+            color: theme.borderSubtle
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: faucetMiningCard.width >= 480 ? "Faucet Quota: 100 LEZ / 24h • Cooldown: Ready" : "Quota: 100 LEZ / 24h"
+                color: theme.textMuted
+                font.family: theme.fontMono
+                font.pixelSize: theme.fontSizeSmall
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
+
+            Text {
+                text: {
+                    if (faucetMiningCard.isMining) {
+                        return faucetMiningCard.width >= 480 ? ("PoW Active • Mined: " + faucetMiningCard.blocksMined + " Blocks") : ("Mined: " + faucetMiningCard.blocksMined + " Blk");
+                    }
+                    return faucetMiningCard.width >= 480 ? "Consensus: SHA-256 PoW (Testnet)" : "SHA-256 PoW";
+                }
+                color: faucetMiningCard.isMining ? theme.statusSuccess : theme.textMuted
+                font.family: theme.fontMono
+                font.pixelSize: theme.fontSizeSmall
+                Layout.alignment: Qt.AlignRight
+                elide: Text.ElideRight
             }
         }
     }

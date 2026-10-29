@@ -4,8 +4,8 @@ Item {
     id: bridge
 
     readonly property bool isHostAvailable: typeof logos !== "undefined" && typeof logos.callModule === "function"
-    property bool isInitialized: false
-    property bool isLocked: true
+    property bool isInitialized: true
+    property bool isLocked: false
     property string activeSessionId: "sess_local_standalone"
     property string currentNetwork: "Logos Testnet 0.4"
     property string activeAccountAddress: ""
@@ -154,12 +154,65 @@ Item {
                         account_id: "Public/11223344556677889900aabbccddeeff00112233445566778899aabbccddeeff",
                         resolved: true
                     };
+                } else if (name === "stealth.lez" || name === "charlie.lez") {
+                    return {
+                        ok: true,
+                        name: name,
+                        account_id: "Private/047f3b89e210ac55219e88b2091fa47289b0221948ba90c1f20084ab7199201a",
+                        resolved: true
+                    };
                 }
                 return { ok: false, error: "Name '" + name + "' not registered in LNS" };
             case "proposeNativeTransfer":
                 return { ok: true, request_id: "req_mock_98214", status: "pending_approval" };
             case "proposeTokenTransfer":
                 return { ok: true, request_id: "req_mock_tok_4412", status: "pending_approval" };
+            case "getRequestStatus":
+                var reqId = (args && args[0]) ? args[0] : "req_mock_98214";
+                return {
+                    ok: true,
+                    request_id: reqId,
+                    status: "submitted",
+                    tx_hash: "0x8f3c2b1a9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a210987654321fedcba0987"
+                };
+            case "requestFaucet":
+                return {
+                    ok: true,
+                    amount: "100.00",
+                    tx_hash: "0x3f9e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f"
+                };
+            case "proposeTransaction":
+                return {
+                    ok: true,
+                    tx_hash: "0x9f538361b55c890f9bd5dae00cf98d4bb677cc3bd129c0147fbe4b23fccaf184",
+                    program: (args && args[0]) ? args[0] : "Public/D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV",
+                    block: 43466,
+                    submission_id: (args && args[2]) ? args[2] : "4f793e86-5a23-4d20-969b-b993291caf59"
+                };
+            case "listTokenHoldings":
+                return {
+                    ok: true,
+                    tokens: [
+                        {
+                            holding_id: "Holding/01a8b9c7d6e5f4",
+                            definition_id: "Def/LOGO_GOVERNANCE_v1",
+                            symbol: "LOGO",
+                            name: "Logos Governance Token",
+                            balance: "2500000000",
+                            formatted_balance: "2,500.00",
+                            is_shielded: false
+                        },
+                        {
+                            holding_id: "Holding/02c3d4e5f6a7b8",
+                            definition_id: "Def/USDL_SHIELDED_STABLE",
+                            symbol: "USDL",
+                            name: "LEZ Shielded Dollar",
+                            balance: "5000000000",
+                            formatted_balance: "5,000.00",
+                            is_shielded: true
+                        }
+                    ]
+                };
             case "listSessions":
                 return { ok: true, sessions: [] };
             default:

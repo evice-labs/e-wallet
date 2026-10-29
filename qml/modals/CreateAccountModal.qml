@@ -51,9 +51,12 @@ ModalOverlay {
             }
         }
 
-        PillBadge {
-            text: modal.isPrivate ? "Full ZK-SNARK sender & receiver privacy" : "Standard public on-chain verifiable ledger account"
-            badgeColor: modal.isPrivate ? theme.statusShielded : theme.statusPublic
+        Text {
+            text: modal.isPrivate ? "ZK-SNARK SHIELDED PRIVACY" : "PUBLIC ON-CHAIN LEDGER"
+            color: modal.isPrivate ? theme.statusShielded : theme.statusPublic
+            font.family: theme.fontFamily
+            font.pixelSize: theme.fontSizeTiny
+            font.weight: Font.Bold
         }
 
         TextField {
