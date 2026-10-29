@@ -7,9 +7,8 @@ ModalOverlay {
     id: modal
 
     title: "Create New Account"
-    subtitle: "Public Transparent or Shielded Zero-Knowledge"
     dialogWidth: 480
-    dialogHeight: 380
+    dialogHeight: 250
 
     required property var accountStore
 
@@ -20,50 +19,44 @@ ModalOverlay {
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 16
+        spacing: 14
 
-        Text {
-            Layout.fillWidth: true
-            text: "Select account privacy model and provide an optional label for portfolio organization."
-            color: theme.textSecondary
-            font.family: theme.fontFamily
-            font.pixelSize: theme.fontSizeBody
-            wrapMode: Text.WordWrap
-        }
-
-        // Privacy Model Selector (Zero-Icon Segmented Buttons)
+        // Privacy Model Selector
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
 
             Button {
                 Layout.fillWidth: true
-                text: "Public Transparent"
+                text: "Public Unshielded"
                 isPrimary: !modal.isPrivate
-                onClicked: modal.isPrivate = false
+                onClicked: {
+                    modal.isPrivate = false;
+                    var count = (accountStore && accountStore.accounts) ? accountStore.accounts.length + 1 : 1;
+                    labelInput.text = "Public Account " + count;
+                }
             }
 
             Button {
                 Layout.fillWidth: true
-                text: "Shielded ZK Circuit"
+                text: "Private Shielded"
                 isPrimary: modal.isPrivate
-                onClicked: modal.isPrivate = true
+                onClicked: {
+                    modal.isPrivate = true;
+                    var count = (accountStore && accountStore.accounts) ? accountStore.accounts.length + 1 : 1;
+                    labelInput.text = "Shielded Account " + count;
+                }
             }
-        }
-
-        Text {
-            text: modal.isPrivate ? "ZK-SNARK SHIELDED PRIVACY" : "PUBLIC ON-CHAIN LEDGER"
-            color: modal.isPrivate ? theme.statusShielded : theme.statusPublic
-            font.family: theme.fontFamily
-            font.pixelSize: theme.fontSizeTiny
-            font.weight: Font.Bold
         }
 
         TextField {
             id: labelInput
             Layout.fillWidth: true
             placeholder: modal.isPrivate ? "e.g. Private Savings" : "e.g. Daily Operations"
-            text: modal.isPrivate ? "Shielded Account" : "Public Account"
+            text: {
+                var count = (accountStore && accountStore.accounts) ? accountStore.accounts.length + 1 : 1;
+                return modal.isPrivate ? ("Shielded Account " + count) : ("Public Account " + count);
+            }
             onAccepted: submitCreate()
         }
 
