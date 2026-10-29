@@ -213,6 +213,46 @@ Item {
                         }
                     ]
                 };
+            case "channelDeposit":
+                var depAmount = (args && args[1]) ? args[1] : "142.50";
+                return {
+                    ok: true,
+                    amount: depAmount,
+                    tx_hash: "0x7c9a1b2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+                    recipient: (args && args[0]) ? args[0] : ""
+                };
+            case "simulatePromptEffect":
+                return {
+                    ok: true,
+                    simulation: {
+                        effect: "Transfer 25.00 LEZ from active public account to Governance Treasury.",
+                        gas_fee: "0.0015 LEZ",
+                        state_diff: "-25.0015 LEZ (Public Account)",
+                        verification_status: "Verified",
+                        program_hash: "0x891ae258f92ca8447af6cf09c41d96b3a06187d098b91ab2cc17b42e3c4a2fa1"
+                    }
+                };
+            case "submitApprovalDecision":
+                return { ok: true, submitted: true, decision: (args && args[1]) ? args[1] : 1 };
+            case "getIdentityCommitment":
+                return {
+                    ok: true,
+                    commitment: "0x3f9e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f",
+                    scope_prefix: "lez_id_v1"
+                };
+            case "deriveScopedNullifier":
+                var scope = (args && args[1]) ? args[1] : "governance.logos.co";
+                return {
+                    ok: true,
+                    scope: scope,
+                    nullifier: "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b"
+                };
+            case "signIdentityAttestation":
+                return {
+                    ok: true,
+                    signature: "0xbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                    scheme: "BIP-340 Schnorr"
+                };
             case "listSessions":
                 return { ok: true, sessions: [] };
             default:
