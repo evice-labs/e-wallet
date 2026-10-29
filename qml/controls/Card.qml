@@ -25,13 +25,13 @@ Rectangle {
         id: cardMainLayout
         anchors.fill: parent
         anchors.margins: 16
-        spacing: 10
+        spacing: 12
 
         // Card Header
         Item {
             id: headerContainer
             Layout.fillWidth: true
-            implicitHeight: Math.max(headerCol.implicitHeight, headerRightLoader.implicitHeight)
+            implicitHeight: Math.max(38, Math.max(headerCol.implicitHeight, headerRightLoader.implicitHeight))
             visible: control.title.length > 0 || (headerRightLoader.item !== null)
 
             Column {

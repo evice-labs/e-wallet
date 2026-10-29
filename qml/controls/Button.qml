@@ -4,7 +4,8 @@ import "../theme"
 Item {
     id: control
 
-    property string text: "Button"
+    property string text: ""
+    property string iconSource: ""
     property bool isPrimary: false
     property bool isCompact: false
     property bool isDestructive: false
@@ -12,8 +13,17 @@ Item {
     property int customHeight: 0
     signal clicked()
 
-    implicitWidth: customWidth > 0 ? customWidth : (control.text.length <= 2 && isCompact ? 28 : Math.max(isCompact ? 60 : 100, labelText.implicitWidth + (isCompact ? 18 : 28)))
-    implicitHeight: customHeight > 0 ? customHeight : (control.text.length <= 2 && isCompact ? 28 : 36)
+    implicitWidth: {
+        if (customWidth > 0) return customWidth;
+        if (control.iconSource.length > 0 && control.text.length === 0) {
+            return isCompact ? 34 : 36;
+        }
+        var contentWidth = labelText.implicitWidth;
+        if (control.iconSource.length > 0) contentWidth += (control.isCompact ? 16 : 18) + 6;
+        if (control.text.length <= 2 && isCompact && control.iconSource.length === 0) return 28;
+        return Math.max(isCompact ? 60 : 100, contentWidth + (isCompact ? 18 : 28));
+    }
+    implicitHeight: customHeight > 0 ? customHeight : (control.text.length <= 2 && isCompact && control.iconSource.length === 0 ? 28 : (isCompact ? 34 : 36))
 
     opacity: control.enabled ? 1.0 : 0.45
 
@@ -59,17 +69,34 @@ Item {
         border.color: control.isPrimary ? theme.btnPrimaryBorderSides : theme.btnSecondaryBorderSides
         border.width: 1
 
-        // Pure Typographic Text (Strict Zero-Icon Rule)
-        Text {
-            id: labelText
+        Row {
             anchors.centerIn: parent
-            text: control.text
-            color: theme.textPrimary
-            font.family: theme.fontFamily
-            font.pixelSize: control.isCompact ? (control.text.length <= 2 ? 14 : theme.fontSizeSmall) : theme.fontSizeBody
-            font.weight: control.isPrimary ? Font.DemiBold : Font.Medium
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
+            spacing: 6
+
+            Image {
+                id: iconImg
+                visible: control.iconSource.length > 0
+                source: control.iconSource
+                width: control.isCompact ? 16 : 18
+                height: control.isCompact ? 16 : 18
+                fillMode: Image.PreserveAspectFit
+                anchors.verticalCenter: parent.verticalCenter
+                mipmap: true
+                smooth: true
+            }
+
+            Text {
+                id: labelText
+                visible: control.text.length > 0
+                anchors.verticalCenter: parent.verticalCenter
+                text: control.text
+                color: theme.textPrimary
+                font.family: theme.fontFamily
+                font.pixelSize: control.isCompact ? (control.text.length <= 2 ? 14 : theme.fontSizeSmall) : theme.fontSizeBody
+                font.weight: control.isPrimary ? Font.DemiBold : Font.Medium
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
         }
     }
 

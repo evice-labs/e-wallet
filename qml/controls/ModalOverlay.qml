@@ -8,6 +8,7 @@ Item {
     anchors.fill: parent
     visible: opacity > 0
     opacity: 0
+    z: 200
 
     property string title: "Modal Title"
     property string subtitle: ""
