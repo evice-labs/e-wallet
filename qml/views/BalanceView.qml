@@ -17,6 +17,7 @@ Card {
 
     property bool isCascadeExpanded: false
     property bool isProfileMenuOpen: false
+    property alias profileMenuRef: profileMenu
     property string activeAssetTab: "native" // "native" | "tokens"
 
     function getSecondaryAccount() {
@@ -93,7 +94,7 @@ Card {
 
                 readonly property var secondaryAcc: balanceCard.getSecondaryAccount()
 
-                // BACK RECTANGLE: Cascaded secondary action (Switch to 2nd profile OR Add new account)
+                // BACK RECTANGLE: Cascaded secondary action
                 Rectangle {
                     id: backCascadeItem
                     z: 1
@@ -255,11 +256,11 @@ Card {
         visible: balanceCard.isProfileMenuOpen
         z: 100
         anchors.top: parent.top
-        anchors.topMargin: 0
+        anchors.topMargin: 48
         anchors.right: parent.right
-        anchors.rightMargin: 0
-        width: 250
-        implicitHeight: profileMenuCol.implicitHeight + 24
+        anchors.rightMargin: 16
+        width: 260
+        implicitHeight: profileMenuCol.implicitHeight + 28
         height: implicitHeight
         radius: theme.radiusCard
         color: theme.bgSurface
@@ -280,8 +281,10 @@ Card {
 
         ColumnLayout {
             id: profileMenuCol
-            anchors.fill: parent
-            anchors.margins: 12
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: 14
             spacing: 8
 
             // Header: Active Account details
@@ -335,14 +338,14 @@ Card {
                 model: accountStore.accounts
                 delegate: Rectangle {
                     Layout.fillWidth: true
-                    height: 28
-                    radius: theme.radiusSmall
-                    color: accMouse.containsMouse ? theme.bgActive : "transparent"
+                    height: 30
+                    radius: theme.radiusButton
+                    color: accMouse.containsMouse ? theme.bgSurfaceSubtle : "transparent"
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 6
-                        anchors.rightMargin: 6
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
                         spacing: 8
 
                         Rectangle {
@@ -355,7 +358,7 @@ Card {
                         Text {
                             Layout.fillWidth: true
                             text: modelData.label || "Account"
-                            color: modelData === accountStore.activeAccount ? theme.textPrimary : theme.textSecondary
+                            color: modelData === accountStore.activeAccount ? theme.textPrimary : (accMouse.containsMouse ? theme.textPrimary : theme.textSecondary)
                             font.family: theme.fontFamily
                             font.pixelSize: theme.fontSizeSmall
                             font.weight: modelData === accountStore.activeAccount ? Font.Bold : Font.Normal
@@ -364,9 +367,10 @@ Card {
 
                         Text {
                             text: modelData.is_private ? "Shielded" : "Public"
-                            color: theme.textMuted
+                            color: modelData.is_private ? theme.statusShielded : theme.statusPublic
                             font.family: theme.fontFamily
                             font.pixelSize: theme.fontSizeTiny
+                            font.weight: Font.Bold
                         }
                     }
 
@@ -384,22 +388,22 @@ Card {
                 }
             }
 
-            // Button: + Create New Account
+            // Button: + Add New Account
             Rectangle {
                 Layout.fillWidth: true
-                height: 28
-                radius: theme.radiusSmall
-                color: addMouse.containsMouse ? theme.bgActive : "transparent"
+                height: 32
+                radius: theme.radiusButton
+                color: addMouse.containsMouse ? theme.bgSurfaceSubtle : "transparent"
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 6
-                    anchors.rightMargin: 6
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
                     spacing: 8
 
                     Text {
                         text: "+ Add New Account"
-                        color: addMouse.containsMouse ? theme.accentPrimary : theme.textSecondary
+                        color: addMouse.containsMouse ? theme.textPrimary : theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
                         font.weight: Font.DemiBold
@@ -425,7 +429,7 @@ Card {
                 color: theme.borderSubtle
             }
 
-            // Settings & Vault Actions
+            // Settings & Vault Actions (Inside Card)
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
@@ -513,9 +517,8 @@ Card {
                 }
 
                 // Desktop / Wide mode: Tabs beside balance
-                Row {
+                SegmentedBar {
                     visible: balanceCard.width >= 500
-                    spacing: 6
                     Layout.alignment: Qt.AlignVCenter
 
                     TabButton {
@@ -536,10 +539,8 @@ Card {
             }
 
             // Compact / Narrow mode: Tabs below balance to prevent horizontal overflow
-            Row {
+            SegmentedBar {
                 visible: balanceCard.width < 500
-                spacing: 6
-                Layout.fillWidth: true
 
                 TabButton {
                     text: "LEZ Native"
@@ -759,7 +760,7 @@ Card {
             }
         }
 
-        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        // FLEXIBLE EXPANDING SPACER 
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -772,7 +773,7 @@ Card {
             color: theme.borderSubtle
         }
 
-        // Vault Security & Sequencer Telemetry Footer Bar (Responsive)
+        // Vault Security & Sequencer Telemetry Footer Bar 
         RowLayout {
             Layout.fillWidth: true
             spacing: 8

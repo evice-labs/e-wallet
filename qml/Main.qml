@@ -17,6 +17,14 @@ Rectangle {
     WalletBridge { id: bridge }
     AccountStore { id: accountStore; bridge: bridge }
     TransferController { id: transferCtrl; bridge: bridge; accountStore: accountStore }
+    FundingBridgeController { id: bridgeCtrl; bridge: bridge; accountStore: accountStore }
+    TestimonialController { id: testimonialCtrl; bridge: bridge; accountStore: accountStore }
+    ApprovalManager {
+        id: approvalManager
+        bridge: bridge
+        accountStore: accountStore
+        onPromptReceived: (prompt) => approvalModal.open()
+    }
 
     // AUTO-LOCK IDLE TIMER (15 MINUTES)
     Timer {
@@ -107,7 +115,15 @@ Rectangle {
                 anchors.fill: parent
                 z: 50
                 visible: balanceView.isProfileMenuOpen
-                onClicked: {
+                onPressed: (mouse) => {
+                    if (balanceView.profileMenuRef) {
+                        var p = mapToItem(balanceView.profileMenuRef, mouse.x, mouse.y);
+                        if (p.x >= 0 && p.x <= balanceView.profileMenuRef.width &&
+                            p.y >= 0 && p.y <= balanceView.profileMenuRef.height) {
+                            mouse.accepted = false;
+                            return;
+                        }
+                    }
                     balanceView.isProfileMenuOpen = false;
                     balanceView.isCascadeExpanded = false;
                 }
@@ -157,7 +173,7 @@ Rectangle {
                     implicitHeight: dashboardContainer.computedRow2H
                     spacing: 12
 
-                    // LEFT COLUMN: Stacked Faucet/Mining & Testimonials
+                    // LEFT COLUMN: EmPoWer Mining & L1 Bridge + Testimonials
                     ColumnLayout {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
@@ -165,11 +181,12 @@ Rectangle {
                         spacing: 12
 
                         FundingBridgeView {
-                            id: faucetView
+                            id: bridgeView
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             bridge: bridge
                             accountStore: accountStore
+                            bridgeCtrl: bridgeCtrl
                             ledgerViewRef: ledgerView
                         }
 
@@ -179,6 +196,7 @@ Rectangle {
                             Layout.fillHeight: true
                             bridge: bridge
                             accountStore: accountStore
+                            testimonialCtrl: testimonialCtrl
                             ledgerViewRef: ledgerView
                         }
                     }
@@ -204,6 +222,8 @@ Rectangle {
         accountStore: accountStore
         onOpenRestoreWalletModal: restoreWalletModal.open()
         onOpenUnlockModal: unlockModal.open()
+        onOpenIdentityModal: identityModal.open()
+        onSimulateApprovalModal: approvalManager.simulateDemoRequest("transfer")
     }
 
     UnlockModal {
@@ -230,6 +250,17 @@ Rectangle {
 
     AccountDetailModal {
         id: accountDetailModal
+        accountStore: accountStore
+    }
+
+    ApprovalModal {
+        id: approvalModal
+        approvalManager: approvalManager
+    }
+
+    IdentityModal {
+        id: identityModal
+        bridge: bridge
         accountStore: accountStore
     }
 }

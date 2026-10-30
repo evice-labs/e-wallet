@@ -24,7 +24,7 @@ ModalOverlay {
         anchors.fill: parent
         spacing: 14
 
-        // ── Header Privacy Badge & Balance ────────────────────
+        // Header Privacy Badge & Balance
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
@@ -48,9 +48,8 @@ ModalOverlay {
             }
         }
 
-        // ── Tab Switcher (Overview vs Key Export) ──────────────
-        Row {
-            spacing: 8
+        // Tab Switcher (Overview vs Key Export)
+        SegmentedBar {
             TabButton {
                 text: "Overview & Address"
                 isActive: modal.activeTab === "overview"
@@ -69,7 +68,7 @@ ModalOverlay {
             color: theme.borderSubtle
         }
 
-        // ── TAB 1: OVERVIEW & ADDRESS ─────────────────────────
+        // TAB 1: OVERVIEW & ADDRESS
         ColumnLayout {
             visible: modal.activeTab === "overview"
             Layout.fillWidth: true
@@ -131,7 +130,7 @@ ModalOverlay {
             }
         }
 
-        // ── TAB 2: KEY EXPORT & SECRET INSPECTOR ──────────────
+        // TAB 2: KEY EXPORT & SECRET INSPECTOR
         ColumnLayout {
             visible: modal.activeTab === "keys"
             Layout.fillWidth: true
@@ -202,7 +201,7 @@ ModalOverlay {
             }
         }
 
-        // ── Status Telemetry / Feedback ───────────────────────
+        // Status Telemetry / Feedback
         Text {
             visible: modal.copyStatus.length > 0
             text: modal.copyStatus
@@ -213,7 +212,7 @@ ModalOverlay {
 
         Item { Layout.fillHeight: true }
 
-        // ── Action Buttons ────────────────────────────────────
+        // Action Buttons
         RowLayout {
             Layout.fillWidth: true
 
