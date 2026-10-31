@@ -18,6 +18,15 @@ Card {
     property string feedbackMessage: ""
     property bool isSuccessFeedback: false
 
+    Timer {
+        id: feedbackDismissTimer
+        interval: 4000
+        repeat: false
+        onTriggered: {
+            transferCard.feedbackMessage = "";
+        }
+    }
+
     title: "Quick Transfer"
 
     Connections {
@@ -26,6 +35,7 @@ Card {
             transferCard.isSuccessFeedback = true;
             var shortHash = txHash.length > 20 ? txHash.substring(0, 10) + "..." + txHash.substring(txHash.length - 8) : txHash;
             transferCard.feedbackMessage = "Transfer proposal submitted successfully! Ref: " + shortHash;
+            feedbackDismissTimer.restart();
             if (transferCard.ledgerViewRef && transferCtrl) {
                 var isPriv = transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv";
                 var modeLabel = isPriv ? "Shield" : (transferCtrl.transferMode === "priv_to_pub" ? "Unshield" : "Public");
@@ -37,13 +47,18 @@ Card {
                     cat,
                     "-" + transferCtrl.amountInput + " " + symbol,
                     isPriv ? "Zero-Knowledge Transfer" : "Public Transfer",
-                    false
+                    false,
+                    txHash,
+                    "34,000 units (0.00015 LEZ)",
+                    43582,
+                    isPriv ? "Public ➝ Shield" : "Public ➝ Public"
                 );
             }
         }
         function onTransferFailed(reason) {
             transferCard.isSuccessFeedback = false;
             transferCard.feedbackMessage = "Transfer failed: " + reason;
+            feedbackDismissTimer.restart();
         }
     }
 
@@ -276,6 +291,18 @@ Card {
             Layout.fillHeight: true
         }
 
+        // Status / Feedback Banner (Auto-dismissing)
+        Text {
+            visible: transferCard.feedbackMessage.length > 0
+            text: transferCard.feedbackMessage
+            color: transferCard.isSuccessFeedback ? theme.statusSuccess : theme.statusDanger
+            font.family: theme.fontFamily
+            font.pixelSize: theme.fontSizeSmall
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+            Layout.bottomMargin: 2
+        }
+
         // STATIC FOOTER: Telemetry & Action Button
         Rectangle {
             Layout.fillWidth: true
@@ -315,6 +342,7 @@ Card {
                     if (bridge.isLocked) {
                         transferCard.feedbackMessage = "Vault is locked. Please unlock your keystore.";
                         transferCard.isSuccessFeedback = false;
+                        feedbackDismissTimer.restart();
                         transferCard.openUnlockModal();
                         return;
                     }
@@ -325,17 +353,6 @@ Card {
                     }
                 }
             }
-        }
-
-        // Feedback / Error Telemetry
-        Text {
-            visible: transferCard.feedbackMessage.length > 0
-            text: transferCard.feedbackMessage
-            color: transferCard.isSuccessFeedback ? theme.statusSuccess : theme.statusDanger
-            font.family: theme.fontFamily
-            font.pixelSize: theme.fontSizeSmall
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
         }
     }
 }

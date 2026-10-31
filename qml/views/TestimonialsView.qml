@@ -21,11 +21,15 @@ Card {
                 var previewText = message.length > 20 ? "\"" + message.substring(0, 18) + "...\"" : "\"" + message + "\"";
                 testimonialCard.ledgerViewRef.addActivity(
                     testimonialCtrl ? testimonialCtrl.activeAuthor : "Active Account",
-                    "zkVM Broadcast",
+                    "Ledger",
                     "Testimonials",
                     previewText,
-                    "On-Chain Broadcast (0.1 LEZ)",
-                    false
+                    "On-Chain zkVM Broadcast",
+                    false,
+                    txHash,
+                    "34,000 units (0.00015 LEZ)",
+                    43466,
+                    "Public ➝ zkVM Contract"
                 );
             }
         }
