@@ -14,10 +14,11 @@ Card {
     signal openCreateAccount()
     signal openSettingsModal()
     signal openUnlockModal()
+    signal openProfileModal()
+    signal triggerDappPreview()
 
+    property var approvalManager: null
     property bool isCascadeExpanded: false
-    property bool isProfileMenuOpen: false
-    property alias profileMenuRef: profileMenu
     property string activeAssetTab: "native" // "native" | "tokens"
 
     function getSecondaryAccount() {
@@ -31,7 +32,7 @@ Card {
         return null;
     }
 
-    z: isProfileMenuOpen ? 60 : 1
+    z: 1
     title: "Your Balance"
 
     headerRight: Component {
@@ -110,7 +111,7 @@ Card {
 
                     color: cascadedAvatarContainer.secondaryAcc ?
                            (backHoverArea.containsMouse ? "#2a4365" : "#1e293b") :
-                           (backHoverArea.containsMouse ? theme.bgActive : "#252b42")
+                           (backHoverArea.containsMouse ? theme.bgSurfaceSubtle : "#252b42")
                     border.color: cascadedAvatarContainer.secondaryAcc ?
                                   (backHoverArea.containsMouse ? theme.statusPublic : "#3b4261") :
                                   (backHoverArea.containsMouse ? theme.borderActive : theme.borderSubtle)
@@ -213,25 +214,29 @@ Card {
                         color: theme.textPrimary
                     }
 
-                    // Chevron indicator badge
+                    // Notification Badge for pending dApp authorization queue
                     Rectangle {
-                        width: 12
-                        height: 12
-                        radius: 6
-                        color: balanceCard.isCascadeExpanded ? theme.borderActive : "#1e1e2e"
-                        border.color: theme.borderCard
-                        border.width: 1
-                        anchors.bottom: parent.bottom
+                        id: notifBadge
+                        visible: approvalManager && approvalManager.pendingRequests && approvalManager.pendingRequests.length > 0
+                        width: 15
+                        height: 15
+                        radius: 7.5
+                        color: theme.accentOrange
+                        border.color: theme.bgSurface
+                        border.width: 1.5
+                        anchors.top: parent.top
                         anchors.right: parent.right
-                        anchors.bottomMargin: -1
-                        anchors.rightMargin: -1
+                        anchors.topMargin: -3
+                        anchors.rightMargin: -3
+                        z: 10
 
                         Text {
                             anchors.centerIn: parent
-                            text: balanceCard.isCascadeExpanded ? "‹" : "›"
+                            text: approvalManager ? (approvalManager.pendingRequests.length > 9 ? "9+" : approvalManager.pendingRequests.length) : ""
+                            color: "#ffffff"
+                            font.family: theme.fontFamily
                             font.pixelSize: 8
                             font.bold: true
-                            color: balanceCard.isCascadeExpanded ? "#ffffff" : theme.textMuted
                         }
                     }
 
@@ -241,221 +246,7 @@ Card {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            balanceCard.isCascadeExpanded = !balanceCard.isCascadeExpanded;
-                            balanceCard.isProfileMenuOpen = !balanceCard.isProfileMenuOpen;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // PROFILE CONTEXTUAL DROPDOWN MENU
-    Rectangle {
-        id: profileMenu
-        visible: balanceCard.isProfileMenuOpen
-        z: 100
-        anchors.top: parent.top
-        anchors.topMargin: 48
-        anchors.right: parent.right
-        anchors.rightMargin: 16
-        width: 260
-        implicitHeight: profileMenuCol.implicitHeight + 28
-        height: implicitHeight
-        radius: theme.radiusCard
-        color: theme.bgSurface
-        border.color: theme.borderActive
-        border.width: 1
-
-        // Ambient Shadow
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: -1
-            anchors.topMargin: 4
-            anchors.bottomMargin: -4
-            radius: parent.radius + 1
-            color: "#000000"
-            opacity: 0.6
-            z: -1
-        }
-
-        ColumnLayout {
-            id: profileMenuCol
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: 14
-            spacing: 8
-
-            // Header: Active Account details
-            Text {
-                text: "ACTIVE ACCOUNT"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeTiny
-                font.weight: Font.Bold
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 8
-
-                Text {
-                    Layout.fillWidth: true
-                    text: accountStore.activeAccount && accountStore.activeAccount.label ? accountStore.activeAccount.label : "alice.lez"
-                    color: theme.textPrimary
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeBody
-                    font.weight: Font.Bold
-                    elide: Text.ElideRight
-                }
-
-                Text {
-                    text: (accountStore.activeAccount && accountStore.activeAccount.is_private) ? "SHIELDED" : "PUBLIC"
-                    color: (accountStore.activeAccount && accountStore.activeAccount.is_private) ? theme.statusShielded : theme.statusPublic
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTiny
-                    font.weight: Font.Bold
-                }
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: 1
-                color: theme.borderSubtle
-            }
-
-            // Quick Actions: Account List
-            Text {
-                text: "SWITCH ACCOUNT"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeTiny
-                font.weight: Font.Bold
-            }
-
-            Repeater {
-                model: accountStore.accounts
-                delegate: Rectangle {
-                    Layout.fillWidth: true
-                    height: 30
-                    radius: theme.radiusButton
-                    color: accMouse.containsMouse ? theme.bgSurfaceSubtle : "transparent"
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
-                        spacing: 8
-
-                        Rectangle {
-                            width: 6
-                            height: 6
-                            radius: 3
-                            color: modelData === accountStore.activeAccount ? theme.statusSuccess : "transparent"
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: modelData.label || "Account"
-                            color: modelData === accountStore.activeAccount ? theme.textPrimary : (accMouse.containsMouse ? theme.textPrimary : theme.textSecondary)
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeSmall
-                            font.weight: modelData === accountStore.activeAccount ? Font.Bold : Font.Normal
-                            elide: Text.ElideRight
-                        }
-
-                        Text {
-                            text: modelData.is_private ? "Shielded" : "Public"
-                            color: modelData.is_private ? theme.statusShielded : theme.statusPublic
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeTiny
-                            font.weight: Font.Bold
-                        }
-                    }
-
-                    MouseArea {
-                        id: accMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            accountStore.selectAccount(modelData);
-                            balanceCard.isProfileMenuOpen = false;
-                            balanceCard.isCascadeExpanded = false;
-                        }
-                    }
-                }
-            }
-
-            // Button: + Add New Account
-            Rectangle {
-                Layout.fillWidth: true
-                height: 32
-                radius: theme.radiusButton
-                color: addMouse.containsMouse ? theme.bgSurfaceSubtle : "transparent"
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
-                    spacing: 8
-
-                    Text {
-                        text: "+ Add New Account"
-                        color: addMouse.containsMouse ? theme.textPrimary : theme.textSecondary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeSmall
-                        font.weight: Font.DemiBold
-                    }
-                }
-
-                MouseArea {
-                    id: addMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        balanceCard.isProfileMenuOpen = false;
-                        balanceCard.isCascadeExpanded = false;
-                        balanceCard.openCreateAccount();
-                    }
-                }
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: 1
-                color: theme.borderSubtle
-            }
-
-            // Settings & Vault Actions (Inside Card)
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 8
-
-                Button {
-                    Layout.fillWidth: true
-                    text: "Settings"
-                    isCompact: true
-                    onClicked: {
-                        balanceCard.isProfileMenuOpen = false;
-                        balanceCard.openSettingsModal();
-                    }
-                }
-
-                Button {
-                    Layout.fillWidth: true
-                    text: bridge.isLocked ? "Unlock" : "Lock"
-                    isCompact: true
-                    isDestructive: !bridge.isLocked
-                    isPrimary: bridge.isLocked
-                    onClicked: {
-                        balanceCard.isProfileMenuOpen = false;
-                        if (bridge.isLocked) {
-                            balanceCard.openUnlockModal();
-                        } else {
-                            bridge.invoke("lockWallet", []);
+                            balanceCard.openProfileModal();
                         }
                     }
                 }

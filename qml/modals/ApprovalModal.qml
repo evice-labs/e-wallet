@@ -7,9 +7,8 @@ ModalOverlay {
     id: modal
 
     title: "dApp Permission Request"
-    subtitle: "Informed Consent & Effect Simulation (LP-0023)"
     dialogWidth: 540
-    dialogHeight: 460
+    dialogHeight: 500
 
     required property var approvalManager
 
@@ -48,11 +47,11 @@ ModalOverlay {
                 }
             }
 
-            // LP-0023 Verification Typography
+            // Source Verification Typography
             Text {
                 text: {
                     var status = modal.approvalManager ? modal.approvalManager.verificationStatus : "Verified";
-                    if (status === "Verified") return "LP-0023 VERIFIED";
+                    if (status === "Verified") return "VERIFIED";
                     if (status === "Unverified") return "UNVERIFIED SOURCE";
                     return "UNTRUSTED";
                 }
@@ -101,12 +100,12 @@ ModalOverlay {
 
         InsetPanel {
             Layout.fillWidth: true
-            Layout.preferredHeight: 110
+            Layout.preferredHeight: Math.max(96, effectCol.implicitHeight + 24)
 
             ColumnLayout {
+                id: effectCol
                 anchors.fill: parent
-                anchors.margins: 12
-                spacing: 6
+                spacing: 8
 
                 Text {
                     Layout.fillWidth: true
@@ -176,7 +175,7 @@ ModalOverlay {
                 isDestructive: true
                 onClicked: {
                     if (modal.approvalManager) {
-                        modal.approvalManager.reject();
+                        modal.approvalManager.reject(modal.prompt ? modal.prompt.request_id : null);
                     }
                     modal.close();
                 }
@@ -190,7 +189,7 @@ ModalOverlay {
                 isPrimary: true
                 onClicked: {
                     if (modal.approvalManager) {
-                        modal.approvalManager.approve();
+                        modal.approvalManager.approve(modal.prompt ? modal.prompt.request_id : null);
                     }
                     modal.close();
                 }
