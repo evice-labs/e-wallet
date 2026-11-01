@@ -13,6 +13,7 @@ Rectangle {
     color: theme.bgInsetTrough
     border.color: theme.borderSubtle
     border.width: 1
+    clip: true
 
     Theme { id: theme }
 

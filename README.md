@@ -72,10 +72,10 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 - **Card-Contained Settings Actions.** `SettingsModal.qml` places all security actions (`Restore from Seed`, `Lock/Unlock Vault`) directly inside the Security Card, eliminating detached floating buttons.
 - **Streamlined Scope.** Focused strictly on vault security, active account details, and keystore management without unnecessary network latency noise.
 
-### 8. Informed Consent dApp Approvals & LP-0023 Verification
+### 8. Informed Consent dApp Approvals & Program Source Verification
 - **Permission Scope Assignment.** Manages dApp connection grant permissions (`GrantKind::Read`, `GrantKind::Propose`) via `ApprovalManager.qml` and `ApprovalModal.qml`.
 - **Plain-Language Effect Simulation.** Invokes `simulatePromptEffect` to calculate net state diff (e.g. `+100 LOGO`, `-0.001 LEZ`) and estimated gas fees before user authorization.
-- **LP-0023 Source Verification.** Evaluates caller origin and displays verified status badges (`LP-0023 VERIFIED`, `UNVERIFIED SOURCE`, `UNTRUSTED`).
+- **Program Source Verification.** Evaluates caller origin and displays verified status badges (`VERIFIED`, `UNVERIFIED SOURCE`, `UNTRUSTED`).
 - **Dual Consent Affordance.** Explicit, unambiguous action buttons: `Reject (0)` vs `Authorize & Sign (1)`.
 
 ### 9. Zero-Knowledge Identity Accountability
@@ -119,7 +119,7 @@ e-wallet-ui/
 │   │   ├── TransferController.qml  # Automated 4-way transfer route & LNS lookup controller
 │   │   ├── FundingBridgeController.qml # EmPoWer mining REST & L1 ChannelDeposit bridge controller
 │   │   ├── TestimonialController.qml   # On-chain zkVM testimonial broadcast controller
-│   │   ├── ApprovalManager.qml     # dApp permission & LP-0023 effect simulation manager
+│   │   ├── ApprovalManager.qml     # dApp permission & effect simulation manager
 │   │   └── qmldir
 │   ├── views/                      # Decoupled modular Bento-Grid card components
 │   │   ├── BalanceView.qml         # Hero balance card, pool breakdown, cascaded avatar & menu
@@ -136,9 +136,11 @@ e-wallet-ui/
 │       ├── RestoreWalletModal.qml  # Seed phrase import & recovery
 │       ├── CreateAccountModal.qml  # Public Unshielded / Private Shielded account creator
 │       ├── AccountDetailModal.qml  # 32-byte key inspector & label editor
-│       ├── ApprovalModal.qml       # LP-0023 dApp permission & effect simulation consent modal
+│       ├── ApprovalModal.qml       # dApp permission & effect simulation consent modal
 │       ├── IdentityModal.qml       # Zero-knowledge identity commitment, nullifiers & BIP-340 Schnorr
+│       ├── ProfileModal.qml        # Account identity switcher & sequential dApp request queue modal
 │       ├── SettingsModal.qml       # Keystore security info & vault lock controls
+│       ├── TxDetailModal.qml       # Detailed on-chain transaction telemetry & block inspector
 │       └── qmldir
 └── .github/workflows/              # Continuous integration pipelines
     ├── ci-linux.yml                # Linux Nix build & QML architecture verification

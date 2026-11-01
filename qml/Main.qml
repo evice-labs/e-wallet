@@ -110,25 +110,6 @@ Rectangle {
                 z: 10
             }
 
-            // Global Dismiss Overlay for Balance Profile Dropdown
-            MouseArea {
-                anchors.fill: parent
-                z: 50
-                visible: balanceView.isProfileMenuOpen
-                onPressed: (mouse) => {
-                    if (balanceView.profileMenuRef) {
-                        var p = mapToItem(balanceView.profileMenuRef, mouse.x, mouse.y);
-                        if (p.x >= 0 && p.x <= balanceView.profileMenuRef.width &&
-                            p.y >= 0 && p.y <= balanceView.profileMenuRef.height) {
-                            mouse.accepted = false;
-                            return;
-                        }
-                    }
-                    balanceView.isProfileMenuOpen = false;
-                    balanceView.isCascadeExpanded = false;
-                }
-            }
-
             ColumnLayout {
                 id: mainCol
                 width: Math.max(parent.width - (scrollIndicator.visible ? 10 : 0), dashboardContainer.responsiveBreakpoint)
@@ -148,9 +129,11 @@ Rectangle {
                         Layout.preferredWidth: 1
                         bridge: bridge
                         accountStore: accountStore
+                        approvalManager: approvalManager
                         onOpenCreateAccount: createAccountModal.open()
                         onOpenSettingsModal: settingsModal.open()
                         onOpenUnlockModal: unlockModal.open()
+                        onOpenProfileModal: profileModal.open()
                     }
 
                     TransferView {
@@ -209,6 +192,10 @@ Rectangle {
                         Layout.preferredWidth: 1
                         bridge: bridge
                         accountStore: accountStore
+                        onOpenTxDetailModal: function(txData) {
+                            txDetailModal.txData = txData;
+                            txDetailModal.open();
+                        }
                     }
                 }
             }
@@ -216,6 +203,10 @@ Rectangle {
     }
 
     // GLOBAL MODAL DIALOGS
+    TxDetailModal {
+        id: txDetailModal
+    }
+
     SettingsModal {
         id: settingsModal
         bridge: bridge
@@ -223,7 +214,17 @@ Rectangle {
         onOpenRestoreWalletModal: restoreWalletModal.open()
         onOpenUnlockModal: unlockModal.open()
         onOpenIdentityModal: identityModal.open()
-        onSimulateApprovalModal: approvalManager.simulateDemoRequest("transfer")
+    }
+
+    ProfileModal {
+        id: profileModal
+        bridge: bridge
+        accountStore: accountStore
+        approvalManager: approvalManager
+        onOpenCreateAccount: createAccountModal.open()
+        onOpenSettingsModal: settingsModal.open()
+        onOpenUnlockModal: unlockModal.open()
+        onOpenApprovalModal: approvalModal.open()
     }
 
     UnlockModal {

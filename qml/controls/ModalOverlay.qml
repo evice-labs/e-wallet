@@ -61,6 +61,7 @@ Item {
         color: theme.bgSurfaceElevated
         border.color: theme.borderCard
         border.width: 1
+        clip: true
 
         // Eat clicks inside modal dialog
         MouseArea {

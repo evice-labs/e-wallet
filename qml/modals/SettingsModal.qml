@@ -12,10 +12,9 @@ ModalOverlay {
     signal openRestoreWalletModal()
     signal openUnlockModal()
     signal openIdentityModal()
-    signal simulateApprovalModal()
 
-    dialogWidth: 560
-    dialogHeight: 330
+    dialogWidth: 500
+    dialogHeight: 310
     title: "Wallet Settings"
 
     Theme { id: theme }
@@ -31,7 +30,7 @@ ModalOverlay {
 
             ColumnLayout {
                 width: parent.width
-                spacing: 8
+                spacing: 10
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -68,78 +67,46 @@ ModalOverlay {
                         font.weight: Font.Bold
                     }
                 }
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: 1
-                    color: theme.borderSubtle
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-
-                    Button {
-                        Layout.fillWidth: true
-                        text: "Restore from Seed"
-                        isCompact: true
-                        onClicked: {
-                            modal.close();
-                            modal.openRestoreWalletModal();
-                        }
-                    }
-
-                    Button {
-                        Layout.fillWidth: true
-                        text: modal.bridge.isLocked ? "Unlock Vault" : "Lock Vault"
-                        isCompact: true
-                        isDestructive: !modal.bridge.isLocked
-                        isPrimary: modal.bridge.isLocked
-                        onClicked: {
-                            modal.close();
-                            if (modal.bridge.isLocked) {
-                                modal.openUnlockModal();
-                            } else {
-                                modal.bridge.invoke("lockWallet", []);
-                            }
-                        }
-                    }
-                }
             }
         }
 
-        // IDENTITY & PERMISSION
-        Card {
+        Item {
+            Layout.fillHeight: true
+        }
+
+        // STATIC MODAL FOOTER ACTIONS
+        Rectangle {
             Layout.fillWidth: true
-            title: "Identity Accountability & dApp Approvals"
-            subtitle: "Zero-Knowledge Scoped Nullifiers & LP-0023 Verification"
+            implicitHeight: 1
+            color: theme.borderSubtle
+        }
 
-            ColumnLayout {
-                width: parent.width
-                spacing: 10
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
+            Button {
+                Layout.fillWidth: true
+                text: "Restore from Seed"
+                isCompact: true
+                onClicked: {
+                    modal.close();
+                    modal.openRestoreWalletModal();
+                }
+            }
 
-                    Button {
-                        Layout.fillWidth: true
-                        text: "Identity Accountability (ZK)"
-                        isCompact: true
-                        onClicked: {
-                            modal.close();
-                            modal.openIdentityModal();
-                        }
-                    }
-
-                    Button {
-                        Layout.fillWidth: true
-                        text: "Test dApp Approval Modal"
-                        isCompact: true
-                        onClicked: {
-                            modal.close();
-                            modal.simulateApprovalModal();
-                        }
+            Button {
+                Layout.fillWidth: true
+                text: modal.bridge.isLocked ? "Unlock Vault" : "Lock Vault"
+                isCompact: true
+                isDestructive: !modal.bridge.isLocked
+                isPrimary: modal.bridge.isLocked
+                onClicked: {
+                    modal.close();
+                    if (modal.bridge.isLocked) {
+                        modal.openUnlockModal();
+                    } else {
+                        modal.bridge.invoke("lockWallet", []);
                     }
                 }
             }

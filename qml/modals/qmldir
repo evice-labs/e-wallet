@@ -7,3 +7,5 @@ AccountDetailModal 1.0 AccountDetailModal.qml
 SettingsModal 1.0 SettingsModal.qml
 ApprovalModal 1.0 ApprovalModal.qml
 IdentityModal 1.0 IdentityModal.qml
+TxDetailModal 1.0 TxDetailModal.qml
+ProfileModal 1.0 ProfileModal.qml

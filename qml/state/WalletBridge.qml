@@ -182,12 +182,37 @@ Item {
                     tx_hash: "0x3f9e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f"
                 };
             case "proposeTransaction":
+                var targetProgram = "Public/D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV";
+                var reqId = "req_prop_" + Math.random().toString(16).substring(2, 10);
+                if (args && args.length >= 3 && typeof args[1] === "string" && args[1].indexOf("[") === 0) {
+                    try {
+                        var parsedMentions = JSON.parse(args[1]);
+                        if (parsedMentions.length > 1) targetProgram = parsedMentions[1];
+                    } catch(e) {}
+                } else if (args && args[0]) {
+                    targetProgram = args[0];
+                }
                 return {
                     ok: true,
-                    tx_hash: "0x9f538361b55c890f9bd5dae00cf98d4bb677cc3bd129c0147fbe4b23fccaf184",
-                    program: (args && args[0]) ? args[0] : "Public/D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV",
+                    request_id: reqId,
+                    status: "pending_approval",
+                    tx_hash: "0xb2655903cac86b50b55d0a8c0feb062dd2113ebe5292423d23ab8924f8189bfc",
+                    program: targetProgram,
                     block: 43466,
-                    submission_id: (args && args[2]) ? args[2] : "4f793e86-5a23-4d20-969b-b993291caf59"
+                    submission_id: "4f793e86-5a23-4d20-969b-b993291caf59"
+                };
+            case "getRequestStatus":
+                return {
+                    ok: true,
+                    request_id: (args && args[0]) ? args[0] : "req_status",
+                    status: "submitted",
+                    tx_hash: "0xb2655903cac86b50b55d0a8c0feb062dd2113ebe5292423d23ab8924f8189bfc"
+                };
+            case "cancelRequest":
+                return {
+                    ok: true,
+                    request_id: (args && args[0]) ? args[0] : "req_cancelled",
+                    status: "cancelled"
                 };
             case "listTokenHoldings":
                 return {
