@@ -13,17 +13,36 @@ Rectangle {
     height: 720
     color: theme.bgCanvas
 
-    Theme { id: theme }
-    WalletBridge { id: bridge }
-    AccountStore { id: accountStore; bridge: bridge }
-    TransferController { id: transferCtrl; bridge: bridge; accountStore: accountStore }
-    FundingBridgeController { id: bridgeCtrl; bridge: bridge; accountStore: accountStore }
-    TestimonialController { id: testimonialCtrl; bridge: bridge; accountStore: accountStore }
+    Theme {
+        id: theme
+    }
+    WalletBridge {
+        id: bridge
+    }
+    AccountStore {
+        id: accountStore
+        bridge: bridge
+    }
+    TransferController {
+        id: transferCtrl
+        bridge: bridge
+        accountStore: accountStore
+    }
+    FundingBridgeController {
+        id: bridgeCtrl
+        bridge: bridge
+        accountStore: accountStore
+    }
+    TestimonialController {
+        id: testimonialCtrl
+        bridge: bridge
+        accountStore: accountStore
+    }
     ApprovalManager {
         id: approvalManager
         bridge: bridge
         accountStore: accountStore
-        onPromptReceived: (prompt) => approvalModal.open()
+        onPromptReceived: prompt => approvalModal.open()
     }
 
     // AUTO-LOCK IDLE TIMER (15 MINUTES)
@@ -43,11 +62,13 @@ Rectangle {
         z: -1
         hoverEnabled: true
         propagateComposedEvents: true
-        onPositionChanged: (mouse) => {
-            if (idleTimer.running) idleTimer.restart();
+        onPositionChanged: mouse => {
+            if (idleTimer.running)
+                idleTimer.restart();
         }
-        onPressed: (mouse) => {
-            if (idleTimer.running) idleTimer.restart();
+        onPressed: mouse => {
+            if (idleTimer.running)
+                idleTimer.restart();
             mouse.accepted = false;
         }
     }
@@ -72,7 +93,7 @@ Rectangle {
         onOpenRestoreModal: restoreWalletModal.open()
     }
 
-    // RESPONSIVE BENTO-GRID DASHBOARD VIEW
+    // RESPONSIVE DASHBOARD VIEW (Bento-Grid in Desktop / Linear Vertical in Narrow/Mobile)
     ColumnLayout {
         id: dashboardContainer
         anchors.fill: parent
@@ -81,121 +102,185 @@ Rectangle {
         visible: bridge.isInitialized && !bridge.isLocked
 
         readonly property int responsiveBreakpoint: 880
+        readonly property bool isNarrow: width < responsiveBreakpoint
         readonly property real availH: dashboardContainer.height
         readonly property bool isFlexible: availH >= 700
         readonly property real computedRow1H: isFlexible ? (availH - 12) * 0.40 : 285
         readonly property real computedRow2H: isFlexible ? (availH - 12) * 0.60 : 410
 
-        Flickable {
-            id: flickable
+        // SCROLLABLE BODY CONTAINER
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            contentWidth: Math.max(width, dashboardContainer.responsiveBreakpoint)
-            contentHeight: Math.max(height, mainCol.implicitHeight)
             clip: true
-            boundsBehavior: Flickable.StopAtBounds
 
-            // Minimalist Scroll Indicator
-            Rectangle {
-                id: scrollIndicator
-                anchors.right: parent.right
-                anchors.rightMargin: 2
-                y: flickable.visibleArea.yPosition * flickable.height
-                width: 4
-                height: Math.max(30, flickable.visibleArea.heightRatio * flickable.height)
-                radius: 2
-                color: theme.borderActive
-                opacity: flickable.moving || flickable.dragging ? 0.7 : 0.3
-                visible: flickable.visibleArea.heightRatio < 1.0
-                z: 10
-            }
+            Flickable {
+                id: flickable
+                anchors.fill: parent
+                anchors.rightMargin: scrollTrack.visible ? 10 : 0
+                contentWidth: width
+                contentHeight: mainCol.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.VerticalFlick
 
-            ColumnLayout {
-                id: mainCol
-                width: Math.max(parent.width - (scrollIndicator.visible ? 10 : 0), dashboardContainer.responsiveBreakpoint)
-                spacing: 12
-
-                // ROW 1: HERO BALANCE CARD & QUICK TRANSFER CARD
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: dashboardContainer.computedRow1H
-                    implicitHeight: dashboardContainer.computedRow1H
-                    spacing: 12
-
-                    BalanceView {
-                        id: balanceView
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 1
-                        bridge: bridge
-                        accountStore: accountStore
-                        approvalManager: approvalManager
-                        onOpenCreateAccount: createAccountModal.open()
-                        onOpenSettingsModal: settingsModal.open()
-                        onOpenUnlockModal: unlockModal.open()
-                        onOpenProfileModal: profileModal.open()
-                    }
-
-                    TransferView {
-                        id: transferView
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 1
-                        bridge: bridge
-                        accountStore: accountStore
-                        transferCtrl: transferCtrl
-                        ledgerViewRef: ledgerView
-                        onOpenUnlockModal: unlockModal.open()
+                Behavior on contentY {
+                    NumberAnimation {
+                        duration: 150
+                        easing.type: Easing.OutQuad
                     }
                 }
 
-                // ROW 2: ECOSYSTEM STACK (LEFT) & ACTIVITY LEDGER (RIGHT)
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: dashboardContainer.computedRow2H
-                    implicitHeight: dashboardContainer.computedRow2H
+                WheelHandler {
+                    id: wheelHandler
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: event => {
+                        var step = (event.angleDelta.y !== 0 ? event.angleDelta.y : event.pixelDelta.y) * 1.0;
+                        var maxScroll = Math.max(0, flickable.contentHeight - flickable.height);
+                        flickable.contentY = Math.max(0, Math.min(maxScroll, flickable.contentY - step));
+                    }
+                }
+
+                ColumnLayout {
+                    id: mainCol
+                    width: flickable.width
                     spacing: 12
 
-                    // LEFT COLUMN: EmPoWer Mining & L1 Bridge + Testimonials
-                    ColumnLayout {
+                    // SECTION 1: BALANCE & TRANSFER (Grid in Desktop / Stacked in Narrow)
+                    GridLayout {
+                        id: row1Grid
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 1
-                        spacing: 12
+                        columns: dashboardContainer.isNarrow ? 1 : 2
+                        columnSpacing: 12
+                        rowSpacing: 12
+                        Layout.preferredHeight: dashboardContainer.isNarrow ? -1 : dashboardContainer.computedRow1H
 
-                        FundingBridgeView {
-                            id: bridgeView
+                        BalanceView {
+                            id: balanceView
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
+                            Layout.fillHeight: !dashboardContainer.isNarrow
+                            Layout.preferredHeight: dashboardContainer.isNarrow ? implicitHeight : -1
+                            Layout.preferredWidth: dashboardContainer.isNarrow ? -1 : 1
                             bridge: bridge
                             accountStore: accountStore
-                            bridgeCtrl: bridgeCtrl
-                            ledgerViewRef: ledgerView
+                            approvalManager: approvalManager
+                            onOpenCreateAccount: createAccountModal.open()
+                            onOpenSettingsModal: settingsModal.open()
+                            onOpenUnlockModal: unlockModal.open()
+                            onOpenProfileModal: profileModal.open()
                         }
 
-                        TestimonialsView {
-                            id: testimonialView
+                        TransferView {
+                            id: transferView
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
+                            Layout.fillHeight: !dashboardContainer.isNarrow
+                            Layout.preferredHeight: dashboardContainer.isNarrow ? implicitHeight : -1
+                            Layout.preferredWidth: dashboardContainer.isNarrow ? -1 : 1
                             bridge: bridge
                             accountStore: accountStore
-                            testimonialCtrl: testimonialCtrl
+                            transferCtrl: transferCtrl
                             ledgerViewRef: ledgerView
+                            onOpenUnlockModal: unlockModal.open()
                         }
                     }
 
-                    // RIGHT COLUMN: Activity Feed & Transaction History
-                    ActivityLedgerView {
-                        id: ledgerView
+                    // SECTION 2: ECOSYSTEM (MINING/TESTIMONIALS) & ACTIVITY LEDGER
+                    GridLayout {
+                        id: row2Grid
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 1
-                        bridge: bridge
-                        accountStore: accountStore
-                        onOpenTxDetailModal: function(txData) {
-                            txDetailModal.txData = txData;
-                            txDetailModal.open();
+                        columns: dashboardContainer.isNarrow ? 1 : 2
+                        columnSpacing: 12
+                        rowSpacing: 12
+                        Layout.preferredHeight: dashboardContainer.isNarrow ? -1 : dashboardContainer.computedRow2H
+
+                        // LEFT COLUMN: EmPoWer Mining & L1 Bridge + Testimonials
+                        ColumnLayout {
+                            id: ecosystemCol
+                            Layout.fillWidth: true
+                            Layout.fillHeight: !dashboardContainer.isNarrow
+                            Layout.preferredWidth: dashboardContainer.isNarrow ? -1 : 1
+                            spacing: 12
+
+                            FundingBridgeView {
+                                id: bridgeView
+                                Layout.fillWidth: true
+                                Layout.fillHeight: !dashboardContainer.isNarrow
+                                Layout.preferredHeight: dashboardContainer.isNarrow ? implicitHeight : -1
+                                bridge: bridge
+                                accountStore: accountStore
+                                bridgeCtrl: bridgeCtrl
+                                ledgerViewRef: ledgerView
+                            }
+
+                            TestimonialsView {
+                                id: testimonialView
+                                Layout.fillWidth: true
+                                Layout.fillHeight: !dashboardContainer.isNarrow
+                                Layout.preferredHeight: dashboardContainer.isNarrow ? implicitHeight : -1
+                                bridge: bridge
+                                accountStore: accountStore
+                                testimonialCtrl: testimonialCtrl
+                                ledgerViewRef: ledgerView
+                            }
                         }
+
+                        // RIGHT COLUMN: Activity Feed & Transaction History
+                        ActivityLedgerView {
+                            id: ledgerView
+                            Layout.fillWidth: true
+                            Layout.fillHeight: !dashboardContainer.isNarrow
+                            Layout.preferredHeight: dashboardContainer.isNarrow ? implicitHeight : -1
+                            Layout.preferredWidth: dashboardContainer.isNarrow ? -1 : 1
+                            bridge: bridge
+                            accountStore: accountStore
+                            onOpenTxDetailModal: function (txData) {
+                                txDetailModal.txData = txData;
+                                txDetailModal.open();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // STATIC VIEWPORT SCROLLBAR TRACK & THUMB (Active and synchronized like Wallet Settings)
+            Rectangle {
+                id: scrollTrack
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.topMargin: 2
+                anchors.bottomMargin: 2
+                width: 4
+                radius: 2
+                color: theme.bgSurfaceSubtle
+                visible: flickable.visibleArea.heightRatio < 1.0
+                z: 20
+
+                Rectangle {
+                    id: scrollThumb
+                    width: parent.width
+                    height: Math.max(30, flickable.visibleArea.heightRatio * scrollTrack.height)
+                    y: flickable.visibleArea.yPosition * scrollTrack.height
+                    radius: 2
+                    color: theme.borderActive
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    preventStealing: true
+                    onPositionChanged: mouse => {
+                        if (pressed) {
+                            var maxRatio = 1.0 - flickable.visibleArea.heightRatio;
+                            var ratio = Math.max(0, Math.min(maxRatio, (mouse.y - scrollThumb.height / 2) / scrollTrack.height));
+                            var maxScroll = Math.max(0, flickable.contentHeight - flickable.height);
+                            flickable.contentY = (ratio / maxRatio) * maxScroll;
+                        }
+                    }
+                    onPressed: mouse => {
+                        var maxRatio = 1.0 - flickable.visibleArea.heightRatio;
+                        var ratio = Math.max(0, Math.min(maxRatio, (mouse.y - scrollThumb.height / 2) / scrollTrack.height));
+                        var maxScroll = Math.max(0, flickable.contentHeight - flickable.height);
+                        flickable.contentY = (ratio / maxRatio) * maxScroll;
                     }
                 }
             }
@@ -246,11 +331,6 @@ Rectangle {
 
     CreateAccountModal {
         id: createAccountModal
-        accountStore: accountStore
-    }
-
-    AccountDetailModal {
-        id: accountDetailModal
         accountStore: accountStore
     }
 
