@@ -15,7 +15,9 @@ ModalOverlay {
 
     property string errorMessage: ""
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -48,7 +50,9 @@ ModalOverlay {
             wrapMode: Text.WordWrap
         }
 
-        Item { Layout.fillHeight: true }
+        Item {
+            Layout.fillHeight: true
+        }
 
         RowLayout {
             Layout.fillWidth: true
@@ -60,7 +64,9 @@ ModalOverlay {
                 onClicked: modal.close()
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Button {
                 text: "Unlock Vault"
@@ -72,10 +78,11 @@ ModalOverlay {
     }
 
     function submitUnlock() {
-        if (passwordField.text.length === 0) return;
+        if (passwordField.text.length === 0)
+            return;
         modal.errorMessage = "";
 
-        bridge.invoke("unlockWallet", [passwordField.text], function(res) {
+        bridge.invoke("unlockWallet", [passwordField.text], function (res) {
             if (res && res.ok) {
                 passwordField.text = "";
                 modal.close();

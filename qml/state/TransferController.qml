@@ -102,9 +102,10 @@ Item {
 
     function executeResolution() {
         var name = destinationInput.trim();
-        if (!name.endsWith(".lez")) return;
+        if (!name.endsWith(".lez"))
+            return;
 
-        bridge.invoke("resolveName", [bridge.activeSessionId, name], function(res) {
+        bridge.invoke("resolveName", [bridge.activeSessionId, name], function (res) {
             if (res && res.ok && res.account_id) {
                 controller.lnsStatus = "resolved";
                 controller.resolvedTargetId = res.account_id;
@@ -120,7 +121,8 @@ Item {
 
     function setMaxAmount() {
         var active = accountStore.activeAccount;
-        if (!active) return;
+        if (!active)
+            return;
 
         if (selectedAsset === "token" && selectedToken) {
             var tokBal = parseFloat(selectedToken.formatted_balance ? selectedToken.formatted_balance.replace(/,/g, "") : "0") || 0;
@@ -135,43 +137,71 @@ Item {
     function validate(): var {
         var active = accountStore.activeAccount;
         if (!active) {
-            return { valid: false, message: "No active account selected" };
+            return {
+                valid: false,
+                message: "No active account selected"
+            };
         }
 
         var amt = parseFloat(amountInput);
         if (isNaN(amt) || amt <= 0) {
-            return { valid: false, message: "Enter a valid positive transfer amount" };
+            return {
+                valid: false,
+                message: "Enter a valid positive transfer amount"
+            };
         }
 
         if (selectedAsset === "token") {
             if (!selectedToken) {
-                return { valid: false, message: "Select a valid token holding" };
+                return {
+                    valid: false,
+                    message: "Select a valid token holding"
+                };
             }
             var tokBal = parseFloat(selectedToken.formatted_balance ? selectedToken.formatted_balance.replace(/,/g, "") : "0") || 0;
             if (amt > tokBal) {
-                return { valid: false, message: "Insufficient token balance (" + amt + " > " + tokBal + " " + selectedToken.symbol + ")" };
+                return {
+                    valid: false,
+                    message: "Insufficient token balance (" + amt + " > " + tokBal + " " + selectedToken.symbol + ")"
+                };
             }
         } else {
             var bal = parseFloat(active.formatted_balance ? active.formatted_balance.replace(/,/g, "") : "0") || 0;
             if (amt > bal) {
-                return { valid: false, message: "Insufficient LEZ balance (" + amt + " > " + bal + " LEZ)" };
+                return {
+                    valid: false,
+                    message: "Insufficient LEZ balance (" + amt + " > " + bal + " LEZ)"
+                };
             }
         }
 
         var dest = resolvedTargetId.length > 0 ? resolvedTargetId : destinationInput.trim();
         if (dest.length === 0) {
-            return { valid: false, message: "Destination address or .lez domain name is required" };
+            return {
+                valid: false,
+                message: "Destination address or .lez domain name is required"
+            };
         }
 
         if (dest === active.account_id) {
-            return { valid: false, message: "Self-transfer is not permitted" };
+            return {
+                valid: false,
+                message: "Self-transfer is not permitted"
+            };
         }
 
         if (destinationInput.trim().endsWith(".lez") && lnsStatus !== "resolved") {
-            return { valid: false, message: "Cannot send to unverified .lez name" };
+            return {
+                valid: false,
+                message: "Cannot send to unverified .lez name"
+            };
         }
 
-        return { valid: true, destination: dest, amount: amt };
+        return {
+            valid: true,
+            destination: dest,
+            amount: amt
+        };
     }
 
     function submitTransfer() {
@@ -181,7 +211,8 @@ Item {
             return;
         }
 
-        if (controller.isSubmitting) return;
+        if (controller.isSubmitting)
+            return;
         controller.isSubmitting = true;
 
         var active = accountStore.activeAccount;
@@ -195,14 +226,14 @@ Item {
             var toHolding = dest;
             var defId = selectedToken.definition_id || "Def/LOGO_GOVERNANCE_v1";
 
-            bridge.invoke("proposeTokenTransfer", [bridge.activeSessionId, fromHolding, toHolding, defId, tokenAmountRaw], function(res) {
+            bridge.invoke("proposeTokenTransfer", [bridge.activeSessionId, fromHolding, toHolding, defId, tokenAmountRaw], function (res) {
                 handleProposalResponse(res);
             });
         } else {
             // Native LEZ Transfer (1 LEZ = 1,000,000 micro-LEZ)
             var amountRaw = Math.round(check.amount * 1000000).toString();
 
-            bridge.invoke("proposeNativeTransfer", [bridge.activeSessionId, fromAcc, dest, amountRaw], function(res) {
+            bridge.invoke("proposeNativeTransfer", [bridge.activeSessionId, fromAcc, dest, amountRaw], function (res) {
                 handleProposalResponse(res);
             });
         }
@@ -212,7 +243,7 @@ Item {
         if (res && res.ok) {
             controller.lastRequestId = res.request_id || "req_pending";
             // Check request confirmation / status
-            bridge.invoke("getRequestStatus", [controller.lastRequestId], function(statusRes) {
+            bridge.invoke("getRequestStatus", [controller.lastRequestId], function (statusRes) {
                 controller.isSubmitting = false;
                 if (statusRes && statusRes.ok && statusRes.tx_hash) {
                     controller.lastTxHash = statusRes.tx_hash;

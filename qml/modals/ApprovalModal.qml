@@ -12,7 +12,9 @@ ModalOverlay {
 
     required property var approvalManager
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     readonly property var prompt: approvalManager ? approvalManager.currentPrompt : null
     readonly property var sim: approvalManager ? approvalManager.simulatedEffect : null
@@ -51,14 +53,18 @@ ModalOverlay {
             Text {
                 text: {
                     var status = modal.approvalManager ? modal.approvalManager.verificationStatus : "Verified";
-                    if (status === "Verified") return "VERIFIED";
-                    if (status === "Unverified") return "UNVERIFIED SOURCE";
+                    if (status === "Verified")
+                        return "VERIFIED";
+                    if (status === "Unverified")
+                        return "UNVERIFIED SOURCE";
                     return "UNTRUSTED";
                 }
                 color: {
                     var status = modal.approvalManager ? modal.approvalManager.verificationStatus : "Verified";
-                    if (status === "Verified") return theme.statusSuccess;
-                    if (status === "Unverified") return theme.accentOrange;
+                    if (status === "Verified")
+                        return theme.statusSuccess;
+                    if (status === "Unverified")
+                        return theme.accentOrange;
                     return theme.statusDanger;
                 }
                 font.family: theme.fontFamily
@@ -87,7 +93,9 @@ ModalOverlay {
                 font.weight: Font.Bold
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
         }
 
         // PLAIN-LANGUAGE EFFECT SIMULATION
@@ -133,7 +141,9 @@ ModalOverlay {
                         font.pixelSize: theme.fontSizeSmall
                     }
 
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
 
                     Text {
                         text: "Net State Diff: " + (modal.sim ? (modal.sim.state_diff || "Pending") : "Pending")
@@ -155,7 +165,9 @@ ModalOverlay {
             wrapMode: Text.WordWrap
         }
 
-        Item { Layout.fillHeight: true }
+        Item {
+            Layout.fillHeight: true
+        }
 
         // Skeuomorphic Divider
         Rectangle {
@@ -181,7 +193,9 @@ ModalOverlay {
                 }
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Button {
                 text: "Authorize & Sign (1)"

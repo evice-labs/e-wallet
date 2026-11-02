@@ -13,7 +13,9 @@ ModalOverlay {
     property var txData: null
     property string copyStatus: ""
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     Timer {
         id: resetCopyTimer
@@ -36,11 +38,15 @@ ModalOverlay {
             Text {
                 text: txData ? (txData.status || "Public").toUpperCase() : "PUBLIC"
                 color: {
-                    if (!txData) return theme.statusPublic;
+                    if (!txData)
+                        return theme.statusPublic;
                     var st = txData.status;
-                    if (st === "Private" || st === "Shield") return theme.statusShielded;
-                    if (st === "Unshield") return theme.statusSuccess;
-                    if (st === "Faucet" || st === "Ledger") return theme.accentOrange;
+                    if (st === "Private" || st === "Shield")
+                        return theme.statusShielded;
+                    if (st === "Unshield")
+                        return theme.statusSuccess;
+                    if (st === "Faucet" || st === "Ledger")
+                        return theme.accentOrange;
                     return theme.statusPublic;
                 }
                 font.family: theme.fontFamily
@@ -48,7 +54,9 @@ ModalOverlay {
                 font.weight: Font.Bold
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Text {
                 text: txData ? txData.amount : "0.00 LEZ"
@@ -143,7 +151,9 @@ ModalOverlay {
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
                     }
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
                     Text {
                         text: txData ? (txData.detailedTime || (txData.time ? ("2026-10-30 17:35:10 UTC (" + txData.time + ")") : "2026-10-30 17:35:10 UTC")) : "2026-10-30 17:35:10 UTC"
                         color: theme.textPrimary
@@ -161,7 +171,9 @@ ModalOverlay {
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
                     }
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
                     Text {
                         text: txData ? ("Block #" + (txData.block || 43565)) : "Block #43565"
                         color: theme.accentOrange
@@ -180,7 +192,9 @@ ModalOverlay {
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
                     }
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
                     Text {
                         text: txData ? (txData.gasUsed || "34,000 units (0.00015 LEZ)") : "34,000 units"
                         color: theme.statusSuccess
@@ -199,7 +213,9 @@ ModalOverlay {
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
                     }
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
                     Text {
                         text: txData ? (txData.gasLimit ? (txData.gasLimit + " units") : "34,000 units") : "34,000 units"
                         color: theme.textPrimary
@@ -217,7 +233,9 @@ ModalOverlay {
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
                     }
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
                     Text {
                         text: txData ? (txData.route || "Public ➝ Public") : "Public ➝ Public"
                         color: theme.textPrimary
@@ -235,7 +253,9 @@ ModalOverlay {
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
                     }
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
                     Text {
                         text: "Logos LEZ (Testnet 0.4)"
                         color: theme.textMuted
@@ -252,7 +272,9 @@ ModalOverlay {
             visible: false
         }
 
-        Item { Layout.fillHeight: true }
+        Item {
+            Layout.fillHeight: true
+        }
 
         // FOOTER ACTIONS
         RowLayout {

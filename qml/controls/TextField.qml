@@ -10,7 +10,7 @@ Rectangle {
     property int echoMode: TextInput.Normal
     property bool readOnly: false
     property alias validator: input.validator
-    signal accepted()
+    signal accepted
 
     implicitWidth: 320
     implicitHeight: control.label.length > 0 ? 58 : 36
@@ -19,7 +19,9 @@ Rectangle {
     border.color: input.activeFocus ? theme.borderActive : theme.borderSubtle
     border.width: input.activeFocus ? 1.5 : 1
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     Column {
         anchors.fill: parent

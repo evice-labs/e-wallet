@@ -15,7 +15,9 @@ Rectangle {
     border.width: 1
     clip: true
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     Item {
         id: contentSlot
