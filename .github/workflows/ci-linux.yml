@@ -47,6 +47,10 @@ jobs:
         run: |
           git add -N .
 
+      - name: Verify QML Architecture, Formatting, and Linting (Nix Flake Check)
+        run: |
+          nix flake check --impure -L
+
       - name: Build QML UI Module Package
         run: |
           nix build .# --impure --no-link -L
