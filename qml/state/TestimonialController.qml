@@ -20,8 +20,9 @@ Item {
     // System automatically resolves author moniker from the currently active account
     readonly property string activeAuthor: {
         var acc = accountStore ? accountStore.activeAccount : null;
-        if (!acc) return "alice.lez";
-        return acc.label || acc.address || acc.account_id || "alice.lez";
+        if (!acc)
+            return "";
+        return acc.label || acc.address || acc.account_id || "";
     }
 
     property string messageInput: ""
@@ -38,7 +39,8 @@ Item {
 
     // Accurate multi-byte UTF-8 calculation
     function calculateUtf8Bytes(str) {
-        if (!str) return 0;
+        if (!str)
+            return 0;
         var bytes = 0;
         for (var i = 0; i < str.length; i++) {
             var code = str.charCodeAt(i);
@@ -83,12 +85,7 @@ Item {
     }
 
     function u32ToLeBytes(val) {
-        return [
-            val & 0xff,
-            (val >> 8) & 0xff,
-            (val >> 16) & 0xff,
-            (val >> 24) & 0xff
-        ];
+        return [val & 0xff, (val >> 8) & 0xff, (val >> 16) & 0xff, (val >> 24) & 0xff];
     }
 
     function hexToBytes(hex) {
@@ -104,7 +101,8 @@ Item {
         var hex = "";
         for (var i = 0; i < bytes.length; i++) {
             var b = (bytes[i] & 0xff).toString(16);
-            if (b.length === 1) hex += "0";
+            if (b.length === 1)
+                hex += "0";
             hex += b;
         }
         return hex;
@@ -129,16 +127,20 @@ Item {
         // Field 2: text: String
         var textBytes = toUtf8ByteArray(textStr);
         var textLen = u32ToLeBytes(textBytes.length);
-        for (var j = 0; j < textLen.length; j++) bytes.push(textLen[j]);
-        for (var k = 0; k < textBytes.length; k++) bytes.push(textBytes[k]);
+        for (var j = 0; j < textLen.length; j++)
+            bytes.push(textLen[j]);
+        for (var k = 0; k < textBytes.length; k++)
+            bytes.push(textBytes[k]);
 
         // Field 3: username: Option<String>
         if (usernameStr && usernameStr.trim().length > 0) {
             bytes.push(0x01); // Some
             var userBytes = toUtf8ByteArray(usernameStr.trim());
             var userLen = u32ToLeBytes(userBytes.length);
-            for (var l = 0; l < userLen.length; l++) bytes.push(userLen[l]);
-            for (var m = 0; m < userBytes.length; m++) bytes.push(userBytes[m]);
+            for (var l = 0; l < userLen.length; l++)
+                bytes.push(userLen[l]);
+            for (var m = 0; m < userBytes.length; m++)
+                bytes.push(userBytes[m]);
         } else {
             bytes.push(0x00); // None
         }
@@ -147,14 +149,19 @@ Item {
     }
 
     function broadcast(callback) {
-        if (!isValid) return;
+        if (!isValid)
+            return;
 
         var activeAcc = accountStore ? accountStore.activeAccount : null;
         if (!activeAcc) {
             ctrl.statusMessage = "Error: No active account available for signing.";
             ctrl.isSuccessStatus = false;
             ctrl.broadcastFailed("No active account");
-            if (callback) callback({ ok: false, error: "No active account" });
+            if (callback)
+                callback({
+                    ok: false,
+                    error: "No active account"
+                });
             return;
         }
 
@@ -162,7 +169,11 @@ Item {
             ctrl.statusMessage = "Error: Keystore is locked. Unlock wallet before broadcasting.";
             ctrl.isSuccessStatus = false;
             ctrl.broadcastFailed("Wallet locked");
-            if (callback) callback({ ok: false, error: "Wallet locked" });
+            if (callback)
+                callback({
+                    ok: false,
+                    error: "Wallet locked"
+                });
             return;
         }
 
@@ -174,7 +185,11 @@ Item {
             ctrl.statusMessage = "Error: Testimonial exceeds 280 bytes limit.";
             ctrl.isSuccessStatus = false;
             ctrl.broadcastFailed("Payload exceeds 280 bytes");
-            if (callback) callback({ ok: false, error: "Exceeds 280 bytes" });
+            if (callback)
+                callback({
+                    ok: false,
+                    error: "Exceeds 280 bytes"
+                });
             return;
         }
 
@@ -190,45 +205,66 @@ Item {
         var calldataHex = encodeBorshSubmitTestimonial(ctrl.submissionIdHashHex, text, author);
 
         // Account Mentions (Clean Base58 AccountIds required by lee::AccountId::from_str)
-        var payerRaw = activeAcc.account_id || activeAcc.address || "alice.lez";
+        var payerRaw = activeAcc.account_id || activeAcc.address;
+        if (!payerRaw) {
+            ctrl.statusMessage = "Error: Active account identifier is unavailable";
+            ctrl.isSuccessStatus = false;
+            ctrl.isBroadcasting = false;
+            if (callback)
+                callback({
+                    ok: false,
+                    error: "Active account identifier missing"
+                });
+            return;
+        }
         var payerClean = payerRaw.replace(/^Public\//, "").replace(/^Private\//, "");
         var contractClean = ctrl.targetContract.replace(/^Public\//, "").replace(/^Private\//, "");
         var mentionsJson = JSON.stringify([payerClean, contractClean]);
 
-        var sessionId = (bridge.activeSessionId && bridge.activeSessionId.length > 0) ?
-                        bridge.activeSessionId : "sess_wallet_internal";
+        var sessionId = (bridge.activeSessionId && bridge.activeSessionId.length > 0) ? bridge.activeSessionId : "";
+        if (!sessionId) {
+            ctrl.statusMessage = "Error: No active dApp session found";
+            ctrl.isSuccessStatus = false;
+            ctrl.isBroadcasting = false;
+            if (callback)
+                callback({
+                    ok: false,
+                    error: "No active session"
+                });
+            return;
+        }
         var desc = "Testimonial: " + (text.length > 32 ? text.substring(0, 30) + "..." : text);
 
-        bridge.invoke("proposeTransaction", [
-            sessionId,
-            mentionsJson,
-            calldataHex,
-            desc
-        ], function(res) {
+        bridge.invoke("proposeTransaction", [sessionId, mentionsJson, calldataHex, desc], function (res) {
             if (res && res.ok) {
                 if (res.status === "pending_approval" && res.request_id) {
                     var reqId = res.request_id;
                     // Auto-approve within wallet modal / internal queue
-                    bridge.invoke("submitApprovalDecision", [reqId, 1], function(appRes) {
+                    bridge.invoke("submitApprovalDecision", [reqId, 1], function (appRes) {
                         ctrl.isBroadcasting = false;
-                        var txHash = (appRes && appRes.tx_hash) ? appRes.tx_hash :
-                                     (res.tx_hash || "0xb2655903cac86b50b55d0a8c0feb062dd2113ebe5292423d23ab8924f8189bfc");
+                        var txHash = (appRes && appRes.tx_hash) ? appRes.tx_hash : (res.tx_hash || res.request_id || "");
                         var shortHash = txHash.length > 20 ? (txHash.substring(0, 10) + "..." + txHash.substring(txHash.length - 6)) : txHash;
                         ctrl.statusMessage = "zkVM Testimonial confirmed! Tx: " + shortHash;
                         ctrl.isSuccessStatus = true;
                         ctrl.messageInput = "";
                         ctrl.broadcastSuccess(txHash, text);
-                        if (callback) callback({ ok: true, tx_hash: txHash, request_id: reqId });
+                        if (callback)
+                            callback({
+                                ok: true,
+                                tx_hash: txHash,
+                                request_id: reqId
+                            });
                     });
                 } else {
                     ctrl.isBroadcasting = false;
-                    var txHash = res.tx_hash || "0xb2655903cac86b50b55d0a8c0feb062dd2113ebe5292423d23ab8924f8189bfc";
+                    var txHash = res.tx_hash || res.request_id || "";
                     var shortHash = txHash.length > 20 ? (txHash.substring(0, 10) + "..." + txHash.substring(txHash.length - 6)) : txHash;
                     ctrl.statusMessage = "Broadcast confirmed! Tx: " + shortHash;
                     ctrl.isSuccessStatus = true;
                     ctrl.messageInput = "";
                     ctrl.broadcastSuccess(txHash, text);
-                    if (callback) callback(res);
+                    if (callback)
+                        callback(res);
                 }
             } else {
                 ctrl.isBroadcasting = false;
@@ -236,7 +272,8 @@ Item {
                 ctrl.statusMessage = "Broadcast failed: " + err;
                 ctrl.isSuccessStatus = false;
                 ctrl.broadcastFailed(err);
-                if (callback) callback(res);
+                if (callback)
+                    callback(res);
             }
         });
     }

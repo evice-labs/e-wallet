@@ -9,7 +9,7 @@ Rectangle {
     required property var bridge
     required property var accountStore
 
-    signal openRestoreModal()
+    signal openRestoreModal
 
     color: theme.bgCanvas
 
@@ -19,7 +19,9 @@ Rectangle {
     property string errorMessage: ""
     property bool isCreating: false
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     Item {
         anchors.fill: parent
@@ -30,15 +32,21 @@ Rectangle {
             anchors.centerIn: parent
             width: Math.min(parent.width - 40, 600)
             title: {
-                if (currentStep === 1) return "WELCOME TO EVICE WALLET";
-                if (currentStep === 2) return "STEP 1: SECURE YOUR KEYSTORE";
-                if (currentStep === 3) return "STEP 2: BACKUP RECOVERY PHRASE";
+                if (currentStep === 1)
+                    return "WELCOME TO EVICE WALLET";
+                if (currentStep === 2)
+                    return "STEP 1: SECURE YOUR KEYSTORE";
+                if (currentStep === 3)
+                    return "STEP 2: BACKUP RECOVERY PHRASE";
                 return "SETUP COMPLETE";
             }
             subtitle: {
-                if (currentStep === 1) return "Logos Execution Zone (LEZ) Multi-Account & Shielded Vault";
-                if (currentStep === 2) return "Set Master Passphrase for Argon2id AES-256-GCM Vault";
-                if (currentStep === 3) return "12-Word BIP-39 Master Recovery Phrase";
+                if (currentStep === 1)
+                    return "Logos Execution Zone (LEZ) Multi-Account & Shielded Vault";
+                if (currentStep === 2)
+                    return "Set Master Passphrase for Argon2id AES-256-GCM Vault";
+                if (currentStep === 3)
+                    return "12-Word BIP-39 Master Recovery Phrase";
                 return "Your Keystore is Ready for LEZ Testnet 0.4";
             }
 
@@ -81,7 +89,9 @@ Rectangle {
                             font.weight: Font.Bold
                         }
 
-                        Item { Layout.fillWidth: true }
+                        Item {
+                            Layout.fillWidth: true
+                        }
                     }
 
                     Rectangle {
@@ -166,7 +176,9 @@ Rectangle {
                             }
                         }
 
-                        Item { Layout.fillWidth: true }
+                        Item {
+                            Layout.fillWidth: true
+                        }
 
                         Button {
                             text: onboardingView.isCreating ? "Generating Seed..." : "Generate Recovery Phrase"
@@ -188,7 +200,7 @@ Rectangle {
                                 onboardingView.masterPassword = p1;
                                 onboardingView.isCreating = true;
 
-                                bridge.invoke("createWallet", [p1], function(res) {
+                                bridge.invoke("createWallet", [p1], function (res) {
                                     onboardingView.isCreating = false;
                                     if (res && res.ok && res.mnemonic) {
                                         onboardingView.mnemonicWords = res.mnemonic.trim().split(/\s+/);
@@ -263,21 +275,20 @@ Rectangle {
                             font.weight: Font.Bold
                         }
 
-                        Item { Layout.fillWidth: true }
+                        Item {
+                            Layout.fillWidth: true
+                        }
 
                         Button {
                             text: "I Have Saved My Seed Phrase"
                             isPrimary: true
                             onClicked: {
-                                // Create default initial accounts
-                                accountStore.createAccount("Primary Vault (Public)", false, function() {
-                                    accountStore.createAccount("Stealth Stash (Shielded)", true, function() {
-                                        accountStore.refreshAccounts();
-                                        accountStore.refreshTokens();
-                                        bridge.isInitialized = true;
-                                        bridge.isLocked = false;
-                                        bridge.walletStateChanged();
-                                    });
+                                bridge.isInitialized = true;
+                                bridge.isLocked = false;
+                                bridge.ensureActiveSession(function () {
+                                    accountStore.refreshAccounts();
+                                    accountStore.refreshTokens();
+                                    bridge.walletStateChanged();
                                 });
                             }
                         }

@@ -19,7 +19,9 @@ ModalOverlay {
     property var mnemonicWords: []
     property string errorMessage: ""
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -64,7 +66,9 @@ ModalOverlay {
                 wrapMode: Text.WordWrap
             }
 
-            Item { Layout.fillHeight: true }
+            Item {
+                Layout.fillHeight: true
+            }
 
             RowLayout {
                 Layout.fillWidth: true
@@ -75,7 +79,9 @@ ModalOverlay {
                     onClicked: modal.close()
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Button {
                     text: "Generate Vault"
@@ -136,7 +142,9 @@ ModalOverlay {
                 }
             }
 
-            Item { Layout.fillHeight: true }
+            Item {
+                Layout.fillHeight: true
+            }
 
             RowLayout {
                 Layout.fillWidth: true
@@ -149,7 +157,9 @@ ModalOverlay {
                     font.weight: Font.Bold
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Button {
                     text: "I Have Saved My Seed Phrase"
@@ -174,7 +184,7 @@ ModalOverlay {
             return;
         }
 
-        bridge.invoke("createWallet", [p1], function(res) {
+        bridge.invoke("createWallet", [p1], function (res) {
             if (res && res.ok && res.mnemonic) {
                 modal.mnemonicWords = res.mnemonic.trim().split(/\s+/);
                 modal.step = 2;

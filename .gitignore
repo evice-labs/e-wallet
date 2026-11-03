@@ -1,6 +1,9 @@
-result
+result*
 build/
 .cache/
 *.tmp
 .DS_Store
 .logos-basecamp-dev/
+result-dev/
+result-ui/
+result-ui-lgx/

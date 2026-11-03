@@ -19,18 +19,7 @@ Card {
         function onBroadcastSuccess(txHash, message) {
             if (testimonialCard.ledgerViewRef) {
                 var previewText = message.length > 20 ? "\"" + message.substring(0, 18) + "...\"" : "\"" + message + "\"";
-                testimonialCard.ledgerViewRef.addActivity(
-                    testimonialCtrl ? testimonialCtrl.activeAuthor : "Active Account",
-                    "Ledger",
-                    "Testimonials",
-                    previewText,
-                    "On-Chain zkVM Broadcast",
-                    false,
-                    txHash,
-                    "34,000 units (0.00015 LEZ)",
-                    43466,
-                    "Public ➝ zkVM Contract"
-                );
+                testimonialCard.ledgerViewRef.addActivity(testimonialCtrl ? testimonialCtrl.activeAuthor : "Active Account", "Ledger", "Testimonials", previewText, "On-Chain zkVM Broadcast", false, txHash, "34,000 units (0.00015 LEZ)", 43466, "Public ➝ zkVM Contract");
             }
         }
     }
@@ -63,7 +52,7 @@ Card {
                     font.pixelSize: theme.fontSizeTiny
                 }
                 Text {
-                    text: testimonialCtrl ? testimonialCtrl.activeAuthor : (accountStore.activeAccount ? accountStore.activeAccount.label : "alice.lez")
+                    text: (testimonialCtrl && testimonialCtrl.activeAuthor.length > 0) ? testimonialCtrl.activeAuthor : accountStore.activeAccountName
                     color: theme.statusPublic
                     font.family: theme.fontFamily
                     font.pixelSize: theme.fontSizeSmall
@@ -116,7 +105,8 @@ Card {
 
             Text {
                 text: {
-                    if (!testimonialCtrl) return "280 bytes remaining";
+                    if (!testimonialCtrl)
+                        return "280 bytes remaining";
                     return testimonialCtrl.remainingBytes + " bytes remaining (" + testimonialCtrl.currentByteLength + "/280)";
                 }
                 color: (testimonialCtrl && testimonialCtrl.remainingBytes < 0) ? theme.statusDanger : theme.textMuted
@@ -124,7 +114,9 @@ Card {
                 font.pixelSize: theme.fontSizeSmall
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Button {
                 id: broadcastBtn

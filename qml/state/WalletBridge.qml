@@ -1,17 +1,25 @@
 import QtQuick
+import QtCore
 
 Item {
     id: bridge
 
     readonly property bool isHostAvailable: typeof logos !== "undefined" && typeof logos.callModule === "function"
-    property bool isInitialized: true
-    property bool isLocked: false
-    property string activeSessionId: "sess_local_standalone"
+    property bool isInitialized: false
+    property bool isLocked: true
+    property string activeSessionId: ""
     property string currentNetwork: "Logos Testnet 0.4"
     property string activeAccountAddress: ""
+    property string dataDir: {
+        var urlStr = StandardPaths.writableLocation(StandardPaths.GenericDataLocation).toString();
+        if (urlStr.startsWith("file://")) {
+            urlStr = urlStr.substring(7);
+        }
+        return urlStr ? (urlStr + "/Logos/module_data/e_wallet_core") : "";
+    }
 
     signal errorOccurred(string method, string message)
-    signal walletStateChanged()
+    signal walletStateChanged
     signal toastRequested(string message, string level)
 
     Component.onCompleted: {
@@ -19,269 +27,195 @@ Item {
     }
 
     function checkStatus() {
-        invoke("isInitialized", [], function(res) {
+        if (!isHostAvailable) {
+            console.warn("[WalletBridge] logos.callModule host is not available in standalone execution.");
+            bridge.isInitialized = false;
+            bridge.isLocked = true;
+            bridge.walletStateChanged();
+            return;
+        }
+
+        invoke("isInitialized", [], function (res) {
+            var alreadyInitialized = false;
+            if (res) {
+                if (res.value === true || res.initialized === true) {
+                    alreadyInitialized = true;
+                }
+            }
+
+            if (alreadyInitialized) {
+                fetchSdkInfoAndSession();
+            } else {
+                // Probe engine instance with persistent storage directory and blank password
+                invoke("initEngine", [bridge.dataDir, ""], function (initRes) {
+                    if (initRes && initRes.ok) {
+                        fetchSdkInfoAndSession();
+                    } else {
+                        // If initEngine fails with path initialization error, it means an encrypted keystore
+                        // already exists on disk (wallet_storage.json) and requires the master password.
+                        var errMsg = (initRes && initRes.error) ? String(initRes.error) : "";
+                        var isLockedKeystore = errMsg.indexOf("Failed to initialize wallet engine at path") !== -1 || errMsg.indexOf("InvalidPassword") !== -1 || errMsg.indexOf("WALLET_LOCKED") !== -1;
+
+                        if (isLockedKeystore) {
+                            console.log("[WalletBridge] Persistent encrypted wallet detected on disk. Presenting lock screen.");
+                            bridge.isInitialized = true;
+                            bridge.isLocked = true;
+                            bridge.walletStateChanged();
+                        } else {
+                            console.error("[WalletBridge] initEngine failed:", JSON.stringify(initRes));
+                            bridge.isInitialized = false;
+                            bridge.isLocked = true;
+                            bridge.walletStateChanged();
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    function fetchSdkInfoAndSession() {
+        invoke("getSdkInfo", [], function (res) {
             if (res && res.ok) {
-                bridge.isInitialized = !!res.initialized;
+                var isInit = (res.wallet_initialized !== undefined) ? !!res.wallet_initialized : (res.initialized !== undefined ? !!res.initialized : false);
+                var isLock = (res.wallet_locked !== undefined) ? !!res.wallet_locked : (res.locked !== undefined ? !!res.locked : true);
+                bridge.isInitialized = isInit;
+                bridge.isLocked = isLock;
+                if (res.network) {
+                    bridge.currentNetwork = res.network;
+                }
+                if (bridge.isInitialized && !bridge.isLocked) {
+                    ensureActiveSession(function () {
+                        bridge.walletStateChanged();
+                    });
+                } else {
+                    bridge.walletStateChanged();
+                }
             }
         });
-        invoke("getSdkInfo", [], function(res) {
-            if (res && res.ok && res.network) {
-                bridge.currentNetwork = res.network;
+    }
+
+    function ensureActiveSession(callback) {
+        if (bridge.activeSessionId && bridge.activeSessionId.length > 0) {
+            if (callback)
+                callback({
+                    ok: true,
+                    session_id: bridge.activeSessionId
+                });
+            return;
+        }
+
+        invoke("connectDApp", ["internal_wallet_ui", 1], function (res) {
+            if (res && res.ok && res.session_id) {
+                bridge.activeSessionId = res.session_id;
+                console.log("[WalletBridge] Internal dApp session active:", bridge.activeSessionId);
             }
+            if (callback)
+                callback(res);
         });
+    }
+
+    function parseJsonResult(rawResult) {
+        var parsed = rawResult;
+        for (var unwrapCount = 0; unwrapCount < 3 && typeof parsed === "string"; unwrapCount++) {
+            var trimmed = parsed.trim();
+            if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith("\"") && trimmed.endsWith("\""))) {
+                try {
+                    parsed = JSON.parse(trimmed);
+                } catch (e) {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        if (typeof parsed !== "object" || parsed === null) {
+            parsed = {
+                ok: true,
+                value: parsed
+            };
+        }
+        return parsed;
     }
 
     // Primary Dispatch Method
     function invoke(method, args, callback) {
         if (!isHostAvailable) {
-            // Standalone Mock Harness for Preview & Development
-            var mockResponse = mockDispatch(method, args);
-            if (callback) callback(mockResponse);
-            return mockResponse;
+            var unavailableErr = {
+                ok: false,
+                error: "Host module 'e_wallet_core' is not available. Ensure application is launched within Logos Basecamp or standalone runner."
+            };
+            bridge.errorOccurred(method, unavailableErr.error);
+            if (callback)
+                callback(unavailableErr);
+            return unavailableErr;
         }
 
         try {
             var rawResult = logos.callModule("e_wallet_core", method, args || []);
-            var parsed = null;
-            if (typeof rawResult === "string") {
-                try {
-                    parsed = JSON.parse(rawResult);
-                } catch (e) {
-                    parsed = { ok: true, raw: rawResult };
+            var parsed = parseJsonResult(rawResult);
+
+            // Cold-start fallback for unlockWallet:
+            // If the host process restarted, the in-memory engine handle is null (m_engine == nullptr).
+            // Calling unlockWallet directly will fail with "Wallet engine is not initialized".
+            // In that case, decrypt and initialize the engine via initEngine using the supplied master password.
+            if (method === "unlockWallet" && parsed && parsed.ok === false) {
+                var pass = (args && args.length > 0) ? String(args[0]) : "";
+                var initRaw = logos.callModule("e_wallet_core", "initEngine", [bridge.dataDir, pass]);
+                var initParsed = parseJsonResult(initRaw);
+
+                if (initParsed && initParsed.ok === true) {
+                    parsed = {
+                        ok: true,
+                        message: "Keystore unlocked and engine initialized"
+                    };
+                } else {
+                    parsed = {
+                        ok: false,
+                        error: "Incorrect master password or decryption failed"
+                    };
                 }
-            } else if (typeof rawResult === "object") {
-                parsed = rawResult;
-            } else {
-                parsed = { ok: true, value: rawResult };
+            } else if (method === "restoreWallet" && parsed && parsed.ok === false) {
+                var newPass = (args && args.length > 1) ? String(args[1]) : "";
+                var mnem = (args && args.length > 0) ? String(args[0]) : "";
+                var initRawRest = logos.callModule("e_wallet_core", "initEngine", [bridge.dataDir, newPass]);
+                var initParsedRest = parseJsonResult(initRawRest);
+                if (initParsedRest && initParsedRest.ok === true) {
+                    var restRaw = logos.callModule("e_wallet_core", "restoreWallet", [mnem, newPass]);
+                    parsed = parseJsonResult(restRaw);
+                }
             }
 
             if (parsed && parsed.ok === false) {
                 bridge.errorOccurred(method, parsed.error || "Unknown engine error");
+            } else if (parsed && parsed.ok === true) {
+                // Synchronize core lifecycle state upon successful key management operations
+                if (method === "restoreWallet" || method === "unlockWallet") {
+                    bridge.isInitialized = true;
+                    bridge.isLocked = false;
+                    bridge.ensureActiveSession(function () {
+                        bridge.walletStateChanged();
+                    });
+                } else if (method === "lockWallet") {
+                    bridge.isLocked = true;
+                    bridge.activeSessionId = "";
+                    bridge.walletStateChanged();
+                }
             }
 
-            if (callback) callback(parsed);
+            if (callback)
+                callback(parsed);
             return parsed;
         } catch (err) {
             var errStr = String(err);
             bridge.errorOccurred(method, errStr);
-            var errObj = { ok: false, error: errStr };
-            if (callback) callback(errObj);
+            var errObj = {
+                ok: false,
+                error: errStr
+            };
+            if (callback)
+                callback(errObj);
             return errObj;
-        }
-    }
-
-    // Standalone Fallback / Mock Engine
-    function mockDispatch(method, args) {
-        switch (method) {
-            case "isInitialized":
-                return { ok: true, initialized: bridge.isInitialized };
-            case "getSdkInfo":
-                return { ok: true, version: "0.1.1", network: "Logos Testnet 0.4", engine: "mock-preview" };
-            case "createWallet":
-                bridge.isInitialized = true;
-                bridge.isLocked = false;
-                bridge.walletStateChanged();
-                return {
-                    ok: true,
-                    mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-                };
-            case "restoreWallet":
-                bridge.isInitialized = true;
-                bridge.isLocked = false;
-                bridge.walletStateChanged();
-                return { ok: true, restored: true };
-            case "unlockWallet":
-                bridge.isLocked = false;
-                bridge.walletStateChanged();
-                return { ok: true, unlocked: true };
-            case "lockWallet":
-                bridge.isLocked = true;
-                bridge.walletStateChanged();
-                return { ok: true, locked: true };
-            case "createPublicAccount":
-                var pubLabel = (args && args[0]) ? args[0] : "Public Account";
-                return {
-                    ok: true,
-                    account_id: "Public/891ae258f92ca8447af6cf09c41d96b3a06187d098b91ab2cc17b42e3c4a2fa1",
-                    label: pubLabel,
-                    is_private: false
-                };
-            case "createPrivateAccount":
-                var privLabel = (args && args[0]) ? args[0] : "Shielded Account";
-                return {
-                    ok: true,
-                    account_id: "Private/047f3b89e210ac55219e88b2091fa47289b0221948ba90c1f20084ab7199201a",
-                    label: privLabel,
-                    is_private: true
-                };
-            case "listAllAccounts":
-                return {
-                    ok: true,
-                    accounts: [
-                        {
-                            account_id: "Public/891ae258f92ca8447af6cf09c41d96b3a06187d098b91ab2cc17b42e3c4a2fa1",
-                            label: "Primary Vault (Public)",
-                            is_private: false,
-                            balance: "12500000000",
-                            formatted_balance: "12,500.00"
-                        },
-                        {
-                            account_id: "Private/047f3b89e210ac55219e88b2091fa47289b0221948ba90c1f20084ab7199201a",
-                            label: "Stealth Stash (Shielded)",
-                            is_private: true,
-                            balance: "8400000000",
-                            formatted_balance: "8,400.00"
-                        }
-                    ]
-                };
-            case "getBalance":
-                return { ok: true, balance: "12500000000", formatted: "12,500.00" };
-            case "setAccountLabel":
-                return { ok: true, updated: true };
-            case "resolveName":
-                var name = args && args[1] ? args[1] : "";
-                if (name === "alice.lez") {
-                    return {
-                        ok: true,
-                        name: "alice.lez",
-                        account_id: "Public/891ae258f92ca8447af6cf09c41d96b3a06187d098b91ab2cc17b42e3c4a2fa1",
-                        resolved: true
-                    };
-                } else if (name === "bob.lez") {
-                    return {
-                        ok: true,
-                        name: "bob.lez",
-                        account_id: "Public/11223344556677889900aabbccddeeff00112233445566778899aabbccddeeff",
-                        resolved: true
-                    };
-                } else if (name === "stealth.lez" || name === "charlie.lez") {
-                    return {
-                        ok: true,
-                        name: name,
-                        account_id: "Private/047f3b89e210ac55219e88b2091fa47289b0221948ba90c1f20084ab7199201a",
-                        resolved: true
-                    };
-                }
-                return { ok: false, error: "Name '" + name + "' not registered in LNS" };
-            case "proposeNativeTransfer":
-                return { ok: true, request_id: "req_mock_98214", status: "pending_approval" };
-            case "proposeTokenTransfer":
-                return { ok: true, request_id: "req_mock_tok_4412", status: "pending_approval" };
-            case "getRequestStatus":
-                var reqId = (args && args[0]) ? args[0] : "req_mock_98214";
-                return {
-                    ok: true,
-                    request_id: reqId,
-                    status: "submitted",
-                    tx_hash: "0x8f3c2b1a9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a210987654321fedcba0987"
-                };
-            case "requestFaucet":
-                return {
-                    ok: true,
-                    amount: "100.00",
-                    tx_hash: "0x3f9e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f"
-                };
-            case "proposeTransaction":
-                var targetProgram = "Public/D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV";
-                var reqId = "req_prop_" + Math.random().toString(16).substring(2, 10);
-                if (args && args.length >= 3 && typeof args[1] === "string" && args[1].indexOf("[") === 0) {
-                    try {
-                        var parsedMentions = JSON.parse(args[1]);
-                        if (parsedMentions.length > 1) targetProgram = parsedMentions[1];
-                    } catch(e) {}
-                } else if (args && args[0]) {
-                    targetProgram = args[0];
-                }
-                return {
-                    ok: true,
-                    request_id: reqId,
-                    status: "pending_approval",
-                    tx_hash: "0xb2655903cac86b50b55d0a8c0feb062dd2113ebe5292423d23ab8924f8189bfc",
-                    program: targetProgram,
-                    block: 43466,
-                    submission_id: "4f793e86-5a23-4d20-969b-b993291caf59"
-                };
-            case "getRequestStatus":
-                return {
-                    ok: true,
-                    request_id: (args && args[0]) ? args[0] : "req_status",
-                    status: "submitted",
-                    tx_hash: "0xb2655903cac86b50b55d0a8c0feb062dd2113ebe5292423d23ab8924f8189bfc"
-                };
-            case "cancelRequest":
-                return {
-                    ok: true,
-                    request_id: (args && args[0]) ? args[0] : "req_cancelled",
-                    status: "cancelled"
-                };
-            case "listTokenHoldings":
-                return {
-                    ok: true,
-                    tokens: [
-                        {
-                            holding_id: "Holding/01a8b9c7d6e5f4",
-                            definition_id: "Def/LOGO_GOVERNANCE_v1",
-                            symbol: "LOGO",
-                            name: "Logos Governance Token",
-                            balance: "2500000000",
-                            formatted_balance: "2,500.00",
-                            is_shielded: false
-                        },
-                        {
-                            holding_id: "Holding/02c3d4e5f6a7b8",
-                            definition_id: "Def/USDL_SHIELDED_STABLE",
-                            symbol: "USDL",
-                            name: "LEZ Shielded Dollar",
-                            balance: "5000000000",
-                            formatted_balance: "5,000.00",
-                            is_shielded: true
-                        }
-                    ]
-                };
-            case "channelDeposit":
-                var depAmount = (args && args[1]) ? args[1] : "142.50";
-                return {
-                    ok: true,
-                    amount: depAmount,
-                    tx_hash: "0x7c9a1b2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
-                    recipient: (args && args[0]) ? args[0] : ""
-                };
-            case "simulatePromptEffect":
-                return {
-                    ok: true,
-                    simulation: {
-                        effect: "Transfer 25.00 LEZ from active public account to Governance Treasury.",
-                        gas_fee: "0.0015 LEZ",
-                        state_diff: "-25.0015 LEZ (Public Account)",
-                        verification_status: "Verified",
-                        program_hash: "0x891ae258f92ca8447af6cf09c41d96b3a06187d098b91ab2cc17b42e3c4a2fa1"
-                    }
-                };
-            case "submitApprovalDecision":
-                return { ok: true, submitted: true, decision: (args && args[1]) ? args[1] : 1 };
-            case "getIdentityCommitment":
-                return {
-                    ok: true,
-                    commitment: "0x3f9e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f",
-                    scope_prefix: "lez_id_v1"
-                };
-            case "deriveScopedNullifier":
-                var scope = (args && args[1]) ? args[1] : "governance.logos.co";
-                return {
-                    ok: true,
-                    scope: scope,
-                    nullifier: "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b"
-                };
-            case "signIdentityAttestation":
-                return {
-                    ok: true,
-                    signature: "0xbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                    scheme: "BIP-340 Schnorr"
-                };
-            case "listSessions":
-                return { ok: true, sessions: [] };
-            default:
-                return { ok: true, method: method, message: "Mock execution successful" };
         }
     }
 }

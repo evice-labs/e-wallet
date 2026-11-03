@@ -11,18 +11,19 @@ Card {
 
     implicitHeight: 295
 
-    signal openCreateAccount()
-    signal openSettingsModal()
-    signal openUnlockModal()
-    signal openProfileModal()
-    signal triggerDappPreview()
+    signal openCreateAccount
+    signal openSettingsModal
+    signal openUnlockModal
+    signal openProfileModal
+    signal triggerDappPreview
 
     property var approvalManager: null
     property bool isCascadeExpanded: false
     property string activeAssetTab: "native" // "native" | "tokens"
 
     function getSecondaryAccount() {
-        if (!accountStore || !accountStore.accounts || accountStore.accounts.length < 2) return null;
+        if (!accountStore || !accountStore.accounts || accountStore.accounts.length < 2)
+            return null;
         for (var i = 0; i < accountStore.accounts.length; i++) {
             var acc = accountStore.accounts[i];
             if (!accountStore.activeAccount || acc.account_id !== accountStore.activeAccount.account_id) {
@@ -46,10 +47,7 @@ Card {
 
                 Text {
                     Layout.alignment: Qt.AlignRight
-                    text: {
-                        var name = accountStore.activeAccount && accountStore.activeAccount.label ? accountStore.activeAccount.label : "alice.lez";
-                        return "Hola, " + name;
-                    }
+                    text: "Hola, " + accountStore.activeAccountName
                     color: theme.textPrimary
                     font.family: theme.fontFamily
                     font.pixelSize: theme.fontSizeBody
@@ -69,7 +67,8 @@ Card {
 
                     Text {
                         text: {
-                            if (bridge.isLocked) return "Vault Locked";
+                            if (bridge.isLocked)
+                                return "Vault Locked";
                             var isPriv = accountStore.activeAccount && accountStore.activeAccount.is_private;
                             var count = (accountStore.accounts && accountStore.accounts.length) || 1;
                             return (isPriv ? "Shielded ZK" : "Public") + (count > 1 ? " • " + count + " Accounts" : "");
@@ -90,7 +89,10 @@ Card {
                 Layout.preferredHeight: height
 
                 Behavior on width {
-                    NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+                    NumberAnimation {
+                        duration: 220
+                        easing.type: Easing.OutCubic
+                    }
                 }
 
                 readonly property var secondaryAcc: balanceCard.getSecondaryAccount()
@@ -106,15 +108,14 @@ Card {
                     x: balanceCard.isCascadeExpanded ? 42 : 10
 
                     Behavior on x {
-                        NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+                        NumberAnimation {
+                            duration: 240
+                            easing.type: Easing.OutCubic
+                        }
                     }
 
-                    color: cascadedAvatarContainer.secondaryAcc ?
-                           (backHoverArea.containsMouse ? "#2a4365" : "#1e293b") :
-                           (backHoverArea.containsMouse ? theme.bgSurfaceSubtle : "#252b42")
-                    border.color: cascadedAvatarContainer.secondaryAcc ?
-                                  (backHoverArea.containsMouse ? theme.statusPublic : "#3b4261") :
-                                  (backHoverArea.containsMouse ? theme.borderActive : theme.borderSubtle)
+                    color: cascadedAvatarContainer.secondaryAcc ? (backHoverArea.containsMouse ? "#2a4365" : "#1e293b") : (backHoverArea.containsMouse ? theme.bgSurfaceSubtle : "#252b42")
+                    border.color: cascadedAvatarContainer.secondaryAcc ? (backHoverArea.containsMouse ? theme.statusPublic : "#3b4261") : (backHoverArea.containsMouse ? theme.borderActive : theme.borderSubtle)
                     border.width: 1.5
 
                     // Secondary Profile Exists -> Show Initial Letter + ⇄ badge
@@ -124,8 +125,7 @@ Card {
 
                         Text {
                             anchors.centerIn: parent
-                            text: cascadedAvatarContainer.secondaryAcc && cascadedAvatarContainer.secondaryAcc.label ?
-                                  cascadedAvatarContainer.secondaryAcc.label.substring(0, 1).toUpperCase() : "2"
+                            text: accountStore.getAccountLabel(cascadedAvatarContainer.secondaryAcc).substring(0, 1).toUpperCase()
                             font.family: theme.fontFamily
                             font.bold: true
                             font.pixelSize: 14
@@ -199,15 +199,14 @@ Card {
 
                     scale: frontHoverArea.pressed ? 0.94 : (frontHoverArea.containsMouse ? 1.05 : 1.0)
                     Behavior on scale {
-                        NumberAnimation { duration: 120 }
+                        NumberAnimation {
+                            duration: 120
+                        }
                     }
 
                     Text {
                         anchors.centerIn: parent
-                        text: {
-                            var lbl = accountStore.activeAccount && accountStore.activeAccount.label ? accountStore.activeAccount.label : "alice.lez";
-                            return lbl.substring(0, 1).toUpperCase();
-                        }
+                        text: accountStore.activeAccountInitial
                         font.family: theme.fontFamily
                         font.bold: true
                         font.pixelSize: 15
@@ -286,7 +285,6 @@ Card {
                                 var pub = parseFloat(accountStore.totalPublicBalance.replace(/,/g, "")) || 0;
                                 var priv = parseFloat(accountStore.totalShieldedBalance.replace(/,/g, "")) || 0;
                                 var total = pub + priv;
-                                if (total === 0) return "1,250.00 LEZ";
                                 return Number(total).toFixed(2) + " LEZ";
                             } else {
                                 var count = (accountStore.tokens && accountStore.tokens.length) || 0;
@@ -357,7 +355,7 @@ Card {
             color: theme.borderSubtle
         }
 
-        // VIEW 1: Native LEZ Split (Public, Private, Faucet)
+        // VIEW 1: Native LEZ Split (Public & Shielded Pools)
         RowLayout {
             visible: balanceCard.activeAssetTab === "native"
             Layout.fillWidth: true
@@ -378,7 +376,7 @@ Card {
                         font.weight: Font.Bold
                     }
                     Text {
-                        text: "UNSHIELD"
+                        text: "UNSHIELDED"
                         color: theme.statusPublic
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeTiny
@@ -387,13 +385,13 @@ Card {
                 }
 
                 Text {
-                    text: accountStore.totalPublicBalance !== "0" && accountStore.totalPublicBalance !== "0.00"
-                          ? accountStore.totalPublicBalance + " LEZ"
-                          : "500.00 LEZ"
+                    text: (accountStore.totalPublicBalance || "0.00") + " LEZ"
                     color: theme.textPrimary
                     font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTitle
+                    font.pixelSize: balanceCard.width < 450 ? theme.fontSizeBody : theme.fontSizeTitle
                     font.weight: Font.Bold
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
             }
 
@@ -428,44 +426,7 @@ Card {
                 }
 
                 Text {
-                    text: accountStore.totalShieldedBalance !== "0" && accountStore.totalShieldedBalance !== "0.00"
-                          ? accountStore.totalShieldedBalance + " LEZ"
-                          : "750.00 LEZ"
-                    color: theme.textPrimary
-                    font.family: theme.fontFamily
-                    font.pixelSize: balanceCard.width < 450 ? theme.fontSizeBody : theme.fontSizeTitle
-                    font.weight: Font.Bold
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-            }
-
-            // Vertical Divider
-            Rectangle {
-                width: 1
-                height: 44
-                color: theme.borderSubtle
-            }
-
-            // Faucet Pool
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 4
-
-                Row {
-                    Text {
-                        text: "FAUCET"
-                        color: theme.accentOrange
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeTiny
-                        font.weight: Font.Bold
-                    }
-                }
-
-                Text {
-                    text: accountStore.totalShieldedBalance !== "0" && accountStore.totalShieldedBalance !== "0.00"
-                          ? accountStore.totalShieldedBalance + " LEZ"
-                          : "400.00 LEZ"
+                    text: (accountStore.totalShieldedBalance || "0.00") + " LEZ"
                     color: theme.textPrimary
                     font.family: theme.fontFamily
                     font.pixelSize: balanceCard.width < 450 ? theme.fontSizeBody : theme.fontSizeTitle
@@ -527,7 +488,9 @@ Card {
                             }
                         }
 
-                        Item { Layout.fillWidth: true }
+                        Item {
+                            Layout.fillWidth: true
+                        }
 
                         // Token Balance
                         Text {
@@ -551,7 +514,7 @@ Card {
             }
         }
 
-        // FLEXIBLE EXPANDING SPACER 
+        // FLEXIBLE EXPANDING SPACER
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -564,7 +527,7 @@ Card {
             color: theme.borderSubtle
         }
 
-        // Vault Security & Sequencer Telemetry Footer Bar 
+        // Vault Security & Sequencer Telemetry Footer Bar
         RowLayout {
             Layout.fillWidth: true
             spacing: 8

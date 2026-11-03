@@ -15,7 +15,9 @@ Rectangle {
     Layout.fillWidth: true
     radius: 0
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     color: theme.bgSurface
     border.color: theme.borderSubtle
@@ -80,4 +82,3 @@ Rectangle {
         }
     }
 }
-

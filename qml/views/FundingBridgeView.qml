@@ -21,18 +21,7 @@ Card {
             if (bridgeCard.ledgerViewRef) {
                 var acc = accountStore.activeAccount;
                 var label = acc ? acc.label : "Primary Account";
-                bridgeCard.ledgerViewRef.addActivity(
-                    label,
-                    "Channel Bridge",
-                    "Transfers",
-                    "+" + amount + " LEZ",
-                    "L1 → LEZ Channel Deposit",
-                    true,
-                    txHash || "0x3f9e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f",
-                    "Channel Inscription (L1 Bridge)",
-                    43580,
-                    "Logos L1 ➝ LEZ Channel"
-                );
+                bridgeCard.ledgerViewRef.addActivity(label, "Channel Bridge", "Transfers", "+" + amount + " LEZ", "L1 → LEZ Channel Deposit", true, txHash || "0x3f9e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f", "Channel Inscription (L1 Bridge)", 43580, "Logos L1 ➝ LEZ Channel");
             }
             resetActionTimer.restart();
         }
@@ -75,8 +64,7 @@ Card {
                     }
 
                     Text {
-                        text: (bridgeCtrl && bridgeCtrl.isMining) ?
-                              (bridgeCtrl.hashrate + " H/s (ACTIVE)") : "OFFLINE"
+                        text: (bridgeCtrl && bridgeCtrl.isMining) ? (bridgeCtrl.hashrate + " H/s (ACTIVE)") : "OFFLINE"
                         color: (bridgeCtrl && bridgeCtrl.isMining) ? theme.statusSuccess : theme.textMuted
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeBody + 2
@@ -145,9 +133,7 @@ Card {
                 }
 
                 Text {
-                    text: (bridgeCtrl && bridgeCtrl.isMining) ?
-                          ("POW ACTIVE • " + bridgeCtrl.hashrate + " H/S") :
-                          "NODE IDLE • SHA-256"
+                    text: (bridgeCtrl && bridgeCtrl.isMining) ? ("POW ACTIVE • " + bridgeCtrl.hashrate + " H/S") : "NODE IDLE • SHA-256"
                     color: (bridgeCtrl && bridgeCtrl.isMining) ? theme.statusSuccess : theme.textMuted
                     font.family: theme.fontFamily
                     font.pixelSize: theme.fontSizeTiny
@@ -181,7 +167,10 @@ Card {
                     opacity: 0.9
 
                     Behavior on x {
-                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
                     }
                 }
 
@@ -201,10 +190,8 @@ Card {
                                 if (actionConsole.isDestructiveActive) {
                                     return miningMouse.pressed ? "#991B1B" : (miningMouse.containsMouse ? "#DC2626" : "#B91C1C");
                                 }
-                                var isPressed = (bridgeCard.activeAction === "mining" && miningMouse.pressed) ||
-                                                (bridgeCard.activeAction === "bridge" && bridgeMouse.pressed);
-                                var isHovered = (bridgeCard.activeAction === "mining" && miningMouse.containsMouse) ||
-                                                (bridgeCard.activeAction === "bridge" && bridgeMouse.containsMouse);
+                                var isPressed = (bridgeCard.activeAction === "mining" && miningMouse.pressed) || (bridgeCard.activeAction === "bridge" && bridgeMouse.pressed);
+                                var isHovered = (bridgeCard.activeAction === "mining" && miningMouse.containsMouse) || (bridgeCard.activeAction === "bridge" && bridgeMouse.containsMouse);
                                 return isPressed ? theme.btnPrimaryPressed : (isHovered ? theme.btnPrimaryHoverTop : theme.btnPrimaryTop);
                             }
                         }
@@ -214,10 +201,8 @@ Card {
                                 if (actionConsole.isDestructiveActive) {
                                     return miningMouse.pressed ? "#7F1D1D" : (miningMouse.containsMouse ? "#B91C1C" : "#991B1B");
                                 }
-                                var isPressed = (bridgeCard.activeAction === "mining" && miningMouse.pressed) ||
-                                                (bridgeCard.activeAction === "bridge" && bridgeMouse.pressed);
-                                var isHovered = (bridgeCard.activeAction === "mining" && miningMouse.containsMouse) ||
-                                                (bridgeCard.activeAction === "bridge" && bridgeMouse.containsMouse);
+                                var isPressed = (bridgeCard.activeAction === "mining" && miningMouse.pressed) || (bridgeCard.activeAction === "bridge" && bridgeMouse.pressed);
+                                var isHovered = (bridgeCard.activeAction === "mining" && miningMouse.containsMouse) || (bridgeCard.activeAction === "bridge" && bridgeMouse.containsMouse);
                                 return isPressed ? theme.btnPrimaryPressed : (isHovered ? theme.btnPrimaryHoverBottom : theme.btnPrimaryBottom);
                             }
                         }
@@ -239,7 +224,10 @@ Card {
                     }
 
                     Behavior on x {
-                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
                     }
                 }
 
@@ -258,9 +246,7 @@ Card {
                             id: miningLabel
                             anchors.centerIn: parent
                             text: (bridgeCtrl && bridgeCtrl.isMining) ? "Stop Mining" : "Start Mining"
-                            color: bridgeCard.activeAction === "mining" ?
-                                   theme.textPrimary :
-                                   (miningMouse.containsMouse ? theme.textPrimary : theme.textSecondary)
+                            color: bridgeCard.activeAction === "mining" ? theme.textPrimary : (miningMouse.containsMouse ? theme.textPrimary : theme.textSecondary)
                             font.family: theme.fontFamily
                             font.pixelSize: theme.fontSizeSmall
                             font.weight: bridgeCard.activeAction === "mining" ? Font.DemiBold : Font.Medium
@@ -290,11 +276,7 @@ Card {
                         width: actionConsole.segmentWidth
                         height: parent.height
 
-                        readonly property bool canBridge: !bridge.isLocked &&
-                                                          accountStore.activeAccount !== null &&
-                                                          bridgeCtrl !== null &&
-                                                          bridgeCtrl.hasUnbridgedTokens &&
-                                                          !bridgeCtrl.isDepositing
+                        readonly property bool canBridge: !bridge.isLocked && accountStore.activeAccount !== null && bridgeCtrl !== null && bridgeCtrl.hasUnbridgedTokens && !bridgeCtrl.isDepositing
 
                         opacity: bridgeCard.activeAction === "bridge" ? 1.0 : (bridgeSegment.canBridge ? 1.0 : 0.45)
 
@@ -302,9 +284,7 @@ Card {
                             id: bridgeLabel
                             anchors.centerIn: parent
                             text: (bridgeCtrl && bridgeCtrl.isDepositing) ? "Bridging..." : "Bridge Tokens"
-                            color: bridgeCard.activeAction === "bridge" ?
-                                   theme.textPrimary :
-                                   (bridgeMouse.containsMouse && bridgeSegment.canBridge ? theme.textPrimary : theme.textSecondary)
+                            color: bridgeCard.activeAction === "bridge" ? theme.textPrimary : (bridgeMouse.containsMouse && bridgeSegment.canBridge ? theme.textPrimary : theme.textSecondary)
                             font.family: theme.fontFamily
                             font.pixelSize: theme.fontSizeSmall
                             font.weight: bridgeCard.activeAction === "bridge" ? Font.DemiBold : Font.Medium

@@ -22,7 +22,9 @@ ModalOverlay {
     property string attestationSignature: ""
     property string statusFeedback: ""
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     Component.onCompleted: {
         loadCommitment();
@@ -30,7 +32,7 @@ ModalOverlay {
     }
 
     function loadCommitment() {
-        bridge.invoke("getIdentityCommitment", [bridge.activeSessionId], function(res) {
+        bridge.invoke("getIdentityCommitment", [bridge.activeSessionId], function (res) {
             if (res && res.ok && res.commitment) {
                 modal.commitmentHash = res.commitment;
             } else {
@@ -41,9 +43,10 @@ ModalOverlay {
 
     function executeDerive(scope) {
         var s = (scope || scopeInput).trim();
-        if (!s) return;
+        if (!s)
+            return;
         scopeInput = s;
-        bridge.invoke("deriveScopedNullifier", [bridge.activeSessionId, s], function(res) {
+        bridge.invoke("deriveScopedNullifier", [bridge.activeSessionId, s], function (res) {
             if (res && res.ok && res.nullifier) {
                 modal.derivedNullifier = res.nullifier;
                 modal.statusFeedback = "Scoped nullifier derived for " + s;
@@ -152,7 +155,9 @@ ModalOverlay {
                         font.weight: Font.Bold
                     }
                 }
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
                 Button {
                     text: "Copy Commitment Hash"
                     isCompact: true
@@ -236,9 +241,7 @@ ModalOverlay {
 
                     Text {
                         Layout.fillWidth: true
-                        text: modal.derivedNullifier.length > 0 ?
-                              modal.derivedNullifier :
-                              "Select a preset or click 'Derive Nullifier'."
+                        text: modal.derivedNullifier.length > 0 ? modal.derivedNullifier : "Select a preset or click 'Derive Nullifier'."
                         color: modal.derivedNullifier.length > 0 ? theme.statusShielded : theme.textMuted
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall
@@ -310,7 +313,9 @@ ModalOverlay {
                     }
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Button {
                     text: "Sign Attestation"
@@ -319,7 +324,7 @@ ModalOverlay {
                     enabled: challengeField.text.trim().length > 0
                     onClicked: {
                         var msg = challengeField.text.trim();
-                        bridge.invoke("signIdentityAttestation", [bridge.activeSessionId, modal.scopeInput, msg], function(res) {
+                        bridge.invoke("signIdentityAttestation", [bridge.activeSessionId, modal.scopeInput, msg], function (res) {
                             if (res && res.ok && res.signature) {
                                 modal.attestationSignature = res.signature;
                                 modal.statusFeedback = "BIP-340 Schnorr attestation signature generated.";
@@ -349,9 +354,7 @@ ModalOverlay {
 
                     Text {
                         Layout.fillWidth: true
-                        text: modal.attestationSignature.length > 0 ?
-                              modal.attestationSignature :
-                              "Awaiting attestation challenge signing..."
+                        text: modal.attestationSignature.length > 0 ? modal.attestationSignature : "Awaiting attestation challenge signing..."
                         color: modal.attestationSignature.length > 0 ? theme.statusSuccess : theme.textMuted
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall
@@ -361,7 +364,9 @@ ModalOverlay {
             }
         }
 
-        Item { Layout.fillHeight: true }
+        Item {
+            Layout.fillHeight: true
+        }
 
         // Status Feedback banner
         Text {
@@ -375,7 +380,9 @@ ModalOverlay {
         // Close action
         RowLayout {
             Layout.fillWidth: true
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
             Button {
                 text: "Done"
                 Layout.preferredWidth: 100

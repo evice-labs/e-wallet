@@ -15,7 +15,9 @@ Rectangle {
     border.color: theme.borderSubtle
     border.width: 1
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     Row {
         id: tabRow

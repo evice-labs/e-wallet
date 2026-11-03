@@ -12,7 +12,9 @@ Item {
     implicitWidth: 320
     implicitHeight: title.length > 0 ? 50 : 12
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     Column {
         anchors.fill: parent
@@ -62,12 +64,21 @@ Item {
                 radius: theme.radiusProgress
 
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: Qt.lighter(control.barColor, 1.15) }
-                    GradientStop { position: 1.0; color: control.barColor }
+                    GradientStop {
+                        position: 0.0
+                        color: Qt.lighter(control.barColor, 1.15)
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: control.barColor
+                    }
                 }
 
                 Behavior on width {
-                    NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                    NumberAnimation {
+                        duration: 250
+                        easing.type: Easing.OutCubic
+                    }
                 }
             }
         }

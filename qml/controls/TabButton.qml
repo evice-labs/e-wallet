@@ -7,14 +7,16 @@ Item {
     property string text: "Tab"
     property bool isActive: false
     property int customWidth: 0
-    signal clicked()
+    signal clicked
 
     implicitWidth: customWidth > 0 ? customWidth : (tabLabel.implicitWidth + 24)
     implicitHeight: 28
     width: implicitWidth
     height: parent ? parent.height : 28
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     // Drop shadow beneath active tab to give the "timbul" physical elevation
     Rectangle {
@@ -27,7 +29,9 @@ Item {
         visible: opacity > 0
 
         Behavior on opacity {
-            NumberAnimation { duration: 150 }
+            NumberAnimation {
+                duration: 150
+            }
         }
     }
 
@@ -69,7 +73,9 @@ Item {
             visible: opacity > 0
 
             Behavior on opacity {
-                NumberAnimation { duration: 150 }
+                NumberAnimation {
+                    duration: 150
+                }
             }
         }
 
@@ -77,9 +83,7 @@ Item {
             id: tabLabel
             anchors.centerIn: parent
             text: control.text
-            color: control.isActive ?
-                   theme.textPrimary :
-                   (mouseArea.containsMouse ? theme.textPrimary : theme.textSecondary)
+            color: control.isActive ? theme.textPrimary : (mouseArea.containsMouse ? theme.textPrimary : theme.textSecondary)
             font.family: theme.fontFamily
             font.pixelSize: theme.fontSizeSmall
             font.weight: control.isActive ? Font.DemiBold : Font.Medium
@@ -96,4 +100,3 @@ Item {
         onClicked: control.clicked()
     }
 }
-

@@ -16,7 +16,9 @@ ModalOverlay {
 
     property string errorMessage: ""
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -61,7 +63,9 @@ ModalOverlay {
             wrapMode: Text.WordWrap
         }
 
-        Item { Layout.fillHeight: true }
+        Item {
+            Layout.fillHeight: true
+        }
 
         RowLayout {
             Layout.fillWidth: true
@@ -72,7 +76,9 @@ ModalOverlay {
                 onClicked: modal.close()
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             Button {
                 text: "Restore & Unlock"
@@ -102,7 +108,7 @@ ModalOverlay {
             return;
         }
 
-        bridge.invoke("restoreWallet", [m, p1], function(res) {
+        bridge.invoke("restoreWallet", [m, p1], function (res) {
             if (res && res.ok) {
                 mnemonicInput.text = "";
                 newPassInput.text = "";

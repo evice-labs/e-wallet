@@ -13,7 +13,7 @@ Card {
 
     implicitHeight: 295
 
-    signal openUnlockModal()
+    signal openUnlockModal
 
     property string feedbackMessage: ""
     property bool isSuccessFeedback: false
@@ -41,18 +41,7 @@ Card {
                 var modeLabel = isPriv ? "Shield" : (transferCtrl.transferMode === "priv_to_pub" ? "Unshield" : "Public");
                 var cat = (isPriv || transferCtrl.transferMode === "priv_to_pub") ? "Shields" : "Transfers";
                 var symbol = transferCtrl.selectedAsset === "token" ? (transferCtrl.selectedToken ? transferCtrl.selectedToken.symbol : "TOKEN") : "LEZ";
-                transferCard.ledgerViewRef.addActivity(
-                    transferCtrl.destinationInput || "Recipient",
-                    modeLabel,
-                    cat,
-                    "-" + transferCtrl.amountInput + " " + symbol,
-                    isPriv ? "Zero-Knowledge Transfer" : "Public Transfer",
-                    false,
-                    txHash,
-                    "34,000 units (0.00015 LEZ)",
-                    43582,
-                    isPriv ? "Public ➝ Shield" : "Public ➝ Public"
-                );
+                transferCard.ledgerViewRef.addActivity(transferCtrl.destinationInput || "Recipient", modeLabel, cat, "-" + transferCtrl.amountInput + " " + symbol, isPriv ? "Zero-Knowledge Transfer" : "Public Transfer", false, txHash, "34,000 units (0.00015 LEZ)", 43582, isPriv ? "Public ➝ Shield" : "Public ➝ Public");
             }
         }
         function onTransferFailed(reason) {
@@ -85,7 +74,8 @@ Card {
                     text: "Native LEZ"
                     isActive: !transferCtrl || transferCtrl.selectedAsset === "native"
                     onClicked: {
-                        if (transferCtrl) transferCtrl.selectedAsset = "native";
+                        if (transferCtrl)
+                            transferCtrl.selectedAsset = "native";
                     }
                 }
 
@@ -103,7 +93,9 @@ Card {
                 }
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
         }
 
         // Token Holding Selector (Visible when Asset == Token)
@@ -126,7 +118,8 @@ Card {
                     text: modelData.symbol + " (" + (modelData.formatted_balance || "0") + ")"
                     isPrimary: transferCtrl && transferCtrl.selectedToken && transferCtrl.selectedToken.holding_id === modelData.holding_id
                     onClicked: {
-                        if (transferCtrl) transferCtrl.selectedToken = modelData;
+                        if (transferCtrl)
+                            transferCtrl.selectedToken = modelData;
                     }
                 }
             }
@@ -140,7 +133,7 @@ Card {
             TextField {
                 id: destField
                 Layout.fillWidth: true
-                placeholder: "To: bob.lez or Address"
+                placeholder: "Enter .lez domain name or account address..."
                 text: transferCtrl ? transferCtrl.destinationInput : ""
                 onTextChanged: {
                     if (transferCtrl && transferCtrl.destinationInput !== text) {
@@ -165,16 +158,23 @@ Card {
 
                 Text {
                     text: {
-                        if (!transferCtrl) return "";
-                        if (transferCtrl.lnsStatus === "resolving") return "RESOLVING LNS...";
-                        if (transferCtrl.lnsStatus === "resolved") return "RESOLVED";
-                        if (transferCtrl.lnsStatus === "invalid") return "INVALID DOMAIN";
+                        if (!transferCtrl)
+                            return "";
+                        if (transferCtrl.lnsStatus === "resolving")
+                            return "RESOLVING LNS...";
+                        if (transferCtrl.lnsStatus === "resolved")
+                            return "RESOLVED";
+                        if (transferCtrl.lnsStatus === "invalid")
+                            return "INVALID DOMAIN";
                         return "";
                     }
                     color: {
-                        if (!transferCtrl) return theme.textMuted;
-                        if (transferCtrl.lnsStatus === "resolving") return theme.accentOrange;
-                        if (transferCtrl.lnsStatus === "resolved") return theme.statusSuccess;
+                        if (!transferCtrl)
+                            return theme.textMuted;
+                        if (transferCtrl.lnsStatus === "resolving")
+                            return theme.accentOrange;
+                        if (transferCtrl.lnsStatus === "resolved")
+                            return theme.statusSuccess;
                         return theme.statusDanger;
                     }
                     font.family: theme.fontFamily
@@ -188,43 +188,6 @@ Card {
                     font.family: theme.fontMono
                     font.pixelSize: theme.fontSizeSmall
                     elide: Text.ElideRight
-                }
-            }
-
-            // Quick Recipient Selection for User's Other Accounts
-            RowLayout {
-                visible: accountStore.accounts && accountStore.accounts.length > 1
-                spacing: 6
-
-                Text {
-                    text: "Your Accounts:"
-                    color: theme.textSecondary
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTiny
-                }
-
-                Repeater {
-                    model: {
-                        if (!accountStore || !accountStore.accounts) return [];
-                        var list = [];
-                        var active = accountStore.activeAccount;
-                        for (var i = 0; i < accountStore.accounts.length; i++) {
-                            var a = accountStore.accounts[i];
-                            if (!active || a.account_id !== active.account_id) {
-                                list.push(a);
-                            }
-                        }
-                        return list;
-                    }
-                    delegate: Button {
-                        isCompact: true
-                        text: (modelData.label || "Account") + (modelData.is_private ? " (Shielded)" : "")
-                        onClicked: {
-                            if (transferCtrl) {
-                                transferCtrl.destinationInput = modelData.account_id;
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -272,10 +235,14 @@ Card {
 
             Text {
                 text: {
-                    if (!transferCtrl) return "Public ➝ Public";
-                    if (transferCtrl.transferMode === "pub_to_priv") return "Public ➝ Shield";
-                    if (transferCtrl.transferMode === "priv_to_pub") return "Shield ➝ Public";
-                    if (transferCtrl.transferMode === "priv_to_priv") return "Shield ➝ Shield";
+                    if (!transferCtrl)
+                        return "Public ➝ Public";
+                    if (transferCtrl.transferMode === "pub_to_priv")
+                        return "Public ➝ Shield";
+                    if (transferCtrl.transferMode === "priv_to_pub")
+                        return "Shield ➝ Public";
+                    if (transferCtrl.transferMode === "priv_to_priv")
+                        return "Shield ➝ Shield";
                     return "Public ➝ Public";
                 }
                 color: (transferCtrl && (transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv")) ? theme.statusShielded : theme.statusPublic
@@ -324,13 +291,17 @@ Card {
                 Layout.alignment: Qt.AlignVCenter
             }
 
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
 
             // 2. Submit Action Button
             Button {
                 text: {
-                    if (transferCtrl && transferCtrl.isSubmitting) return "Submitting...";
-                    if (bridge.isLocked) return "Unlock Vault";
+                    if (transferCtrl && transferCtrl.isSubmitting)
+                        return "Submitting...";
+                    if (bridge.isLocked)
+                        return "Unlock Vault";
                     return "Send Transfer";
                 }
                 isPrimary: true

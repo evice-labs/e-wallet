@@ -16,14 +16,19 @@ Item {
     property int dialogHeight: 400
     property bool dismissible: true
 
-    signal closed()
+    signal closed
 
     default property alias content: contentContainer.data
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     Behavior on opacity {
-        NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+        NumberAnimation {
+            duration: 180
+            easing.type: Easing.OutQuad
+        }
     }
 
     function open() {

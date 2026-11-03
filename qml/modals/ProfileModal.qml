@@ -8,18 +8,20 @@ ModalOverlay {
 
     title: "Profile & Accounts"
     dialogWidth: 380
-    dialogHeight: Math.min(580, profileCol.implicitHeight + 120)
+    dialogHeight: Math.min(560, profileCol.implicitHeight + 120)
 
     required property var bridge
     required property var accountStore
     required property var approvalManager
 
-    signal openCreateAccount()
-    signal openSettingsModal()
-    signal openUnlockModal()
-    signal openApprovalModal()
+    signal openCreateAccount
+    signal openSettingsModal
+    signal openUnlockModal
+    signal openApprovalModal
 
-    Theme { id: theme }
+    Theme {
+        id: theme
+    }
 
     ColumnLayout {
         id: profileCol
@@ -39,9 +41,26 @@ ModalOverlay {
             Layout.fillWidth: true
             spacing: 8
 
+            Rectangle {
+                width: 28
+                height: 28
+                radius: 14
+                color: theme.bgSurfaceSubtle
+                border.color: theme.borderActive
+
+                Text {
+                    anchors.centerIn: parent
+                    text: accountStore.activeAccountInitial
+                    font.family: theme.fontFamily
+                    font.bold: true
+                    font.pixelSize: 13
+                    color: theme.textPrimary
+                }
+            }
+
             Text {
                 Layout.fillWidth: true
-                text: accountStore.activeAccount && accountStore.activeAccount.label ? accountStore.activeAccount.label : "alice.lez"
+                text: accountStore.activeAccountName
                 color: theme.textPrimary
                 font.family: theme.fontFamily
                 font.pixelSize: theme.fontSizeBody
@@ -160,7 +179,9 @@ ModalOverlay {
                     font.weight: Font.Bold
                 }
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 Text {
                     text: "Shifts in order on sign/reject"
@@ -177,7 +198,7 @@ ModalOverlay {
             color: theme.borderSubtle
         }
 
-        // Quick Actions: Account List
+        // Quick Actions: Account List (Excluding Currently Active Account)
         Text {
             text: "SWITCH ACCOUNT"
             color: theme.textMuted
@@ -187,7 +208,19 @@ ModalOverlay {
         }
 
         Repeater {
-            model: accountStore.accounts
+            model: {
+                if (!accountStore || !accountStore.accounts)
+                    return [];
+                var list = [];
+                var active = accountStore.activeAccount;
+                for (var i = 0; i < accountStore.accounts.length; i++) {
+                    var acc = accountStore.accounts[i];
+                    if (!active || acc.account_id !== active.account_id) {
+                        list.push(acc);
+                    }
+                }
+                return list;
+            }
             delegate: Rectangle {
                 Layout.fillWidth: true
                 height: 30
@@ -204,16 +237,15 @@ ModalOverlay {
                         width: 6
                         height: 6
                         radius: 3
-                        color: modelData === accountStore.activeAccount ? theme.statusSuccess : "transparent"
+                        color: theme.accentCyan
                     }
 
                     Text {
                         Layout.fillWidth: true
-                        text: modelData.label || "Account"
-                        color: modelData === accountStore.activeAccount ? theme.textPrimary : (accMouse.containsMouse ? theme.textPrimary : theme.textSecondary)
+                        text: accountStore.getAccountLabel(modelData)
+                        color: accMouse.containsMouse ? theme.textPrimary : theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
-                        font.weight: modelData === accountStore.activeAccount ? Font.Bold : Font.Normal
                         elide: Text.ElideRight
                     }
 
@@ -236,6 +268,25 @@ ModalOverlay {
                     }
                 }
             }
+        }
+
+        Text {
+            visible: {
+                if (!accountStore || !accountStore.accounts)
+                    return true;
+                var otherCount = 0;
+                var active = accountStore.activeAccount;
+                for (var i = 0; i < accountStore.accounts.length; i++) {
+                    if (!active || accountStore.accounts[i].account_id !== active.account_id)
+                        otherCount++;
+                }
+                return otherCount === 0;
+            }
+            Layout.fillWidth: true
+            text: "No other accounts in keystore."
+            color: theme.textMuted
+            font.family: theme.fontFamily
+            font.pixelSize: theme.fontSizeSmall
         }
 
         // Button: + Add New Account

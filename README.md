@@ -23,8 +23,8 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 
 ### Core Design Philosophy: Modern Neo-Skeuomorphism
 - **Tactile Materiality.** Deep charcoal canvas (`#171717`), physical card containers (`#262626`) with dual ambient/directional drop shadows, recessed OLED/LCD display bays (`#141414`), and 1px chiseled top specular highlights.
-- **Unified Bento-Grid Layout.** A streamlined, non-fragmented single-screen architecture replacing legacy multi-tab navbars with high-density, responsive modular card workspaces and adaptive proportional scrolling.
-- **Cascaded Profile & Multi-Account Switcher.** Interactive cascaded avatar component embedded directly in the Hero Balance Card header. Features real-time initial badges, sliding reveal micro-animations, 1-click account switching (`⇄`), and a contextual profile drawer with Activity-style subtle hover feedback (`#343434`) and card-contained vault settings.
+- **Unified Bento-Grid Layout & Responsive Mobile Breakpoint.** A streamlined, non-fragmented single-screen architecture replacing legacy multi-tab navbars with high-density modular card workspaces. On wide viewports, renders a 2x2 Bento grid with proportional row heights (40% / 60%). When crossing the responsive breakpoint (`< 880px`), dynamically collapses into an intuitive single-column vertical feed backed by an interactive synchronized scrollbar track and thumb with drag-and-tap navigation.
+- **Cascaded Profile & Multi-Account Switcher with State Persistence.** Interactive cascaded avatar component embedded directly in the Hero Balance Card header. Features real-time initial badges, sliding reveal micro-animations, 1-click account switching (`⇄`), and a contextual profile drawer with subtle hover feedback (`#343434`). The active account is persistently tracked across session locks and unlocks via `lastActiveAccountId`, ensuring the user's selected account is always preserved upon reentry.
 - **Vault Security & Automated Idle Auto-Lock.** Keystore encryption protected by memory-hard key derivation (Argon2id) and authenticated cipher suites (AES-256-GCM). Window-level user inactivity detection automatically engages an idle timer that purges volatile secrets and locks the wallet.
 - **Zero-Redundancy Automated Validation Architecture.** Systems and state controllers automatically resolve active identity credentials, privacy routes, cryptographic nonces, and balances, eliminating redundant user inputs and error-prone manual validations.
 
@@ -36,10 +36,10 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 - **Session Auto-Lock.** Automatic idle timeout clearing volatile cryptographic credentials and sessions from memory upon inactivity.
 
 ### 2. Multi-Account Portfolio (Public Unshielded vs Private Shielded)
-- **Account Switcher.** Seamlessly toggle between transparent public accounts and shielded zero-knowledge accounts with distinct visual status badges (`BalanceView.qml`).
-- **Streamlined Account Creation.** Create new accounts (`CreateAccountModal.qml`) with clear `Public Unshielded` vs `Private Shielded` model selection and sequential default naming without redundant copy.
+- **Account Switcher & Active Persistence.** Seamlessly toggle between transparent public accounts and shielded zero-knowledge accounts with distinct visual status badges (`BalanceView.qml`). Active account selections are persisted across wallet lock/unlock cycles in `AccountStore.qml`.
+- **Streamlined Account Creation with Privacy Context.** Create new accounts (`CreateAccountModal.qml`) with clear `Public Unshielded` vs `Private Shielded` selectors and dynamic context cards explaining transparent on-chain addresses vs zero-knowledge commitments and nullifiers, with calibrated dimensions and integrated card action buttons.
 - **Asset Balances.** Real-time balance queries across Native LEZ, Shielded Zero-Knowledge pools, and Logos Token Program holdings.
-- **Account Detail Modal.** Inspect full 32-byte account IDs, customize labels, and safely inspect View/Spend keys protected by security disclosures (`AccountDetailModal.qml`).
+- **Account Deletion & Safety Safeguards.** Safely delete non-primary accounts via the danger zone in `SettingsModal.qml`. Built-in safeguards enforce a minimum of 1 active account, automatically re-route to an adjacent account, persist deletion state (`deletedAccountsJson`), and immediately redirect the user back to the dashboard.
 
 ### 3. 4-Way Asset Transfers & Instant LNS Domain Resolution
 - **Inline Route Indicator.** Positioned directly beneath the Amount & Max button row, displaying a clean white `"Route:"` label with status-colored route paths (`Public ➝ Public`, `Public ➝ Shield`, `Shield ➝ Public`, `Shield ➝ Shield`).
@@ -68,9 +68,15 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 - **Segmented Filter Tabs.** Real-time chronological transaction history filterable by *All*, *Transfers*, *Shields*, and *Testimonials*.
 - **Monospace Telemetry.** High-contrast transaction rows detailing direction, status tags, relative timestamps, transfer amounts, and page-by-page navigation.
 
-### 7. Keystore & Vault Security Settings
-- **Card-Contained Settings Actions.** `SettingsModal.qml` places all security actions (`Restore from Seed`, `Lock/Unlock Vault`) directly inside the Security Card, eliminating detached floating buttons.
-- **Streamlined Scope.** Focused strictly on vault security, active account details, and keystore management without unnecessary network latency noise.
+### 7. Keystore & Comprehensive Vault Settings
+- **Unified Account & Keystore Management.** Consolidated `SettingsModal.qml` serves as the centralized hub for account and keystore configuration, eliminating fragmented dialogs:
+  - **Account Customization & Labeling:** Copy full account ID, inline label renaming with instantaneous UI feedback and disk persistence (`labelsJson`).
+  - **Danger Zone (Account Deletion):** Secure inline confirmation with automatic fallback account selection and dashboard redirection.
+  - **Master Vault Password Change:** Re-encrypt the Argon2id keystore with new passphrase credentials directly from the settings interface.
+  - **Secret Key Inspector & Export:** Protected 32-byte private key inspection with explicit security disclosure and auto-clearing clipboard feedback.
+  - **Connected dApp Session Management:** Real-time list of active dApp authorizations with 1-click permission revocation.
+  - **Storage Telemetry & Keystore Actions:** Instant copy for on-disk vault storage locations, seed phrase restore triggers, and quick access to ZK identity accountability.
+  - **Synchronized Scrollbar Navigation:** Integrated scroll track and thumb providing effortless navigation across all settings categories.
 
 ### 8. Informed Consent dApp Approvals & Program Source Verification
 - **Permission Scope Assignment.** Manages dApp connection grant permissions (`GrantKind::Read`, `GrantKind::Propose`) via `ApprovalManager.qml` and `ApprovalModal.qml`.
@@ -96,7 +102,7 @@ e-wallet-ui/
 ├── flake.lock                      # Pinned Nix lockfile
 ├── .gitignore                      # Git ignore file (build, caches, local dev runner)
 ├── qml/
-│   ├── Main.qml                    # Decoupled root shell orchestrator (Bento Grid + Adaptive Scrolling)
+│   ├── Main.qml                    # Bento Grid + Responsive Breakpoint + Adaptive Scrollbar
 │   ├── assets/
 │   │   └── icons/
 │   │       └── Refresh.png         # White alpha-cutout icon for plugin sandbox compatibility
@@ -115,7 +121,7 @@ e-wallet-ui/
 │   │   └── qmldir
 │   ├── state/                      # State & IPC controllers (Logic Layer)
 │   │   ├── WalletBridge.qml        # IPC bridge to e_wallet_core (+ Mock harness)
-│   │   ├── AccountStore.qml        # Reactive multi-account portfolio controller
+│   │   ├── AccountStore.qml        # Reactive multi-account controller (Persistence across locks, label map & deletion)
 │   │   ├── TransferController.qml  # Automated 4-way transfer route & LNS lookup controller
 │   │   ├── FundingBridgeController.qml # EmPoWer mining REST & L1 ChannelDeposit bridge controller
 │   │   ├── TestimonialController.qml   # On-chain zkVM testimonial broadcast controller
@@ -134,12 +140,11 @@ e-wallet-ui/
 │       ├── UnlockModal.qml         # Argon2id master password prompt
 │       ├── CreateWalletModal.qml   # 12-word BIP-39 mnemonic generator & backup
 │       ├── RestoreWalletModal.qml  # Seed phrase import & recovery
-│       ├── CreateAccountModal.qml  # Public Unshielded / Private Shielded account creator
-│       ├── AccountDetailModal.qml  # 32-byte key inspector & label editor
+│       ├── CreateAccountModal.qml  # Public Unshielded / Private Shielded account creator with privacy context
 │       ├── ApprovalModal.qml       # dApp permission & effect simulation consent modal
 │       ├── IdentityModal.qml       # Zero-knowledge identity commitment, nullifiers & BIP-340 Schnorr
 │       ├── ProfileModal.qml        # Account identity switcher & sequential dApp request queue modal
-│       ├── SettingsModal.qml       # Keystore security info & vault lock controls
+│       ├── SettingsModal.qml       # Comprehensive account config, renaming, deletion, password change, key export & permissions
 │       ├── TxDetailModal.qml       # Detailed on-chain transaction telemetry & block inspector
 │       └── qmldir
 └── .github/workflows/              # Continuous integration pipelines
@@ -194,7 +199,7 @@ When you launch `LogosBasecamp`, **Evice Wallet** will automatically appear in t
 ## Continuous Integration & Quality Assurance
 
 Automated GitHub Actions workflows are configured in `.github/workflows/`:
-- **`ci-linux.yml`:** Validates `metadata.json` integrity, verifies `eWalletLogo.png` icon presence, enforces the decoupled architecture line-count threshold on `qml/Main.qml`, and builds the module and portable bundles.
+- **`ci-linux.yml`:** Validates `metadata.json` integrity, verifies `eWalletLogo.png` icon presence, enforces decoupled architecture line thresholds on `qml/Main.qml`, runs hermetic `qmlformat` styling and `qmllint` syntax/type checks via native `nix flake check`, and builds the module and portable bundles.
 - **`ci-macos.yml`:** Validates Nix package compilation on `macos-latest`.
 - **`testnet-smoke.yml`:** Periodic weekly workflow that tests live JSON-RPC connectivity with the LEZ testnet sequencer (`https://testnet.lez.logos.co`), checking `checkHealth`, `getLastBlockId`, and `getFeeState` before validating bundle construction.
 
