@@ -1,11 +1,11 @@
 {
   "name": "e_wallet_ui",
-  "display_name": "eWallet",
+  "display_name": "WALLEZ",
   "version": "0.1.0",
   "type": "ui_qml",
   "interface": "universal",
   "category": "wallet",
-  "description": "Evice LEZ Wallet & Provider UI for Logos Basecamp",
+  "description": "Evice Wallet Provider UI for Logos Basecamp",
   "view": "qml/Main.qml",
   "icon": "assets/eWalletLogo.png",
   "dependencies": ["e_wallet_core"],

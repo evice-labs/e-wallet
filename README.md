@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Evice LEZ Wallet QML UI Plugin for Logos Basecamp</strong>
+  <strong>WALLEZ Evice Wallet UI Plugin for Logos Basecamp</strong>
   <br />
 </p>
 
@@ -17,7 +17,7 @@
 
 ## Overview
 
-**Evice LEZ Wallet UI** is the official user-facing desktop application module for the Logos Execution Zone (LEZ), designed and packaged natively for **Logos Basecamp**.
+**WALLEZ** is the official user-facing desktop application module for the Logos Execution Zone (LEZ), designed and packaged natively for **Logos Basecamp**.
 
 It presents a tactile, secure, and intuitive graphical interface that integrates seamlessly with the underlying [Core Module](https://github.com/evice-labs/e-wallet-core) (C++20 Universal Core Module) and the [SDK](https://github.com/evice-labs/lez-wallet-sdk) (pure Rust cryptographic engine).
 
@@ -36,27 +36,29 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 - **Session Auto-Lock.** Automatic idle timeout clearing volatile cryptographic credentials and sessions from memory upon inactivity.
 
 ### 2. Multi-Account Portfolio (Public Unshielded vs Private Shielded)
-- **Account Switcher & Active Persistence.** Seamlessly toggle between transparent public accounts and shielded zero-knowledge accounts with distinct visual status badges (`BalanceView.qml`). Active account selections are persisted across wallet lock/unlock cycles in `AccountStore.qml`.
-- **Streamlined Account Creation with Privacy Context.** Create new accounts (`CreateAccountModal.qml`) with clear `Public Unshielded` vs `Private Shielded` selectors and dynamic context cards explaining transparent on-chain addresses vs zero-knowledge commitments and nullifiers, with calibrated dimensions and integrated card action buttons.
-- **Asset Balances.** Real-time balance queries across Native LEZ, Shielded Zero-Knowledge pools, and Logos Token Program holdings.
+- **Account Switcher & Active Persistence.** Seamlessly toggle between transparent public accounts (`Public/...`) and shielded zero-knowledge accounts (`Private/...`) with distinct visual status badges (`BalanceView.qml`). Active account selections are persisted across wallet lock/unlock cycles in `AccountStore.qml`.
+- **Unified Canonical Telemetry & Address Copy.** Clear visual presentation tailored to each account type. Displays the account's authentic balance, cryptographic privacy model (`PUBLIC ACCOUNT` vs `SHIELDED ZERO-KNOWLEDGE ACCOUNT`), and canonical address (`Public/<id>` or `Private/<id>`) with a 1-click clipboard copy affordance.
+- **Streamlined Account Creation with Privacy Context.** Create new accounts (`CreateAccountModal.qml`) with clear `Public Unshielded` vs `Private Shielded` selectors and dynamic context cards explaining transparent on-chain addresses vs zero-knowledge commitments and nullifiers.
+- **Asset Balances & Token Program Holdings.** Real-time balance queries across Native LEZ, Shielded Zero-Knowledge pools, and Logos Token Program holdings. `AccountStore.qml` dynamically queries `listTokenHoldings` and `listAllTokenHoldings` from the Core Module, mapping active tokens without hardcoded mock fallbacks.
 - **Account Deletion & Safety Safeguards.** Safely delete non-primary accounts via the danger zone in `SettingsModal.qml`. Built-in safeguards enforce a minimum of 1 active account, automatically re-route to an adjacent account, persist deletion state (`deletedAccountsJson`), and immediately redirect the user back to the dashboard.
 
 ### 3. 4-Way Asset Transfers & Instant LNS Domain Resolution
 - **Inline Route Indicator.** Positioned directly beneath the Amount & Max button row, displaying a clean white `"Route:"` label with status-colored route paths (`Public ➝ Public`, `Public ➝ Shield`, `Shield ➝ Public`, `Shield ➝ Shield`).
-- **Automated Privacy Route Detection.** `TransferController.qml` automatically inspects sender privacy and recipient identifier prefix (`Private/...` vs `Public/...` vs `.lez`) to detect and configure the route mode (`pub_to_pub`, `pub_to_priv`, `priv_to_pub`, `priv_to_priv`) without requiring manual route toggling from the user.
+- **Automated Privacy Route Detection.** `TransferController.qml` automatically inspects the sender's account privacy and recipient identifier prefix (`Private/...` vs `Public/...` vs `.lez`) to configure the route mode (`pub_to_pub`, `pub_to_priv`, `priv_to_pub`, `priv_to_priv`) with zero manual toggle overhead.
+- **Fresh Shielded Recipient Safety Notice.** Built-in validation checks inform the user when shielding (`Public ➝ Private`) to a freshly created private account with 0 balance, ensuring the amount exceeds the required private fee reserve (`> 5,070,616 raw units`) to prevent execution errors.
 - **"Your Accounts" 1-Click Quick Selector.** `TransferView.qml` automatically displays 1-click chip buttons for user's other accounts in the wallet, eliminating manual address typing or copy-pasting for intra-wallet transfers and shielding operations.
 - **Clean-Room LNS Resolver.** Resolves human-readable `.lez` names (e.g. `alice.lez`, `bob.lez`) asynchronously via debounced queries to the sequencer LNS registry, displaying real-time verification indicators.
-- **Automatic Gas & Max Spend Calculation.** Gas fee (`0.00015 LEZ`) and spendable maximum balances are automatically computed by the controller.
+- **Automatic Gas & Max Spend Calculation.** Dynamically queries gas limit seeds (`getGasLimit`, default: `34,000 units`) from the Core Module and calculates spendable maximum balances accordingly.
 
 ### 4. Canonical Funding Path: EmPoWer PoW Mining & L1 → LEZ Bridge
-*Directly integrated with Logos Blockchain node architecture and canonical EmPoWer bridging:*
-- **EmPoWer Mining Station.** Direct REST integration with the Logos Blockchain node (`/pow/status`, `/pow/mining/start`, `/pow/mining/stop`, `/pow/claim`). Enables users to generate testnet tokens via local Proof-of-Work without relying on external centralized faucets (`FundingBridgeView.qml`, `FundingBridgeController.qml`).
+*Directly integrated with Logos Blockchain node architecture and canonical EmPoWer bridging via `e-wallet-core` & `lez-wallet-sdk`:*
+- **EmPoWer Mining Station.** Native IPC integration through `e-wallet-core` (`getPowStatus`, `startPowMining`, `stopPowMining`, `channelDeposit`) backed by `lez-wallet-sdk` (`PUT /pow/mining/start`, `PUT /pow/auto-claim/start`, `PUT /pow/mining/stop`, `GET /pow/status`, `POST /pow/claim`, `POST /channel/deposit`), completely compliant with Logos Basecamp's `ui_qml` zero-network sandbox (`FundingBridgeView.qml`, `FundingBridgeController.qml`).
 - **Dual-Action Segmented Controls.** Tactile segmented switch (`Start Mining` vs `Bridge Tokens`) housed in an inset trough capsule with real-time hash rate and status indicators (`POW ACTIVE • 1920 H/S`).
-- **L1 → LEZ Channel Deposit Bridge.** One-click bridging terminal that deposits mined L1 notes into the user's active LEZ account via on-chain `ChannelDeposit` transactions.
+- **L1 → LEZ Channel Deposit Bridge.** One-click bridging terminal that deposits mined L1 notes into the user's active LEZ Public account via on-chain `ChannelDeposit` transactions while enforcing the Asymmetric Deposit Trap guardrail.
 - **Zero-Redundancy Automation.** The recipient LEZ address is automatically locked to the user's active account (`accountStore.activeAccount`), the deposit amount is automatically calculated from the total unbridged L1 balance, and worker threads are preset to 4 threads.
 
 ### 5. On-Chain Testimonials Mini-App
-- **Adoption Engine (LP-0021).** Built-in workspace enabling users to publish on-chain testimonials directly to the testnet zkVM `testimonial-program` (`TestimonialsView.qml`, `TestimonialController.qml`).
+- **On-Chain Testimonial Engine.** Built-in workspace enabling users to publish on-chain testimonials directly to the testnet zkVM `testimonial-program` (`TestimonialsView.qml`, `TestimonialController.qml`).
 - **Auto-Bound Active Account Author.** The author identity is strictly and automatically derived from the active account currently open in the wallet (`accountStore.activeAccount`). The UI renders a clean read-only affordance: `Posting as: [alice.lez]`, with zero manual username or moniker input.
 - **Standardized Physical Dimensions.** Submit button dimensions calibrated to match the tactile heights across adjacent card action rows.
 - **Strict Client-Side UTF-8 Validation.** Multi-byte UTF-8 character calculator (`calculateUtf8Bytes`) enforcing the strict $\le 280$ byte contract limit with live byte telemetry.
@@ -64,6 +66,7 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 
 ### 6. Activity Feed & Transaction Ledger
 - **Expanded 7-Item Activity Window.** Displays up to 7 rich transaction items per view with calibrated 40px row heights and pagination controls (`‹ Page 1 of N ›`) (`ActivityLedgerView.qml`).
+- **Deterministic zkVM Gas Telemetry.** Uses `GasCalculator.qml` to evaluate and display actual gas execution cycles in `TxDetailModal.qml` and `ActivityLedgerView.qml`: `2,968` for standard public transfers, `3,778` for zkVM smart contract calls, `12,400` for note shielding, `409,764` for private ZK verifications, and `0` for sender-paid incoming transactions.
 - **Inline Refresh Action.** High-contrast tactile action button utilizing a white alpha-cutout refresh icon (`Refresh.png`) located directly alongside the filter tabs.
 - **Segmented Filter Tabs.** Real-time chronological transaction history filterable by *All*, *Transfers*, *Shields*, and *Testimonials*.
 - **Monospace Telemetry.** High-contrast transaction rows detailing direction, status tags, relative timestamps, transfer amounts, and page-by-page navigation.
@@ -84,10 +87,16 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 - **Program Source Verification.** Evaluates caller origin and displays verified status badges (`VERIFIED`, `UNVERIFIED SOURCE`, `UNTRUSTED`).
 - **Dual Consent Affordance.** Explicit, unambiguous action buttons: `Reject (0)` vs `Authorize & Sign (1)`.
 
-### 9. Zero-Knowledge Identity Accountability
+### 9. Zero-Knowledge Identity Accountability (Domain 6)
+- **Direct Cryptographic Wiring (Zero Mock Fallbacks).** Purged all hardcoded mock strings. All identity operations interact directly with the Rust SDK engine via C-ABI FFI and `e-wallet-core`.
+- **Automatic Internal Session Grants.** `WalletBridge.qml` automatically requests `IdentityRead` and `IdentityPropose` grants during internal Basecamp session handshakes, enabling seamless ZK operations without manual friction.
 - **Master Identity Commitment.** Reads and displays the master zero-knowledge public root anchor via `getIdentityCommitment` (`IdentityModal.qml`).
 - **Scoped Nullifier Generator.** Derives domain-isolated pseudonyms (`deriveScopedNullifier`) with 1-click dApp domain presets (`governance.logos.co`, `voting.lez.org`, `dex.swap.lez`).
 - **BIP-340 Schnorr Attestation.** Generates a fresh cryptographic random nonce on modal opening (`generateFreshChallenge()`) and signs attestation challenges via secp256k1 without requiring manual hex input.
+
+### 10. Canonical Demonstration dApp: Logos DAO Governance Mini-App
+- Built as an independent standalone Basecamp module (`/home/namauser/logos-ecosystem/dao-miniapp`) serving as the canonical reference dApp demonstration.
+- Demonstrates decentralized anonymous voting: citizen verification via Master Commitment, proposal-scoped nullifiers for Sybil-resistance (1 citizen = 1 vote per proposal, unlinkable across proposals), and BIP-340 Schnorr signed ballot submission via `proposeContractCall`.
 
 ## Directory Structure
 
@@ -123,15 +132,16 @@ e-wallet-ui/
 │   │   ├── WalletBridge.qml        # IPC bridge to e_wallet_core (+ Mock harness)
 │   │   ├── AccountStore.qml        # Reactive multi-account controller (Persistence across locks, label map & deletion)
 │   │   ├── TransferController.qml  # Automated 4-way transfer route & LNS lookup controller
-│   │   ├── FundingBridgeController.qml # EmPoWer mining REST & L1 ChannelDeposit bridge controller
+│   │   ├── FundingBridgeController.qml # EmPoWer mining & L1 ChannelDeposit bridge IPC controller
 │   │   ├── TestimonialController.qml   # On-chain zkVM testimonial broadcast controller
 │   │   ├── ApprovalManager.qml     # dApp permission & effect simulation manager
+│   │   ├── GasCalculator.qml       # Deterministic zkVM gas cycles & fee calculation engine
 │   │   └── qmldir
 │   ├── views/                      # Decoupled modular Bento-Grid card components
 │   │   ├── BalanceView.qml         # Hero balance card, pool breakdown, cascaded avatar & menu
 │   │   ├── TransferView.qml        # Quick transfer card (To, "Your Accounts" chips, Amount + Max)
 │   │   ├── FundingBridgeView.qml   # EmPoWer mining station & L1 → LEZ Channel Deposit terminal
-│   │   ├── TestimonialsView.qml    # LP-0021 on-chain testimonial broadcast card (Auto-bound author)
+│   │   ├── TestimonialsView.qml    # On-chain testimonial broadcast card (Auto-bound author)
 │   │   ├── ActivityLedgerView.qml  # Filterable transaction ledger & real-time telemetry (7 items)
 │   │   ├── OnboardingView.qml      # Initial vault onboarding & seed phrase setup screen
 │   │   ├── LockScreenView.qml      # Argon2id vault unlock & lock screen
