@@ -32,12 +32,17 @@ ModalOverlay {
     }
 
     function loadCommitment() {
-        bridge.invoke("getIdentityCommitment", [bridge.activeSessionId], function (res) {
-            if (res && res.ok && res.commitment) {
-                modal.commitmentHash = res.commitment;
-            } else {
-                modal.commitmentHash = "0x3f9e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f";
-            }
+        if (!bridge.activeSessionId)
+            return;
+        bridge.invoke("requestIdentityAccess", [bridge.activeSessionId, "IdentityRead"], function () {
+            bridge.invoke("getIdentityCommitment", [bridge.activeSessionId], function (res) {
+                if (res && res.ok && res.commitment) {
+                    modal.commitmentHash = res.commitment;
+                } else {
+                    modal.commitmentHash = "";
+                    modal.statusFeedback = (res && res.error) ? res.error : "Failed to load identity commitment.";
+                }
+            });
         });
     }
 
@@ -46,14 +51,18 @@ ModalOverlay {
         if (!s)
             return;
         scopeInput = s;
-        bridge.invoke("deriveScopedNullifier", [bridge.activeSessionId, s], function (res) {
-            if (res && res.ok && res.nullifier) {
-                modal.derivedNullifier = res.nullifier;
-                modal.statusFeedback = "Scoped nullifier derived for " + s;
-            } else {
-                modal.derivedNullifier = "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b";
-                modal.statusFeedback = "Scoped nullifier derived for " + s;
-            }
+        if (!bridge.activeSessionId)
+            return;
+        bridge.invoke("requestIdentityAccess", [bridge.activeSessionId, "IdentityRead"], function () {
+            bridge.invoke("deriveScopedNullifier", [bridge.activeSessionId, s], function (res) {
+                if (res && res.ok && res.nullifier) {
+                    modal.derivedNullifier = res.nullifier;
+                    modal.statusFeedback = "Scoped nullifier derived for " + s;
+                } else {
+                    modal.derivedNullifier = "";
+                    modal.statusFeedback = (res && res.error) ? res.error : "Failed to derive nullifier.";
+                }
+            });
         });
     }
 
@@ -324,14 +333,18 @@ ModalOverlay {
                     enabled: challengeField.text.trim().length > 0
                     onClicked: {
                         var msg = challengeField.text.trim();
-                        bridge.invoke("signIdentityAttestation", [bridge.activeSessionId, modal.scopeInput, msg], function (res) {
-                            if (res && res.ok && res.signature) {
-                                modal.attestationSignature = res.signature;
-                                modal.statusFeedback = "BIP-340 Schnorr attestation signature generated.";
-                            } else {
-                                modal.attestationSignature = "0xbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-                                modal.statusFeedback = "BIP-340 Schnorr attestation signature generated.";
-                            }
+                        if (!msg || !bridge.activeSessionId)
+                            return;
+                        bridge.invoke("requestIdentityAccess", [bridge.activeSessionId, "IdentityPropose"], function () {
+                            bridge.invoke("signIdentityAttestation", [bridge.activeSessionId, modal.scopeInput, msg], function (res) {
+                                if (res && res.ok && res.signature) {
+                                    modal.attestationSignature = res.signature;
+                                    modal.statusFeedback = "BIP-340 Schnorr attestation signature generated.";
+                                } else {
+                                    modal.attestationSignature = "";
+                                    modal.statusFeedback = (res && res.error) ? res.error : "Failed to sign attestation.";
+                                }
+                            });
                         });
                     }
                 }

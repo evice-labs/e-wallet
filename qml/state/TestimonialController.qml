@@ -9,7 +9,6 @@ Item {
     // Canonical Testnet 0.4 deployment headers
     readonly property string targetContractHeader: "Public/D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV"
     readonly property string targetContract: "D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV"
-    readonly property int programBlockId: 43466
     readonly property int maxBytes: 280
     readonly property int maxAuthorBytes: 64
 
@@ -29,6 +28,49 @@ Item {
     property bool isBroadcasting: false
     property string statusMessage: ""
     property bool isSuccessStatus: true
+
+    GasCalculator {
+        id: gasCalc
+    }
+
+    function calculateGas(text) {
+        var len = text ? text.length : 0;
+        return gasCalc.calculateContractCallGas(len);
+    }
+
+    // Auto-dismiss status notification timer (matching TransferView feedbackDismissTimer)
+    Timer {
+        id: statusDismissTimer
+        interval: 4000
+        repeat: false
+        onTriggered: {
+            ctrl.statusMessage = "";
+        }
+    }
+
+    // Polling timer for asynchronous transaction request status
+    Timer {
+        id: proposalStatusTimer
+        interval: 500
+        repeat: false
+        property var callback: null
+        onTriggered: {
+            if (callback)
+                callback();
+        }
+    }
+
+    onStatusMessageChanged: {
+        if (!ctrl.isBroadcasting && ctrl.statusMessage.length > 0) {
+            statusDismissTimer.restart();
+        }
+    }
+
+    onIsBroadcastingChanged: {
+        if (!ctrl.isBroadcasting && ctrl.statusMessage.length > 0) {
+            statusDismissTimer.restart();
+        }
+    }
 
     readonly property int currentByteLength: calculateUtf8Bytes(messageInput)
     readonly property int remainingBytes: maxBytes - currentByteLength
@@ -235,25 +277,87 @@ Item {
         }
         var desc = "Testimonial: " + (text.length > 32 ? text.substring(0, 30) + "..." : text);
 
-        bridge.invoke("proposeTransaction", [sessionId, mentionsJson, calldataHex, desc], function (res) {
+        bridge.invoke("proposeContractCall", [sessionId, ctrl.targetContract, payerClean, mentionsJson, calldataHex, desc], function (res) {
             if (res && res.ok) {
                 if (res.status === "pending_approval" && res.request_id) {
                     var reqId = res.request_id;
                     // Auto-approve within wallet modal / internal queue
                     bridge.invoke("submitApprovalDecision", [reqId, 1], function (appRes) {
-                        ctrl.isBroadcasting = false;
-                        var txHash = (appRes && appRes.tx_hash) ? appRes.tx_hash : (res.tx_hash || res.request_id || "");
-                        var shortHash = txHash.length > 20 ? (txHash.substring(0, 10) + "..." + txHash.substring(txHash.length - 6)) : txHash;
-                        ctrl.statusMessage = "zkVM Testimonial confirmed! Tx: " + shortHash;
-                        ctrl.isSuccessStatus = true;
-                        ctrl.messageInput = "";
-                        ctrl.broadcastSuccess(txHash, text);
-                        if (callback)
-                            callback({
-                                ok: true,
-                                tx_hash: txHash,
-                                request_id: reqId
+                        var pollAttempts = 0;
+                        var maxAttempts = 60; // Up to 30 seconds polling for on-chain submission
+
+                        function pollStatus() {
+                            bridge.invoke("getRequestStatus", [reqId], function (statusRes) {
+                                pollAttempts++;
+                                if (statusRes && statusRes.ok) {
+                                    if (statusRes.status === "submitted" && statusRes.tx_hash) {
+                                        ctrl.isBroadcasting = false;
+                                        var txHash = statusRes.tx_hash;
+                                        var shortHash = txHash.length > 20 ? (txHash.substring(0, 10) + "..." + txHash.substring(txHash.length - 6)) : txHash;
+                                        ctrl.statusMessage = "zkVM Testimonial confirmed! Tx: " + shortHash;
+                                        ctrl.isSuccessStatus = true;
+                                        ctrl.messageInput = "";
+                                        ctrl.broadcastSuccess(txHash, text);
+                                        if (callback)
+                                            callback({
+                                                ok: true,
+                                                tx_hash: txHash,
+                                                request_id: reqId
+                                            });
+                                        return;
+                                    }
+                                    if (statusRes.status === "failed") {
+                                        ctrl.isBroadcasting = false;
+                                        var err = statusRes.reason || "zkVM execution failed on chain";
+                                        ctrl.statusMessage = "Broadcast failed: " + err;
+                                        ctrl.isSuccessStatus = false;
+                                        ctrl.broadcastFailed(err);
+                                        if (callback)
+                                            callback({
+                                                ok: false,
+                                                error: err
+                                            });
+                                        return;
+                                    }
+                                    if (statusRes.status === "rejected") {
+                                        ctrl.isBroadcasting = false;
+                                        var err = "Broadcast request was rejected";
+                                        ctrl.statusMessage = "Broadcast failed: " + err;
+                                        ctrl.isSuccessStatus = false;
+                                        ctrl.broadcastFailed(err);
+                                        if (callback)
+                                            callback({
+                                                ok: false,
+                                                error: err
+                                            });
+                                        return;
+                                    }
+                                }
+
+                                if (pollAttempts < maxAttempts) {
+                                    proposalStatusTimer.callback = pollStatus;
+                                    proposalStatusTimer.restart();
+                                } else {
+                                    // Fallback if polling timed out waiting for tx_hash
+                                    ctrl.isBroadcasting = false;
+                                    var txHash = (appRes && appRes.tx_hash) ? appRes.tx_hash : (res.tx_hash || res.request_id || "");
+                                    var shortHash = txHash.length > 20 ? (txHash.substring(0, 10) + "..." + txHash.substring(txHash.length - 6)) : txHash;
+                                    ctrl.statusMessage = "zkVM Testimonial confirmed! Tx: " + shortHash;
+                                    ctrl.isSuccessStatus = true;
+                                    ctrl.messageInput = "";
+                                    ctrl.broadcastSuccess(txHash, text);
+                                    if (callback)
+                                        callback({
+                                            ok: true,
+                                            tx_hash: txHash,
+                                            request_id: reqId
+                                        });
+                                }
                             });
+                        }
+
+                        proposalStatusTimer.callback = pollStatus;
+                        proposalStatusTimer.restart();
                     });
                 } else {
                     ctrl.isBroadcasting = false;

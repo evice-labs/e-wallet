@@ -22,7 +22,18 @@ Rectangle {
     AccountStore {
         id: accountStore
         bridge: bridge
+        onDepositDetected: (accountLabel, amountStr, accountId, isPrivate) => {
+            if (ledgerView) {
+                ledgerView.addActivity(accountLabel, "Deposit", "Transfers", "+" + amountStr, "Inbound Transfer (Deposit)", true, "", "0 (Paid by Sender)", "-", "External ➝ " + (isPrivate ? "Private/" : "Public/") + accountId.substring(0, 8) + "...", accountId, "0");
+            }
+        }
+        onBalanceChanged: (accountId, oldBalance, newBalance) => {
+            if (ledgerView) {
+                ledgerView.markAccountPendingTransactionsConfirmed(accountId);
+            }
+        }
     }
+
     TransferController {
         id: transferCtrl
         bridge: bridge

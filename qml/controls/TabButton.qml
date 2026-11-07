@@ -6,6 +6,10 @@ Item {
 
     property string text: "Tab"
     property bool isActive: false
+    property bool isDestructive: false
+    property bool isMuted: false
+    property color inactiveTextColor: "transparent"
+    property int cursorShape: Qt.PointingHandCursor
     property int customWidth: 0
     signal clicked
 
@@ -24,7 +28,7 @@ Item {
         anchors.topMargin: 1
         anchors.bottomMargin: -1
         radius: theme.radiusButton
-        color: theme.btnPrimaryShadow
+        color: control.isDestructive ? Qt.rgba(0.9, 0.1, 0.1, 0.28) : theme.btnPrimaryShadow
         opacity: control.isActive ? 0.85 : 0.0
         visible: opacity > 0
 
@@ -49,15 +53,31 @@ Item {
             id: activeGradient
             GradientStop {
                 position: 0.0
-                color: mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverTop : theme.btnPrimaryTop)
+                color: {
+                    if (control.isMuted) {
+                        return Qt.rgba(0.25, 0.25, 0.28, 0.6);
+                    }
+                    if (control.isDestructive) {
+                        return mouseArea.pressed ? "#991B1B" : (mouseArea.containsMouse ? "#DC2626" : "#B91C1C");
+                    }
+                    return mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverTop : theme.btnPrimaryTop);
+                }
             }
             GradientStop {
                 position: 1.0
-                color: mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverBottom : theme.btnPrimaryBottom)
+                color: {
+                    if (control.isMuted) {
+                        return Qt.rgba(0.18, 0.18, 0.2, 0.6);
+                    }
+                    if (control.isDestructive) {
+                        return mouseArea.pressed ? "#7F1D1D" : (mouseArea.containsMouse ? "#B91C1C" : "#991B1B");
+                    }
+                    return mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverBottom : theme.btnPrimaryBottom);
+                }
             }
         }
 
-        border.color: control.isActive ? theme.btnPrimaryBorderSides : "transparent"
+        border.color: control.isActive ? (control.isMuted ? theme.borderSubtle : (control.isDestructive ? "#EF4444" : theme.btnPrimaryBorderSides)) : "transparent"
         border.width: control.isActive ? 1 : 0
 
         // Top highlight bevel (authentic tactile edge)
@@ -83,7 +103,7 @@ Item {
             id: tabLabel
             anchors.centerIn: parent
             text: control.text
-            color: control.isActive ? theme.textPrimary : (mouseArea.containsMouse ? theme.textPrimary : theme.textSecondary)
+            color: control.isActive ? (control.isMuted && control.inactiveTextColor.a > 0 ? control.inactiveTextColor : theme.textPrimary) : (mouseArea.containsMouse ? (control.inactiveTextColor.a > 0 ? control.inactiveTextColor : theme.textPrimary) : (control.inactiveTextColor.a > 0 ? control.inactiveTextColor : theme.textSecondary))
             font.family: theme.fontFamily
             font.pixelSize: theme.fontSizeSmall
             font.weight: control.isActive ? Font.DemiBold : Font.Medium
@@ -96,7 +116,7 @@ Item {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
+        cursorShape: control.cursorShape
         onClicked: control.clicked()
     }
 }

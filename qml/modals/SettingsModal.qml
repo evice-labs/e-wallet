@@ -884,6 +884,7 @@ ModalOverlay {
                                         isCompact: true
                                         isPrimary: modal.storageCopyStatus.length > 0
                                         customHeight: 36
+                                        customWidth: 78
                                         onClicked: {
                                             copyHelper.text = modal.bridge.dataDir;
                                             copyHelper.selectAll();
