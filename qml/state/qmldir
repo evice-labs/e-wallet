@@ -5,3 +5,4 @@ TransferController 1.0 TransferController.qml
 FundingBridgeController 1.0 FundingBridgeController.qml
 TestimonialController 1.0 TestimonialController.qml
 ApprovalManager 1.0 ApprovalManager.qml
+GasCalculator 1.0 GasCalculator.qml

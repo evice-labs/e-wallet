@@ -12,12 +12,58 @@ Item {
         property string labelsJson: "{}"
         property string deletedAccountsJson: "[]"
         property string lastActiveAccountId: ""
+        property string lastKnownBalancesJson: "{}"
+    }
+
+    signal depositDetected(string accountLabel, string amount, string accountId, bool isPrivate)
+    signal balanceChanged(string accountId, real oldBalance, real newBalance)
+
+    function formatThousands(val) {
+        var num = Number(val);
+        if (isNaN(num))
+            return "0";
+        if (Number.isInteger(num)) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        var parts = num.toFixed(2).split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
     }
 
     property var accounts: []
     property var activeAccount: null
     property string totalPublicBalance: "0.00"
     property string totalShieldedBalance: "0.00"
+
+    readonly property string activePublicBalance: {
+        if (!activeAccount)
+            return "0.00";
+        var isPriv = (activeAccount.is_private === true) || (activeAccount.privacy === "private");
+        if (isPriv)
+            return "0.00";
+        return activeAccount.formatted_balance || store.formatThousands(activeAccount.balance || 0);
+    }
+
+    readonly property string activeShieldedBalance: {
+        if (!activeAccount)
+            return "0.00";
+        var isPriv = (activeAccount.is_private === true) || (activeAccount.privacy === "private");
+        if (!isPriv)
+            return "0.00";
+        if (activeAccount.shielded_balance !== undefined && activeAccount.shielded_balance !== null) {
+            return store.formatThousands(activeAccount.shielded_balance);
+        }
+        return activeAccount.formatted_balance || store.formatThousands(activeAccount.balance || 0);
+    }
+
+    readonly property string activeTotalBalance: {
+        if (!activeAccount)
+            return "0.00";
+        var pub = parseFloat(String(activePublicBalance).replace(/,/g, "")) || 0;
+        var priv = parseFloat(String(activeShieldedBalance).replace(/,/g, "")) || 0;
+        return store.formatThousands(pub + priv);
+    }
+
     property var tokens: []
     property string selectedAssetType: "native" // "native" | "token"
     property var selectedToken: null
@@ -56,16 +102,43 @@ Item {
         return name.length > 0 ? name.charAt(0).toUpperCase() : "V";
     }
 
-    function getAccountLabel(acc) {
-        if (!acc)
+    function getAccountLabel(target) {
+        if (!target)
             return "Vault";
-        var id = acc.account_id;
-        if (id && accountLabels[id])
+        var id = typeof target === "string" ? target : target.account_id;
+        if (!id)
+            return "Vault";
+        if (accountLabels[id])
             return accountLabels[id];
-        if (acc.label && String(acc.label).trim().length > 0) {
-            return String(acc.label).trim();
+        if (typeof target === "object") {
+            if (target.label && String(target.label).trim().length > 0)
+                return String(target.label).trim();
+            return target.is_private ? "Shielded Account" : "Public Account";
         }
-        return acc.is_private ? "Shielded Account" : "Public Account";
+        if (accounts && accounts.length > 0) {
+            for (var i = 0; i < accounts.length; i++) {
+                if (accounts[i].account_id === id)
+                    return getAccountLabel(accounts[i]);
+            }
+        }
+        return id.length > 12 ? (id.substring(0, 6) + "..." + id.substring(id.length - 4)) : id;
+    }
+
+    // Event Trigger: Refresh state when application window gains focus / becomes active
+    property real lastRefreshTime: 0
+
+    Connections {
+        target: Qt.application
+        function onStateChanged() {
+            if (Qt.application.state === Qt.ApplicationActive && bridge.isInitialized && !bridge.isLocked) {
+                var now = Date.now();
+                if (now - store.lastRefreshTime > 30000) {
+                    store.lastRefreshTime = now;
+                    store.refreshAccounts();
+                    store.refreshTokens();
+                }
+            }
+        }
     }
 
     signal accountSelected(var account)
@@ -102,6 +175,7 @@ Item {
         if (store.isLoading)
             return;
         store.isLoading = true;
+        store.lastRefreshTime = Date.now();
 
         bridge.invoke("listAllAccounts", [], function (res) {
             store.isLoading = false;
@@ -113,6 +187,14 @@ Item {
                 var foundActive = false;
                 var delList = Array.isArray(store.deletedAccounts) ? store.deletedAccounts : [];
                 var targetActiveId = (store.activeAccount && store.activeAccount.account_id) ? store.activeAccount.account_id : localSettings.lastActiveAccountId;
+
+                var lastKnown = {};
+                try {
+                    lastKnown = JSON.parse(localSettings.lastKnownBalancesJson) || {};
+                } catch (e) {
+                    lastKnown = {};
+                }
+                var updatedKnown = {};
 
                 for (var i = 0; i < res.accounts.length; i++) {
                     var acc = res.accounts[i];
@@ -126,12 +208,25 @@ Item {
                     var bal = parseFloat(acc.balance || acc.formatted_balance || "0") || 0;
                     acc.is_private = isPriv;
                     acc.address = acc.account_id;
-                    acc.formatted_balance = Number(bal).toFixed(2);
+                    acc.canonical_address = acc.canonical_address || (isPriv ? ("Private/" + acc.account_id) : ("Public/" + acc.account_id));
+                    acc.formatted_balance = store.formatThousands(bal);
 
                     // Retain session label if user renamed it in this session
                     if (store.accountLabels[acc.account_id]) {
                         acc.label = store.accountLabels[acc.account_id];
                     }
+
+                    // Balance change & inbound deposit detection
+                    var prevBal = lastKnown[acc.account_id];
+                    if (prevBal !== undefined && bal !== prevBal) {
+                        store.balanceChanged(acc.account_id, prevBal, bal);
+                        if (bal > prevBal) {
+                            var diff = bal - prevBal;
+                            console.log("[AccountStore] Inbound deposit detected for account", acc.account_id, "amount:", diff);
+                            store.depositDetected(store.getAccountLabel(acc), store.formatThousands(diff), acc.account_id, isPriv);
+                        }
+                    }
+                    updatedKnown[acc.account_id] = bal;
 
                     if (isPriv) {
                         privTotal += bal;
@@ -147,6 +242,24 @@ Item {
                     }
                 }
 
+                // If this is first initialization and no lastKnown records existed, record baseline deposits
+                if (Object.keys(lastKnown).length === 0) {
+                    for (var d = 0; d < processedAccounts.length; d++) {
+                        var dAcc = processedAccounts[d];
+                        var dBal = parseFloat(dAcc.balance || dAcc.formatted_balance || "0") || 0;
+                        if (dBal > 0) {
+                            console.log("[AccountStore] Initial balance deposit recorded for account", dAcc.account_id, "amount:", dBal);
+                            store.depositDetected(store.getAccountLabel(dAcc), store.formatThousands(dBal), dAcc.account_id, dAcc.is_private);
+                        }
+                    }
+                }
+
+                try {
+                    localSettings.lastKnownBalancesJson = JSON.stringify(updatedKnown);
+                } catch (e) {
+                    console.warn("[AccountStore] Failed to save lastKnownBalancesJson:", e);
+                }
+
                 // Safety check: if all accounts in keystore were filtered by deletedAccounts,
                 // recover gracefully by showing all accounts and resetting deletedAccounts list
                 if (processedAccounts.length === 0 && res.accounts.length > 0) {
@@ -158,7 +271,8 @@ Item {
                         var kBal = parseFloat(kAcc.balance || kAcc.formatted_balance || "0") || 0;
                         kAcc.is_private = kIsPriv;
                         kAcc.address = kAcc.account_id;
-                        kAcc.formatted_balance = Number(kBal).toFixed(2);
+                        kAcc.canonical_address = kAcc.canonical_address || (kIsPriv ? ("Private/" + kAcc.account_id) : ("Public/" + kAcc.account_id));
+                        kAcc.formatted_balance = store.formatThousands(kBal);
                         if (store.accountLabels[kAcc.account_id]) {
                             kAcc.label = store.accountLabels[kAcc.account_id];
                         }
@@ -171,8 +285,8 @@ Item {
                 }
 
                 store.accounts = processedAccounts;
-                store.totalPublicBalance = Number(pubTotal).toFixed(2);
-                store.totalShieldedBalance = Number(privTotal).toFixed(2);
+                store.totalPublicBalance = store.formatThousands(pubTotal);
+                store.totalShieldedBalance = store.formatThousands(privTotal);
 
                 if (!foundActive && processedAccounts.length > 0) {
                     store.activeAccount = processedAccounts[0];
@@ -184,17 +298,76 @@ Item {
                     localSettings.lastActiveAccountId = "";
                 }
 
+                if (bridge.activeSessionId && bridge.activeSessionId.length > 0) {
+                    for (var g = 0; g < processedAccounts.length; g++) {
+                        (function (targetAcc) {
+                                bridge.invoke("getBalance", [bridge.activeSessionId, targetAcc.account_id], function (balRes) {
+                                    if (balRes && balRes.ok && balRes.balance !== undefined && balRes.balance !== null) {
+                                        var nBal = parseFloat(balRes.balance) || 0;
+                                        targetAcc.balance = balRes.balance;
+                                        targetAcc.formatted_balance = store.formatThousands(nBal);
+                                        if (store.activeAccount && store.activeAccount.account_id === targetAcc.account_id) {
+                                            var updatedActive = Object.assign({}, store.activeAccount);
+                                            updatedActive.balance = balRes.balance;
+                                            updatedActive.formatted_balance = store.formatThousands(nBal);
+                                            store.activeAccount = updatedActive;
+                                        }
+                                        store.recalculateTotals();
+                                        store.accountsUpdated();
+                                    }
+                                });
+                            })(processedAccounts[g]);
+                    }
+                }
+
                 store.accountsUpdated();
             }
         });
+    }
+
+    function recalculateTotals() {
+        var pubTotal = 0;
+        var privTotal = 0;
+        for (var i = 0; i < store.accounts.length; i++) {
+            var a = store.accounts[i];
+            var bal = parseFloat(a.balance || (a.formatted_balance ? String(a.formatted_balance).replace(/,/g, "") : "0")) || 0;
+            if (a.is_private || a.privacy === "private") {
+                privTotal += bal;
+            } else {
+                pubTotal += bal;
+            }
+        }
+        store.totalPublicBalance = store.formatThousands(pubTotal);
+        store.totalShieldedBalance = store.formatThousands(privTotal);
     }
 
     function selectAccount(account) {
         store.activeAccount = account;
         if (account && account.account_id) {
             localSettings.lastActiveAccountId = account.account_id;
+            refreshActiveAccountBalance();
         }
         store.accountSelected(account);
+    }
+
+    function refreshActiveAccountBalance() {
+        if (!store.activeAccount || !bridge.activeSessionId)
+            return;
+        var targetId = store.activeAccount.account_id;
+        bridge.invoke("grantAccountAccess", [bridge.activeSessionId, targetId, "read"], function () {
+            bridge.invoke("getBalance", [bridge.activeSessionId, targetId], function (balRes) {
+                if (balRes && balRes.ok && balRes.balance !== undefined && balRes.balance !== null) {
+                    var nBal = parseFloat(balRes.balance) || 0;
+                    if (store.activeAccount && store.activeAccount.account_id === targetId) {
+                        var updated = Object.assign({}, store.activeAccount);
+                        updated.balance = balRes.balance;
+                        updated.formatted_balance = store.formatThousands(nBal);
+                        store.activeAccount = updated;
+                        store.accountsUpdated();
+                    }
+                }
+            });
+        });
     }
 
     function canDeleteAccount(acc) {
@@ -268,17 +441,10 @@ Item {
                 pubTotal += bal;
             }
         }
-        store.totalPublicBalance = Number(pubTotal).toFixed(2);
-        store.totalShieldedBalance = Number(privTotal).toFixed(2);
+        store.totalPublicBalance = store.formatThousands(pubTotal);
+        store.totalShieldedBalance = store.formatThousands(privTotal);
 
         store.accountsUpdated();
-
-        // 5. Notify backend module if method exists
-        if (bridge && typeof bridge.invoke === "function") {
-            bridge.invoke("deleteAccount", [accountId], function (res) {
-            // Non-blocking sync
-            });
-        }
 
         if (callback)
             callback({
@@ -356,14 +522,16 @@ Item {
     }
 
     function refreshTokens() {
-        bridge.invoke("listTokenHoldings", [], function (res) {
-            if (res && res.ok && Array.isArray(res.tokens)) {
-                store.tokens = res.tokens;
-                if (!store.selectedToken && res.tokens.length > 0) {
-                    store.selectedToken = res.tokens[0];
-                }
-                store.tokensUpdated();
+        var sid = bridge.activeSessionId || "";
+        var method = sid ? "listTokenHoldings" : "listAllTokenHoldings";
+        var args = sid ? [sid] : [];
+        bridge.invoke(method, args, function (res) {
+            var rawList = (res && res.ok && Array.isArray(res.data)) ? res.data : ((res && res.ok && Array.isArray(res.tokens)) ? res.tokens : []);
+            store.tokens = rawList;
+            if (!store.selectedToken && rawList.length > 0) {
+                store.selectedToken = rawList[0];
             }
+            store.tokensUpdated();
         });
     }
 

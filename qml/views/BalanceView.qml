@@ -16,7 +16,6 @@ Card {
     signal openUnlockModal
     signal openProfileModal
     signal triggerDappPreview
-
     property var approvalManager: null
     property bool isCascadeExpanded: false
     property string activeAssetTab: "native" // "native" | "tokens"
@@ -273,7 +272,7 @@ Card {
                     Layout.fillWidth: true
 
                     Text {
-                        text: balanceCard.activeAssetTab === "native" ? "Total LEZ Balance" : "Fungible Token Holdings"
+                        text: balanceCard.activeAssetTab === "native" ? "Total LEZ Balance (units)" : "Fungible Token Holdings"
                         color: theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
@@ -282,10 +281,7 @@ Card {
                     Text {
                         text: {
                             if (balanceCard.activeAssetTab === "native") {
-                                var pub = parseFloat(accountStore.totalPublicBalance.replace(/,/g, "")) || 0;
-                                var priv = parseFloat(accountStore.totalShieldedBalance.replace(/,/g, "")) || 0;
-                                var total = pub + priv;
-                                return Number(total).toFixed(2) + " LEZ";
+                                return accountStore.activeTotalBalance;
                             } else {
                                 var count = (accountStore.tokens && accountStore.tokens.length) || 0;
                                 return count + " Registered Token" + (count === 1 ? "" : "s");
@@ -293,7 +289,12 @@ Card {
                         }
                         color: theme.textPrimary
                         font.family: theme.fontFamily
-                        font.pixelSize: balanceCard.width < 460 ? (theme.fontSizeHero) : (theme.fontSizeHero + 6)
+                        font.pixelSize: {
+                            if (balanceCard.activeAssetTab === "native") {
+                                return balanceCard.width < 460 ? 34 : theme.fontSizeDisplay;
+                            }
+                            return balanceCard.width < 460 ? theme.fontSizeHero : (theme.fontSizeHero + 2);
+                        }
                         font.weight: Font.Bold
                         elide: Text.ElideRight
                         Layout.fillWidth: true
@@ -348,93 +349,12 @@ Card {
             }
         }
 
-        // Line Divider
+        // Line Divider (Tokens View)
         Rectangle {
+            visible: balanceCard.activeAssetTab === "tokens"
             Layout.fillWidth: true
             implicitHeight: 1
             color: theme.borderSubtle
-        }
-
-        // VIEW 1: Native LEZ Split (Public & Shielded Pools)
-        RowLayout {
-            visible: balanceCard.activeAssetTab === "native"
-            Layout.fillWidth: true
-            spacing: 16
-
-            // Public Pool
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 4
-
-                Row {
-                    spacing: 6
-                    Text {
-                        text: "PUBLIC"
-                        color: theme.textSecondary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeTiny
-                        font.weight: Font.Bold
-                    }
-                    Text {
-                        text: "UNSHIELDED"
-                        color: theme.statusPublic
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeTiny
-                        font.weight: Font.Bold
-                    }
-                }
-
-                Text {
-                    text: (accountStore.totalPublicBalance || "0.00") + " LEZ"
-                    color: theme.textPrimary
-                    font.family: theme.fontFamily
-                    font.pixelSize: balanceCard.width < 450 ? theme.fontSizeBody : theme.fontSizeTitle
-                    font.weight: Font.Bold
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-            }
-
-            // Vertical Divider
-            Rectangle {
-                width: 1
-                height: 44
-                color: theme.borderSubtle
-            }
-
-            // Private Pool
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 4
-
-                Row {
-                    spacing: 6
-                    Text {
-                        text: "PRIVATE"
-                        color: theme.textSecondary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeTiny
-                        font.weight: Font.Bold
-                    }
-                    Text {
-                        text: "SHIELDED"
-                        color: theme.statusShielded
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeTiny
-                        font.weight: Font.Bold
-                    }
-                }
-
-                Text {
-                    text: (accountStore.totalShieldedBalance || "0.00") + " LEZ"
-                    color: theme.textPrimary
-                    font.family: theme.fontFamily
-                    font.pixelSize: balanceCard.width < 450 ? theme.fontSizeBody : theme.fontSizeTitle
-                    font.weight: Font.Bold
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-            }
         }
 
         // VIEW 2: Token Program Holdings List
