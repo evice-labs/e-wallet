@@ -2,10 +2,8 @@
   <img src="assets/wallez.png" alt="WALLEZ Logo" width="160" />
 </p>
 
-<h1 align="center">WALLEZ</h1>
-
 <p align="center">
-  <strong>Evice Wallet UI Plugin for Logos Basecamp</strong>
+  <strong>Wallez</strong>
   <br />
 </p>
 

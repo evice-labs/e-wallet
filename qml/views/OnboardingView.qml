@@ -33,7 +33,7 @@ Rectangle {
             width: Math.min(parent.width - 40, 600)
             title: {
                 if (currentStep === 1)
-                    return "WELCOME TO EVICE WALLET";
+                    return "WELCOME TO WALLEZ";
                 if (currentStep === 2)
                     return "STEP 1: SECURE YOUR KEYSTORE";
                 if (currentStep === 3)
