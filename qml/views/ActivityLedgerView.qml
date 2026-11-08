@@ -46,18 +46,19 @@ Card {
 
     readonly property var filteredTransactions: {
         var activeId = (accountStore.activeAccount && accountStore.activeAccount.account_id) ? accountStore.activeAccount.account_id : "";
+        if (!activeId) {
+            return [];
+        }
         var result = [];
         for (var i = 0; i < rawTransactions.length; i++) {
             var tx = rawTransactions[i];
-            if (activeId.length > 0) {
-                if (tx.accountId) {
-                    if (tx.accountId !== activeId)
-                        continue;
-                } else if (tx.route && tx.route.indexOf(activeId.substring(0, 8)) !== -1)
-                // Match legacy deposit route referencing this account ID prefix
-                {} else {
+            if (tx.accountId) {
+                if (tx.accountId !== activeId)
                     continue;
-                }
+            } else if (tx.route && tx.route.indexOf(activeId.substring(0, 8)) !== -1) {
+                // Match legacy deposit route referencing this account ID prefix
+            } else {
+                continue;
             }
             if (ledgerCard.activeFilter === "All" || tx.category === ledgerCard.activeFilter) {
                 result.push(tx);
@@ -290,7 +291,7 @@ Card {
                 Layout.fillWidth: true
             }
 
-            // Refresh History Action Button (Pure White Icon, 34x34)
+            // Refresh History Action Button
             Button {
                 iconSource: "../assets/icons/Refresh.png"
                 isCompact: true
@@ -393,7 +394,7 @@ Card {
                             anchors.rightMargin: 6
                             spacing: 10
 
-                            // Left: Name, Status Typography (No PillBadge), Time
+                            // Left: Name, Status Typography, Time
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 2
@@ -443,7 +444,7 @@ Card {
             }
         }
 
-        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        // FLEXIBLE EXPANDING SPACER
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true

@@ -41,10 +41,10 @@ Card {
                 var modeLabel = isPriv ? "Shield" : (transferCtrl.transferMode === "priv_to_pub" ? "Unshield" : "Public");
                 var cat = (isPriv || transferCtrl.transferMode === "priv_to_pub") ? "Shields" : "Transfers";
                 var symbol = transferCtrl.selectedAsset === "token" ? (transferCtrl.selectedToken ? transferCtrl.selectedToken.symbol : "TOKEN") : "";
+                var actualAmount = (amount && String(amount).length > 0) ? amount : (transferCtrl.amountInput || "0");
                 var formattedOutAmount = symbol.length > 0 ? ("-" + actualAmount + " " + symbol) : ("-" + actualAmount);
                 var formattedInAmount = symbol.length > 0 ? ("+" + actualAmount + " " + symbol) : ("+" + actualAmount);
                 var senderId = (accountStore && accountStore.activeAccount) ? accountStore.activeAccount.account_id : "";
-                var actualAmount = (amount && String(amount).length > 0) ? amount : (transferCtrl.amountInput || "0");
                 var destTarget = (destination && String(destination).length > 0) ? destination : (transferCtrl.destinationInput || "Recipient");
                 var destLabel = (accountStore && accountStore.getAccountLabel) ? accountStore.getAccountLabel(destTarget) : destTarget;
                 var isToken = transferCtrl.selectedAsset === "token";

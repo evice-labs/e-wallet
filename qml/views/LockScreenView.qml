@@ -86,12 +86,14 @@ Rectangle {
         lockScreen.isUnlocking = true;
 
         bridge.invoke("unlockWallet", [passInput.text], function (res) {
-            lockScreen.isUnlocking = false;
             if (res && res.ok) {
                 passInput.text = "";
-                accountStore.refreshAccounts();
+                accountStore.refreshAccounts(function () {
+                    lockScreen.isUnlocking = false;
+                });
                 accountStore.refreshTokens();
             } else {
+                lockScreen.isUnlocking = false;
                 lockScreen.errorMessage = res && res.error ? res.error : "Incorrect password or decryption failed";
             }
         });

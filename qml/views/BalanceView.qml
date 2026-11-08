@@ -15,6 +15,7 @@ Card {
     signal openSettingsModal
     signal openUnlockModal
     signal openProfileModal
+    signal openAddTokenModal
     signal triggerDappPreview
     property var approvalManager: null
     property bool isCascadeExpanded: false
@@ -46,7 +47,13 @@ Card {
 
                 Text {
                     Layout.alignment: Qt.AlignRight
-                    text: "Hola, " + accountStore.activeAccountName
+                    text: {
+                        if (bridge.isLocked)
+                            return "Vault Locked";
+                        if (!accountStore.isReady || accountStore.isLoading || !accountStore.activeAccount)
+                            return "Loading Vault...";
+                        return "Hola, " + accountStore.activeAccountName;
+                    }
                     color: theme.textPrimary
                     font.family: theme.fontFamily
                     font.pixelSize: theme.fontSizeBody
@@ -61,16 +68,18 @@ Card {
                         width: 6
                         height: 6
                         radius: 3
-                        color: bridge.isLocked ? theme.accentOrange : theme.statusSuccess
+                        color: bridge.isLocked ? theme.accentOrange : ((!accountStore.isReady || accountStore.isLoading) ? theme.accentYellow : theme.statusSuccess)
                     }
 
                     Text {
                         text: {
                             if (bridge.isLocked)
                                 return "Vault Locked";
+                            if (!accountStore.isReady || accountStore.isLoading || !accountStore.activeAccount)
+                                return "Syncing accounts...";
                             var isPriv = accountStore.activeAccount && accountStore.activeAccount.is_private;
-                            var count = (accountStore.accounts && accountStore.accounts.length) || 1;
-                            return (isPriv ? "Shielded ZK" : "Public") + (count > 1 ? " • " + count + " Accounts" : "");
+                            var count = (accountStore.accounts && accountStore.accounts.length) || 0;
+                            return (isPriv ? "Shielded" : "Public") + (count > 1 ? " • " + count + " Accounts" : (count === 1 ? " • 1 Account" : ""));
                         }
                         color: theme.textSecondary
                         font.family: theme.fontFamily
@@ -425,32 +434,35 @@ Card {
             }
 
             Text {
+                id: addTokenNoticeText
                 visible: !accountStore.tokens || accountStore.tokens.length === 0
-                Layout.alignment: Qt.AlignHCenter
                 text: "No token program holdings found for active keystore"
                 color: theme.textMuted
                 font.family: theme.fontFamily
                 font.pixelSize: theme.fontSizeSmall
             }
 
-            Button {
+            Text {
+                id: addTokenActionText
                 visible: !accountStore.tokens || accountStore.tokens.length === 0
-                Layout.alignment: Qt.AlignHCenter
-                text: "+ Register Test Token (TEST)"
-                isPrimary: true
-                isCompact: true
-                onClicked: {
-                    var act = accountStore.activeAccount;
-                    var hid = act ? act.account_id : "";
-                    if (!hid && accountStore.accounts && accountStore.accounts.length > 0) {
-                        hid = accountStore.accounts[0].account_id;
+                text: "+ Add Token Holding"
+                color: addTokenMouseArea.containsMouse ? theme.borderActive : theme.textPrimary
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeSmall
+                font.weight: Font.Bold
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 50
                     }
-                    if (!hid)
-                        return;
-                    var isPriv = act ? !!act.is_private : false;
-                    accountStore.registerTokenHolding(hid, hid, "TEST", "Testnet Fungible Token", isPriv, function (res) {
-                        accountStore.refreshTokens();
-                    });
+                }
+
+                MouseArea {
+                    id: addTokenMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: balanceCard.openAddTokenModal()
                 }
             }
 
@@ -466,20 +478,7 @@ Card {
                     text: "+ Add Token Holding"
                     isCompact: true
                     customHeight: 28
-                    onClicked: {
-                        var act = accountStore.activeAccount;
-                        var hid = act ? act.account_id : "";
-                        if (!hid && accountStore.accounts && accountStore.accounts.length > 0) {
-                            hid = accountStore.accounts[0].account_id;
-                        }
-                        if (!hid)
-                            return;
-                        var sym = "TOKEN" + (accountStore.tokens.length + 1);
-                        var isPriv = act ? !!act.is_private : false;
-                        accountStore.registerTokenHolding(hid, hid, sym, "Custom Token " + sym, isPriv, function (res) {
-                            accountStore.refreshTokens();
-                        });
-                    }
+                    onClicked: balanceCard.openAddTokenModal()
                 }
             }
         }
