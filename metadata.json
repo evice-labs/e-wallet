@@ -7,7 +7,7 @@
   "category": "wallet",
   "description": "Evice Wallet Provider UI for Logos Basecamp",
   "view": "qml/Main.qml",
-  "icon": "assets/wallez.jpg",
+  "icon": "assets/eWalletLogo.png",
   "dependencies": ["e_wallet_core"],
   "nix": {
     "packages": {
