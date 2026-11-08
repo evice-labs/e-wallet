@@ -7,9 +7,8 @@ ModalOverlay {
     id: modal
 
     title: "Restore Vault from Secret Phrase"
-    subtitle: "Import Existing 12 or 24 Word BIP-39 Mnemonic"
     dialogWidth: 520
-    dialogHeight: 460
+    dialogHeight: 380
 
     required property var bridge
     required property var accountStore

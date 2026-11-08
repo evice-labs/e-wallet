@@ -40,15 +40,6 @@ Rectangle {
                     return "STEP 2: BACKUP RECOVERY PHRASE";
                 return "SETUP COMPLETE";
             }
-            subtitle: {
-                if (currentStep === 1)
-                    return "Logos Execution Zone (LEZ) Multi-Account & Shielded Vault";
-                if (currentStep === 2)
-                    return "Set Master Passphrase for Argon2id AES-256-GCM Vault";
-                if (currentStep === 3)
-                    return "12-Word BIP-39 Master Recovery Phrase";
-                return "Your Keystore is Ready for LEZ Testnet 0.4";
-            }
 
             ColumnLayout {
                 width: parent.width
@@ -58,11 +49,11 @@ Rectangle {
                 ColumnLayout {
                     visible: onboardingView.currentStep === 1
                     Layout.fillWidth: true
-                    spacing: 14
+                    spacing: 16
 
                     Text {
                         Layout.fillWidth: true
-                        text: "Evice Wallet is a native Logos Basecamp module providing multi-account key management, zero-knowledge shielded transactions, and LNS domain resolution on the Logos Execution Zone."
+                        text: "Wallez is a native Logos Basecamp module providing multi-account key management, zero-knowledge shielded transactions, and LNS domain resolution on the Logos Execution Zone."
                         color: theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeBody
@@ -92,12 +83,6 @@ Rectangle {
                         Item {
                             Layout.fillWidth: true
                         }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 1
-                        color: theme.borderSubtle
                     }
 
                     RowLayout {
