@@ -329,7 +329,7 @@ ModalOverlay {
             color: theme.borderSubtle
         }
 
-        // Settings & Vault Actions (Inside Card)
+        // Settings & Vault Actions
         RowLayout {
             Layout.fillWidth: true
             spacing: 8

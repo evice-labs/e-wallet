@@ -34,7 +34,7 @@ Item {
         id: theme
     }
 
-    // Outer drop shadow (gives physical elevation)
+    // Outer drop shadow
     Rectangle {
         anchors.fill: buttonBody
         anchors.topMargin: 2
