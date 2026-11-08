@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import "theme"
-import "controls"
 import "state"
 import "views"
 import "modals"
@@ -23,14 +22,12 @@ Rectangle {
         id: accountStore
         bridge: bridge
         onDepositDetected: (accountLabel, amountStr, accountId, isPrivate) => {
-            if (ledgerView) {
+            if (ledgerView)
                 ledgerView.addActivity(accountLabel, "Deposit", "Transfers", "+" + amountStr, "Inbound Transfer (Deposit)", true, "", "0 (Paid by Sender)", "-", "External ➝ " + (isPrivate ? "Private/" : "Public/") + accountId.substring(0, 8) + "...", accountId, "0");
-            }
         }
         onBalanceChanged: (accountId, oldBalance, newBalance) => {
-            if (ledgerView) {
+            if (ledgerView)
                 ledgerView.markAccountPendingTransactionsConfirmed(accountId);
-            }
         }
     }
 
@@ -59,13 +56,9 @@ Rectangle {
     // AUTO-LOCK IDLE TIMER (15 MINUTES)
     Timer {
         id: idleTimer
-        interval: 15 * 60 * 1000 // 15 minutes
+        interval: 15 * 60 * 1000
         running: bridge.isInitialized && !bridge.isLocked
-        repeat: false
-        onTriggered: {
-            console.log("[AutoLock] 15 minutes idle timeout reached, locking wallet keystore");
-            bridge.invoke("lockWallet", []);
-        }
+        onTriggered: bridge.invoke("lockWallet", [])
     }
 
     MouseArea {
@@ -114,10 +107,9 @@ Rectangle {
 
         readonly property int responsiveBreakpoint: 880
         readonly property bool isNarrow: width < responsiveBreakpoint
-        readonly property real availH: dashboardContainer.height
-        readonly property bool isFlexible: availH >= 700
-        readonly property real computedRow1H: isFlexible ? (availH - 12) * 0.40 : 285
-        readonly property real computedRow2H: isFlexible ? (availH - 12) * 0.60 : 410
+        readonly property bool isFlexible: height >= 700
+        readonly property real computedRow1H: isFlexible ? (height - 12) * 0.40 : 285
+        readonly property real computedRow2H: isFlexible ? (height - 12) * 0.60 : 410
 
         // SCROLLABLE BODY CONTAINER
         Item {
@@ -279,20 +271,16 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     preventStealing: true
-                    onPositionChanged: mouse => {
-                        if (pressed) {
-                            var maxRatio = 1.0 - flickable.visibleArea.heightRatio;
-                            var ratio = Math.max(0, Math.min(maxRatio, (mouse.y - scrollThumb.height / 2) / scrollTrack.height));
-                            var maxScroll = Math.max(0, flickable.contentHeight - flickable.height);
-                            flickable.contentY = (ratio / maxRatio) * maxScroll;
-                        }
-                    }
-                    onPressed: mouse => {
+                    function updateScroll(y) {
                         var maxRatio = 1.0 - flickable.visibleArea.heightRatio;
-                        var ratio = Math.max(0, Math.min(maxRatio, (mouse.y - scrollThumb.height / 2) / scrollTrack.height));
-                        var maxScroll = Math.max(0, flickable.contentHeight - flickable.height);
-                        flickable.contentY = (ratio / maxRatio) * maxScroll;
+                        var ratio = Math.max(0, Math.min(maxRatio, (y - scrollThumb.height / 2) / scrollTrack.height));
+                        flickable.contentY = (ratio / maxRatio) * Math.max(0, flickable.contentHeight - flickable.height);
                     }
+                    onPositionChanged: mouse => {
+                        if (pressed)
+                            updateScroll(mouse.y);
+                    }
+                    onPressed: mouse => updateScroll(mouse.y)
                 }
             }
         }
@@ -328,9 +316,27 @@ Rectangle {
         bridge: bridge
     }
 
-    CreateWalletModal { id: createWalletModal; bridge: bridge; accountStore: accountStore }
-    RestoreWalletModal { id: restoreWalletModal; bridge: bridge; accountStore: accountStore }
-    CreateAccountModal { id: createAccountModal; accountStore: accountStore }
-    ApprovalModal { id: approvalModal; approvalManager: approvalManager }
-    IdentityModal { id: identityModal; bridge: bridge; accountStore: accountStore }
+    CreateWalletModal {
+        id: createWalletModal
+        bridge: bridge
+        accountStore: accountStore
+    }
+    RestoreWalletModal {
+        id: restoreWalletModal
+        bridge: bridge
+        accountStore: accountStore
+    }
+    CreateAccountModal {
+        id: createAccountModal
+        accountStore: accountStore
+    }
+    ApprovalModal {
+        id: approvalModal
+        approvalManager: approvalManager
+    }
+    IdentityModal {
+        id: identityModal
+        bridge: bridge
+        accountStore: accountStore
+    }
 }

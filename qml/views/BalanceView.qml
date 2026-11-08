@@ -445,7 +445,8 @@ Card {
                     if (!hid && accountStore.accounts && accountStore.accounts.length > 0) {
                         hid = accountStore.accounts[0].account_id;
                     }
-                    if (!hid) return;
+                    if (!hid)
+                        return;
                     var isPriv = act ? !!act.is_private : false;
                     accountStore.registerTokenHolding(hid, hid, "TEST", "Testnet Fungible Token", isPriv, function (res) {
                         accountStore.refreshTokens();
@@ -471,7 +472,8 @@ Card {
                         if (!hid && accountStore.accounts && accountStore.accounts.length > 0) {
                             hid = accountStore.accounts[0].account_id;
                         }
-                        if (!hid) return;
+                        if (!hid)
+                            return;
                         var sym = "TOKEN" + (accountStore.tokens.length + 1);
                         var isPriv = act ? !!act.is_private : false;
                         accountStore.registerTokenHolding(hid, hid, sym, "Custom Token " + sym, isPriv, function (res) {

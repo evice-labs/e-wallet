@@ -1,5 +1,5 @@
 {
-  description = "Evice LEZ Wallet QML UI Plugin for Logos Basecamp";
+  description = "Evice Wallet UI Plugin for Logos Basecamp";
 
   inputs = {
     logos-module-builder.url = "github:logos-co/logos-module-builder";
