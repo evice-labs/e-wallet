@@ -539,4 +539,13 @@ Item {
         store.selectedToken = token;
         store.tokensUpdated();
     }
+
+    function registerTokenHolding(holdingId, definitionId, symbol, name, isShielded, callback) {
+        bridge.invoke("registerTokenHolding", [holdingId, definitionId, symbol, name, !!isShielded], function (res) {
+            console.log("[AccountStore] registerTokenHolding result:", JSON.stringify(res));
+            store.refreshTokens();
+            if (callback)
+                callback(res);
+        });
+    }
 }

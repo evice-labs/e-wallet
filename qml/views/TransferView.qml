@@ -169,6 +169,14 @@ Card {
                     }
                 }
             }
+
+            Text {
+                visible: !accountStore.tokens || accountStore.tokens.length === 0
+                text: "No token holdings registered. Add one in Balance view."
+                color: theme.accentOrange
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeSmall
+            }
         }
 
         // Recipient Field with LNS Resolution Status

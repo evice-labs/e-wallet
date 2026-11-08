@@ -432,6 +432,54 @@ Card {
                 font.family: theme.fontFamily
                 font.pixelSize: theme.fontSizeSmall
             }
+
+            Button {
+                visible: !accountStore.tokens || accountStore.tokens.length === 0
+                Layout.alignment: Qt.AlignHCenter
+                text: "+ Register Test Token (TEST)"
+                isPrimary: true
+                isCompact: true
+                onClicked: {
+                    var act = accountStore.activeAccount;
+                    var hid = act ? act.account_id : "";
+                    if (!hid && accountStore.accounts && accountStore.accounts.length > 0) {
+                        hid = accountStore.accounts[0].account_id;
+                    }
+                    if (!hid) return;
+                    var isPriv = act ? !!act.is_private : false;
+                    accountStore.registerTokenHolding(hid, hid, "TEST", "Testnet Fungible Token", isPriv, function (res) {
+                        accountStore.refreshTokens();
+                    });
+                }
+            }
+
+            RowLayout {
+                visible: accountStore.tokens && accountStore.tokens.length > 0
+                Layout.fillWidth: true
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Button {
+                    text: "+ Add Token Holding"
+                    isCompact: true
+                    customHeight: 28
+                    onClicked: {
+                        var act = accountStore.activeAccount;
+                        var hid = act ? act.account_id : "";
+                        if (!hid && accountStore.accounts && accountStore.accounts.length > 0) {
+                            hid = accountStore.accounts[0].account_id;
+                        }
+                        if (!hid) return;
+                        var sym = "TOKEN" + (accountStore.tokens.length + 1);
+                        var isPriv = act ? !!act.is_private : false;
+                        accountStore.registerTokenHolding(hid, hid, sym, "Custom Token " + sym, isPriv, function (res) {
+                            accountStore.refreshTokens();
+                        });
+                    }
+                }
+            }
         }
 
         // FLEXIBLE EXPANDING SPACER
