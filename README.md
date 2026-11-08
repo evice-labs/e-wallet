@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/wallez.jpg" alt="WALLEZ Logo" width="160" />
+  <img src="assets/wallez.png" alt="WALLEZ Logo" width="160" />
 </p>
 
 <p align="center">
@@ -103,8 +103,8 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 ```
 e-wallet-ui/
 ├── assets/
-│   ├── wallez.jpg                  # Official WALLEZ application icon
-│   ├── eWalletLogo.png             # Compatible 256x256 application icon
+│   ├── wallez.png                  # Official WALLEZ 256x256 application icon
+│   ├── icon.png                    # Basecamp module icon
 │   └── icons/                      # Source asset repository
 │       └── Refresh.png             # Refresh icon
 ├── metadata.json                   # Basecamp module manifest (type: ui_qml)
@@ -210,7 +210,7 @@ When you launch `LogosBasecamp`, **WALLEZ** will automatically appear in the wor
 ## Continuous Integration & Quality Assurance
 
 Automated GitHub Actions workflows are configured in `.github/workflows/`:
-- **`ci-linux.yml`:** Validates `metadata.json` integrity, verifies `eWalletLogo.png` icon presence, enforces decoupled architecture line thresholds on `qml/Main.qml`, runs hermetic `qmlformat` styling and `qmllint` syntax/type checks via native `nix flake check`, and builds the module and portable bundles.
+- **`ci-linux.yml`:** Validates `metadata.json` integrity, verifies `wallez.png` icon presence, enforces decoupled architecture line thresholds on `qml/Main.qml`, runs hermetic `qmlformat` styling and `qmllint` syntax/type checks via native `nix flake check`, and builds the module and portable bundles.
 - **`ci-macos.yml`:** Validates Nix package compilation on `macos-latest`.
 - **`testnet-smoke.yml`:** Periodic weekly workflow that tests live JSON-RPC connectivity with the LEZ testnet sequencer (`https://testnet.lez.logos.co`), checking `checkHealth`, `getLastBlockId`, and `getFeeState` before validating bundle construction.
 
