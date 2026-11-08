@@ -9,6 +9,7 @@ Item {
     property string nodeUrl: "http://127.0.0.1:8080"
     property bool isMining: false
     property int hashrate: 0
+    property string unbridgedRawBalance: "0"
     property string unbridgedL1Tokens: "0.00 LOGOS"
     property int blocksMined: 0
     property string statusMessage: ""
@@ -17,16 +18,47 @@ Item {
     property bool nodeOnline: false
 
     readonly property bool hasUnbridgedTokens: {
-        var num = parseFloat(unbridgedL1Tokens);
+        var cleaned = String(unbridgedRawBalance).replace(/,/g, "");
+        var num = parseFloat(cleaned);
         return !isNaN(num) && num > 0;
     }
 
     signal depositSuccess(string amount, string txHash)
     signal depositFailed(string reason)
 
+    Component.onCompleted: {
+        if (bridge.isInitialized && !bridge.isLocked) {
+            ctrl.checkPowStatus();
+        }
+    }
+
+    Connections {
+        target: bridge
+        function onWalletStateChanged() {
+            if (bridge.isInitialized && !bridge.isLocked) {
+                ctrl.checkPowStatus();
+            } else {
+                ctrl.isMining = false;
+                ctrl.hashrate = 0;
+            }
+        }
+    }
+
+    Connections {
+        target: accountStore
+        function onActiveAccountChanged() {
+            var activeAcc = accountStore.activeAccount;
+            if (activeAcc && (activeAcc.is_private === true || activeAcc.privacy === "private") && ctrl.isMining) {
+                ctrl.stopMining();
+                ctrl.statusMessage = "Notice: Switched to Shielded account. EmPoWer mining paused.";
+                ctrl.isSuccessStatus = false;
+            }
+        }
+    }
+
     Timer {
         id: telemetryTimer
-        interval: 2000
+        interval: 1500
         repeat: true
         running: ctrl.isMining
         onTriggered: {
@@ -34,56 +66,77 @@ Item {
         }
     }
 
-    function checkPowStatus() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", ctrl.nodeUrl + "/pow/status", true);
-        xhr.timeout = 2500;
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200) {
-                    ctrl.nodeOnline = true;
-                    try {
-                        var res = JSON.parse(xhr.responseText);
-                        if (res.hashrate !== undefined)
-                            ctrl.hashrate = res.hashrate;
-                        if (res.unbridged_balance !== undefined)
-                            ctrl.unbridgedL1Tokens = res.unbridged_balance + " LOGOS";
-                        if (res.is_mining !== undefined)
-                            ctrl.isMining = res.is_mining;
-                        if (res.blocks_mined !== undefined)
-                            ctrl.blocksMined = res.blocks_mined;
-                    } catch (e) {}
-                } else {
-                    ctrl.nodeOnline = false;
-                }
+    property int postDepositTicks: 0
+
+    Timer {
+        id: postDepositRefreshTimer
+        interval: 3000
+        repeat: true
+        running: false
+        onTriggered: {
+            ctrl.postDepositTicks += 1;
+            accountStore.refreshAccounts();
+            if (ctrl.postDepositTicks >= 5) {
+                postDepositRefreshTimer.stop();
             }
-        };
-        try {
-            xhr.send();
-        } catch (e) {
-            ctrl.nodeOnline = false;
         }
     }
 
+    function applyPowStatus(res) {
+        if (!res || !res.ok)
+            return;
+        if (res.node_online !== undefined)
+            ctrl.nodeOnline = !!res.node_online;
+        if (res.hashrate !== undefined)
+            ctrl.hashrate = Number(res.hashrate) || 0;
+        if (res.is_mining !== undefined)
+            ctrl.isMining = !!res.is_mining;
+        if (res.blocks_mined !== undefined)
+            ctrl.blocksMined = Number(res.blocks_mined) || 0;
+        if (res.unbridged_balance !== undefined) {
+            ctrl.unbridgedRawBalance = String(res.unbridged_balance);
+            var formatted = res.formatted_unbridged_balance ? String(res.formatted_unbridged_balance) : String(res.unbridged_balance);
+            ctrl.unbridgedL1Tokens = formatted + " LOGOS";
+        }
+    }
+
+    function checkPowStatus() {
+        if (!bridge.isHostAvailable || bridge.isLocked)
+            return;
+
+        bridge.invoke("getPowStatus", [], function (res) {
+            ctrl.applyPowStatus(res);
+        });
+    }
+
     function startMining() {
+        var activeAcc = accountStore.activeAccount;
+        if (activeAcc && (activeAcc.is_private === true || activeAcc.privacy === "private")) {
+            ctrl.statusMessage = "Notice: EmPoWer Mining is only available for Public accounts. Please select a Public account.";
+            ctrl.isSuccessStatus = false;
+            return;
+        }
+
+        if (bridge.isLocked) {
+            ctrl.statusMessage = "Error: Unlock wallet keystore before starting EmPoWer mining.";
+            ctrl.isSuccessStatus = false;
+            return;
+        }
+
         ctrl.isMining = true;
-        ctrl.statusMessage = "EmPoWer mining worker started. Contacting L1 node...";
+        ctrl.statusMessage = "EmPoWer mining worker active via native SDK engine.";
         ctrl.isSuccessStatus = true;
 
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", ctrl.nodeUrl + "/pow/mining/start", true);
-        xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.timeout = 2000;
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                ctrl.checkPowStatus();
+        bridge.invoke("startPowMining", [4], function (res) {
+            if (res && res.ok) {
+                ctrl.applyPowStatus(res);
+            } else {
+                ctrl.isMining = false;
+                ctrl.hashrate = 0;
+                ctrl.statusMessage = (res && res.error) ? ("Mining error: " + res.error) : "Failed to start EmPoWer miner.";
+                ctrl.isSuccessStatus = false;
             }
-        };
-        try {
-            xhr.send(JSON.stringify({
-                threads: 4
-            }));
-        } catch (e) {}
+        });
     }
 
     function stopMining() {
@@ -92,18 +145,9 @@ Item {
         ctrl.statusMessage = "EmPoWer mining worker stopped.";
         ctrl.isSuccessStatus = true;
 
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", ctrl.nodeUrl + "/pow/mining/stop", true);
-        xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.timeout = 2000;
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                ctrl.checkPowStatus();
-            }
-        };
-        try {
-            xhr.send(JSON.stringify({}));
-        } catch (e) {}
+        bridge.invoke("stopPowMining", [], function (res) {
+            ctrl.applyPowStatus(res);
+        });
     }
 
     function depositToLez(callback) {
@@ -122,6 +166,17 @@ Item {
             return;
         }
 
+        if (activeAcc.is_private === true || activeAcc.privacy === "private") {
+            ctrl.statusMessage = "Error: Cannot bridge to a Private account (funds will be locked on transparent state). Please select a Public account.";
+            ctrl.isSuccessStatus = false;
+            if (callback)
+                callback({
+                    ok: false,
+                    error: "Private accounts cannot receive transparent L1 bridge deposits"
+                });
+            return;
+        }
+
         if (bridge.isLocked) {
             ctrl.statusMessage = "Error: Unlock wallet keystore before initiating bridge deposit.";
             ctrl.isSuccessStatus = false;
@@ -133,7 +188,8 @@ Item {
             return;
         }
 
-        var amountVal = parseFloat(ctrl.unbridgedL1Tokens);
+        var rawClean = String(ctrl.unbridgedRawBalance).replace(/,/g, "").trim();
+        var amountVal = parseFloat(rawClean);
         if (isNaN(amountVal) || amountVal <= 0) {
             ctrl.statusMessage = "No unbridged L1 tokens available to deposit.";
             ctrl.isSuccessStatus = false;
@@ -145,7 +201,7 @@ Item {
             return;
         }
 
-        var amountStr = amountVal.toFixed(2);
+        var amountStr = String(Math.floor(amountVal));
         ctrl.isDepositing = true;
         ctrl.statusMessage = "Broadcasting on-chain ChannelDeposit transaction...";
         ctrl.isSuccessStatus = true;
@@ -154,11 +210,17 @@ Item {
             ctrl.isDepositing = false;
             if (res && res.ok) {
                 var txHash = res.tx_hash || "";
+                var creditedRaw = res.amount_deposited || amountStr;
+                var creditedFormatted = accountStore ? accountStore.formatThousands(creditedRaw) : String(creditedRaw);
+                ctrl.unbridgedRawBalance = "0";
                 ctrl.unbridgedL1Tokens = "0.00 LOGOS";
-                ctrl.statusMessage = "ChannelDeposit confirmed! +" + amountStr + " LEZ credited to " + (activeAcc.label || activeAcc.account_id) + ".";
+                ctrl.statusMessage = "ChannelDeposit confirmed! +" + creditedFormatted + " LEZ credited to " + (activeAcc.label || activeAcc.account_id) + ".";
                 ctrl.isSuccessStatus = true;
                 accountStore.refreshAccounts();
-                ctrl.depositSuccess(amountStr, txHash);
+                ctrl.postDepositTicks = 0;
+                postDepositRefreshTimer.restart();
+                ctrl.checkPowStatus();
+                ctrl.depositSuccess(creditedFormatted, txHash);
                 if (callback)
                     callback(res);
             } else {

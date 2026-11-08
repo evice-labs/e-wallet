@@ -31,7 +31,7 @@ Card {
 
     Connections {
         target: transferCtrl
-        function onTransferSuccess(txHash) {
+        function onTransferSuccess(txHash, amount, destination) {
             transferCard.isSuccessFeedback = true;
             var shortHash = txHash.length > 20 ? txHash.substring(0, 10) + "..." + txHash.substring(txHash.length - 8) : txHash;
             transferCard.feedbackMessage = "Transfer proposal submitted successfully! Ref: " + shortHash;
@@ -40,14 +40,60 @@ Card {
                 var isPriv = transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv";
                 var modeLabel = isPriv ? "Shield" : (transferCtrl.transferMode === "priv_to_pub" ? "Unshield" : "Public");
                 var cat = (isPriv || transferCtrl.transferMode === "priv_to_pub") ? "Shields" : "Transfers";
-                var symbol = transferCtrl.selectedAsset === "token" ? (transferCtrl.selectedToken ? transferCtrl.selectedToken.symbol : "TOKEN") : "LEZ";
-                transferCard.ledgerViewRef.addActivity(transferCtrl.destinationInput || "Recipient", modeLabel, cat, "-" + transferCtrl.amountInput + " " + symbol, isPriv ? "Zero-Knowledge Transfer" : "Public Transfer", false, txHash, "34,000 units (0.00015 LEZ)", 43582, isPriv ? "Public ➝ Shield" : "Public ➝ Public");
+                var symbol = transferCtrl.selectedAsset === "token" ? (transferCtrl.selectedToken ? transferCtrl.selectedToken.symbol : "TOKEN") : "";
+                var formattedOutAmount = symbol.length > 0 ? ("-" + actualAmount + " " + symbol) : ("-" + actualAmount);
+                var formattedInAmount = symbol.length > 0 ? ("+" + actualAmount + " " + symbol) : ("+" + actualAmount);
+                var senderId = (accountStore && accountStore.activeAccount) ? accountStore.activeAccount.account_id : "";
+                var actualAmount = (amount && String(amount).length > 0) ? amount : (transferCtrl.amountInput || "0");
+                var destTarget = (destination && String(destination).length > 0) ? destination : (transferCtrl.destinationInput || "Recipient");
+                var destLabel = (accountStore && accountStore.getAccountLabel) ? accountStore.getAccountLabel(destTarget) : destTarget;
+                var isToken = transferCtrl.selectedAsset === "token";
+                var gasInfo = transferCtrl.calculateGas ? transferCtrl.calculateGas(transferCtrl.transferMode, isToken) : null;
+                var gasFeeStr = gasInfo ? gasInfo.displayStr : "2,968";
+                var gasLimitStr = gasInfo ? gasInfo.gasLimitFormatted : "34,000";
+
+                var senderIsPriv = transferCtrl.transferMode === "priv_to_pub" || transferCtrl.transferMode === "priv_to_priv";
+                var senderPrefix = senderIsPriv ? "Private/" : "Public/";
+                var senderShort = senderId.length > 8 ? (senderId.substring(0, 8) + "...") : senderId;
+                var senderRouteStr = senderPrefix + senderShort;
+
+                var destIsPriv = transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv";
+                var destPrefix = destIsPriv ? "Private/" : "Public/";
+                var cleanDestId = destTarget.replace("Private/", "").replace("Public/", "");
+                var destShort = cleanDestId.length > 8 ? (cleanDestId.substring(0, 8) + "...") : cleanDestId;
+                var destRouteStr = destPrefix + destShort;
+
+                var detailedRoute = senderRouteStr + " ➝ " + destRouteStr;
+
+                // 1. Record Outbound Activity on Sender Account
+                transferCard.ledgerViewRef.addActivity(destLabel, modeLabel, cat, formattedOutAmount, isPriv ? "Zero-Knowledge Transfer" : "Public Transfer", false, txHash, gasFeeStr, "Pending", detailedRoute, senderId, gasLimitStr);
+
+                // 2. If Intra-Wallet, immediately record Inbound Activity on Recipient Account
+                if (accountStore && accountStore.accounts) {
+                    for (var a = 0; a < accountStore.accounts.length; a++) {
+                        var rAcc = accountStore.accounts[a];
+                        if (rAcc.account_id === cleanDestId) {
+                            var senderName = accountStore.getAccountLabel(accountStore.activeAccount);
+                            var recStatus = destIsPriv ? "Shield" : "Deposit";
+                            var recDetail = destIsPriv ? "Zero-Knowledge Inbound Transfer" : "Inbound Transfer";
+                            transferCard.ledgerViewRef.addActivity(senderName, recStatus, "Transfers", formattedInAmount, recDetail, true, txHash, "0 (Paid by Sender)", "-", detailedRoute, rAcc.account_id, "0");
+                            break;
+                        }
+                    }
+                }
+            }
+            if (accountStore) {
+                accountStore.refreshAccounts();
+                accountStore.refreshTokens();
             }
         }
         function onTransferFailed(reason) {
             transferCard.isSuccessFeedback = false;
             transferCard.feedbackMessage = "Transfer failed: " + reason;
             feedbackDismissTimer.restart();
+        }
+        function onRequestUnlock() {
+            transferCard.openUnlockModal();
         }
     }
 
@@ -123,6 +169,14 @@ Card {
                     }
                 }
             }
+
+            Text {
+                visible: !accountStore.tokens || accountStore.tokens.length === 0
+                text: "No token holdings registered. Add one in Balance view."
+                color: theme.accentOrange
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeSmall
+            }
         }
 
         // Recipient Field with LNS Resolution Status
@@ -153,7 +207,7 @@ Card {
 
             // Real-Time LNS / Account Validation Typographic Text
             RowLayout {
-                visible: transferCtrl && transferCtrl.lnsStatus !== "idle"
+                visible: transferCtrl && transferCtrl.lnsStatus !== "idle" && (transferCtrl.lnsStatus !== "resolved" || transferCtrl.lnsMessage.length > 0)
                 spacing: 6
 
                 Text {
@@ -161,11 +215,11 @@ Card {
                         if (!transferCtrl)
                             return "";
                         if (transferCtrl.lnsStatus === "resolving")
-                            return "RESOLVING LNS...";
+                            return transferCtrl.destinationInput.endsWith(".lez") ? "RESOLVING LNS..." : "RESOLVING ADDRESS...";
                         if (transferCtrl.lnsStatus === "resolved")
                             return "RESOLVED";
                         if (transferCtrl.lnsStatus === "invalid")
-                            return "INVALID DOMAIN";
+                            return transferCtrl.destinationInput.endsWith(".lez") ? "INVALID DOMAIN" : "INVALID ADDRESS";
                         return "";
                     }
                     color: {
@@ -200,7 +254,7 @@ Card {
             TextField {
                 id: amtField
                 Layout.fillWidth: true
-                placeholder: "Amount: 0.00"
+                placeholder: "Amount: 0"
                 text: transferCtrl ? transferCtrl.amountInput : ""
                 onTextChanged: {
                     if (transferCtrl && transferCtrl.amountInput !== text) {
@@ -233,22 +287,32 @@ Card {
                 font.weight: Font.Medium
             }
 
-            Text {
-                text: {
-                    if (!transferCtrl)
-                        return "Public ➝ Public";
-                    if (transferCtrl.transferMode === "pub_to_priv")
-                        return "Public ➝ Shield";
-                    if (transferCtrl.transferMode === "priv_to_pub")
-                        return "Shield ➝ Public";
-                    if (transferCtrl.transferMode === "priv_to_priv")
-                        return "Shield ➝ Shield";
-                    return "Public ➝ Public";
+            RowLayout {
+                spacing: 4
+
+                Text {
+                    text: (transferCtrl && (transferCtrl.transferMode === "priv_to_pub" || transferCtrl.transferMode === "priv_to_priv")) ? "Shield" : "Public"
+                    color: (transferCtrl && (transferCtrl.transferMode === "priv_to_pub" || transferCtrl.transferMode === "priv_to_priv")) ? theme.statusShielded : theme.statusPublic
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                    font.weight: Font.Bold
                 }
-                color: (transferCtrl && (transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv")) ? theme.statusShielded : theme.statusPublic
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTiny
-                font.weight: Font.Bold
+
+                Text {
+                    text: "➝"
+                    color: theme.textSecondary
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                    font.weight: Font.Bold
+                }
+
+                Text {
+                    text: (transferCtrl && (transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv")) ? "Shield" : "Public"
+                    color: (transferCtrl && (transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv")) ? theme.statusShielded : theme.statusPublic
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                    font.weight: Font.Bold
+                }
             }
         }
 
@@ -284,7 +348,7 @@ Card {
 
             // 1. Est. Gas Telemetry
             Text {
-                text: "Est. Gas: " + (transferCtrl ? transferCtrl.estimatedGas : "0.00015 LEZ")
+                text: "Gas Limit: " + (transferCtrl ? String(transferCtrl.estimatedGas || "34,000").replace(/\s*units\b/gi, "").trim() : "34,000")
                 color: theme.textMuted
                 font.family: theme.fontMono
                 font.pixelSize: theme.fontSizeSmall

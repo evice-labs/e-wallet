@@ -59,7 +59,8 @@ QtObject {
     readonly property string fontFamily: "Inter, -apple-system, Roboto, sans-serif"
     readonly property string fontMono: "JetBrains Mono, SF Mono, Menlo, monospace"
 
-    readonly property int fontSizeHero: 28
+    readonly property int fontSizeDisplay: 42
+    readonly property int fontSizeHero: 32
     readonly property int fontSizeTitle: 20
     readonly property int fontSizeBody: 14
     readonly property int fontSizeSmall: 12

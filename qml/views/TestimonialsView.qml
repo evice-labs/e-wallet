@@ -19,7 +19,11 @@ Card {
         function onBroadcastSuccess(txHash, message) {
             if (testimonialCard.ledgerViewRef) {
                 var previewText = message.length > 20 ? "\"" + message.substring(0, 18) + "...\"" : "\"" + message + "\"";
-                testimonialCard.ledgerViewRef.addActivity(testimonialCtrl ? testimonialCtrl.activeAuthor : "Active Account", "Ledger", "Testimonials", previewText, "On-Chain zkVM Broadcast", false, txHash, "34,000 units (0.00015 LEZ)", 43466, "Public ➝ zkVM Contract");
+                var senderId = (accountStore && accountStore.activeAccount) ? accountStore.activeAccount.account_id : "";
+                var gasInfo = (testimonialCtrl && testimonialCtrl.calculateGas) ? testimonialCtrl.calculateGas(message) : null;
+                var gasUsedStr = gasInfo ? gasInfo.displayStr : "3,778";
+                var gasLimitStr = gasInfo ? gasInfo.gasLimitFormatted : "34,000";
+                testimonialCard.ledgerViewRef.addActivity(testimonialCtrl ? testimonialCtrl.activeAuthor : "Active Account", "Ledger", "Testimonials", previewText, "On-Chain zkVM Broadcast", false, txHash, gasUsedStr, "-", "Public ➝ zkVM Contract", senderId, gasLimitStr);
             }
         }
     }
@@ -120,7 +124,7 @@ Card {
 
             Button {
                 id: broadcastBtn
-                text: (testimonialCtrl && testimonialCtrl.isBroadcasting) ? "Broadcasting..." : "Broadcast (0.1 LEZ)"
+                text: (testimonialCtrl && testimonialCtrl.isBroadcasting) ? "Broadcasting..." : "Broadcast"
                 isCompact: true
                 isPrimary: true
                 customHeight: 34

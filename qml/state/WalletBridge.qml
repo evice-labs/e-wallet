@@ -7,7 +7,10 @@ Item {
     readonly property bool isHostAvailable: typeof logos !== "undefined" && typeof logos.callModule === "function"
     property bool isInitialized: false
     property bool isLocked: true
+
+    // Ephemeral internal session handle; invalidated on backend restart or lock
     property string activeSessionId: ""
+
     property string currentNetwork: "Logos Testnet 0.4"
     property string activeAccountAddress: ""
     property string dataDir: {
@@ -108,6 +111,14 @@ Item {
             if (res && res.ok && res.session_id) {
                 bridge.activeSessionId = res.session_id;
                 console.log("[WalletBridge] Internal dApp session active:", bridge.activeSessionId);
+            } else {
+                var errStr = (res && res.error) ? String(res.error) : "";
+                if (errStr.indexOf("WalletLocked") !== -1 || errStr.indexOf("locked") !== -1) {
+                    bridge.isLocked = true;
+                    bridge.activeSessionId = "";
+                    bridge.walletStateChanged();
+                }
+                console.warn("[WalletBridge] connectDApp failed:", JSON.stringify(res));
             }
             if (callback)
                 callback(res);
@@ -165,10 +176,18 @@ Item {
                 var initParsed = parseJsonResult(initRaw);
 
                 if (initParsed && initParsed.ok === true) {
-                    parsed = {
-                        ok: true,
-                        message: "Keystore unlocked and engine initialized"
-                    };
+                    // CRITICAL: Now that m_engine is initialized with master password,
+                    // call unlockWallet to transition store.locked state to false in memory and on disk
+                    var unlockRaw = logos.callModule("e_wallet_core", "unlockWallet", [pass]);
+                    var unlockParsed = parseJsonResult(unlockRaw);
+                    if (unlockParsed && unlockParsed.ok === true) {
+                        parsed = unlockParsed;
+                    } else {
+                        parsed = {
+                            ok: true,
+                            message: "Keystore unlocked and engine initialized"
+                        };
+                    }
                 } else {
                     parsed = {
                         ok: false,

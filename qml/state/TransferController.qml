@@ -14,13 +14,48 @@ Item {
     property string resolvedTargetId: ""
     property string lnsStatus: "idle" // "idle", "resolving", "resolved", "invalid"
     property string lnsMessage: ""
-    property string estimatedGas: "0.00015 LEZ"
+    property int gasLimitValue: 34000
+    property string estimatedGas: "34,000"
     property bool isSubmitting: false
     property string lastRequestId: ""
     property string lastTxHash: ""
 
-    signal transferSuccess(string txHashOrReqId)
+    GasCalculator {
+        id: gasCalc
+    }
+
+    signal transferSuccess(string txHashOrReqId, string sentAmount, string sentDestination)
     signal transferFailed(string reason)
+    signal requestUnlock
+
+    function calculateGas(mode, isToken) {
+        return gasCalc.calculateTransferGas(mode, isToken);
+    }
+
+    function updateEstimatedGas() {
+        var isPriv = transferMode === "priv_to_pub" || transferMode === "priv_to_priv";
+        if (isPriv) {
+            controller.estimatedGas = "500,000";
+        } else {
+            var limit = controller.gasLimitValue > 0 ? controller.gasLimitValue : 34000;
+            controller.estimatedGas = Number(limit).toLocaleString();
+        }
+    }
+
+    onTransferModeChanged: {
+        updateEstimatedGas();
+    }
+
+    function refreshGasLimit() {
+        if (!bridge)
+            return;
+        bridge.invoke("getGasLimit", [], function (res) {
+            if (res && res.ok && res.gas_limit) {
+                controller.gasLimitValue = res.gas_limit;
+                updateEstimatedGas();
+            }
+        });
+    }
 
     // Automatically align default transfer mode when active account changes
     Connections {
@@ -35,12 +70,12 @@ Item {
 
     Component.onCompleted: {
         refreshRouteMode();
+        refreshGasLimit();
     }
 
     function refreshRouteMode() {
-        var target = resolvedTargetId.length > 0 ? resolvedTargetId : destinationInput.trim();
-        if (target.length > 0) {
-            autoDetectMode(target);
+        if (destinationInput.trim().length > 0) {
+            autoDetectMode(destinationInput.trim());
         } else {
             updateDefaultMode();
         }
@@ -48,14 +83,14 @@ Item {
 
     function updateDefaultMode() {
         var active = accountStore ? accountStore.activeAccount : null;
-        var isSenderPriv = !!(active && active.is_private);
+        var isSenderPriv = !!(active && (active.is_private === true || active.privacy === "private"));
         transferMode = isSenderPriv ? "priv_to_priv" : "pub_to_pub";
     }
 
-    // Debounce timer for LNS resolution
+    // Debounce timer for universal account and name resolution
     Timer {
         id: resolveDebounce
-        interval: 350
+        interval: 300
         repeat: false
         onTriggered: controller.executeResolution()
     }
@@ -74,24 +109,34 @@ Item {
             lnsStatus = "resolving";
             lnsMessage = "Resolving on-chain LNS record...";
             resolveDebounce.restart();
-        } else if (trimmed.toLowerCase().startsWith("public/") || trimmed.toLowerCase().startsWith("private/") || trimmed.length === 64) {
-            lnsStatus = "resolved";
-            resolvedTargetId = trimmed;
-            autoDetectMode(trimmed);
-            lnsMessage = trimmed.toLowerCase().startsWith("private/") ? "Shielded ZK Account Identifier" : "Public Transparent Account Identifier";
         } else {
-            lnsStatus = "idle";
-            lnsMessage = "";
-            resolvedTargetId = trimmed;
-            autoDetectMode(trimmed);
+            var clientRes = resolveClientSide(trimmed);
+            if (clientRes) {
+                applyResolution(clientRes);
+            } else {
+                lnsStatus = "idle";
+                lnsMessage = "";
+            }
+            resolveDebounce.restart();
         }
     }
 
     function autoDetectMode(targetId) {
         var active = accountStore ? accountStore.activeAccount : null;
-        var isSenderPriv = !!(active && active.is_private);
-        var trimmed = (targetId || "").trim();
-        var isDestPriv = trimmed.toLowerCase().startsWith("private/");
+        var isSenderPriv = !!(active && (active.is_private === true || active.privacy === "private"));
+
+        var trimmed = (targetId || destinationInput || "").trim();
+        var lower = trimmed.toLowerCase();
+        var isDestPriv = false;
+        if (lower.startsWith("private/")) {
+            isDestPriv = true;
+        } else if (lower.startsWith("public/")) {
+            isDestPriv = false;
+        } else {
+            var clean = trimmed.replace(/^public\//i, "").replace(/^private\//i, "");
+            var local = findLocalAccount(clean);
+            isDestPriv = (local && (local.is_private === true || local.privacy === "private"));
+        }
 
         if (isSenderPriv) {
             transferMode = isDestPriv ? "priv_to_priv" : "priv_to_pub";
@@ -100,21 +145,142 @@ Item {
         }
     }
 
-    function executeResolution() {
-        var name = destinationInput.trim();
-        if (!name.endsWith(".lez"))
-            return;
+    function findLocalAccount(rawId) {
+        if (!accountStore || !Array.isArray(accountStore.accounts))
+            return null;
+        for (var i = 0; i < accountStore.accounts.length; i++) {
+            var acc = accountStore.accounts[i];
+            if (acc && acc.account_id === rawId) {
+                return acc;
+            }
+        }
+        return null;
+    }
 
-        bridge.invoke("resolveName", [bridge.activeSessionId, name], function (res) {
+    function resolveClientSide(input) {
+        var trimmed = (input || "").trim();
+        if (!trimmed)
+            return null;
+
+        var lower = trimmed.toLowerCase();
+        var isExplicitPriv = lower.startsWith("private/");
+        var isExplicitPub = lower.startsWith("public/");
+
+        if (isExplicitPriv || isExplicitPub) {
+            var rawId = trimmed.substring(isExplicitPriv ? 8 : 7).trim();
+            var matched = findLocalAccount(rawId);
+            var label = matched ? (matched.label || "") : "";
+            return {
+                account_id: rawId,
+                canonical_address: isExplicitPriv ? ("Private/" + rawId) : ("Public/" + rawId),
+                privacy: isExplicitPriv ? "private" : "public",
+                label: label
+            };
+        }
+
+        // Check if raw Base58 address (42 to 45 chars)
+        if (/^[1-9A-HJ-NP-Za-km-z]{42,45}$/.test(trimmed)) {
+            var matchedB58 = findLocalAccount(trimmed);
+            var isPriv = matchedB58 ? (matchedB58.is_private === true || matchedB58.privacy === "private") : false;
+            var labelB58 = matchedB58 ? (matchedB58.label || "") : "";
+            return {
+                account_id: trimmed,
+                canonical_address: isPriv ? ("Private/" + trimmed) : ("Public/" + trimmed),
+                privacy: isPriv ? "private" : "public",
+                label: labelB58
+            };
+        }
+
+        return null;
+    }
+
+    function applyResolution(res) {
+        if (!res || !res.account_id)
+            return;
+        controller.lnsStatus = "resolved";
+        controller.resolvedTargetId = res.account_id;
+
+        var active = accountStore ? accountStore.activeAccount : null;
+        var isSenderPriv = !!(active && (active.is_private === true || active.privacy === "private"));
+
+        var isDestPriv = false;
+        if (res.canonical_address && res.canonical_address.toLowerCase().startsWith("private/")) {
+            isDestPriv = true;
+        } else if (res.canonical_address && res.canonical_address.toLowerCase().startsWith("public/")) {
+            isDestPriv = false;
+        } else {
+            isDestPriv = (res.privacy === "private");
+        }
+
+        if (isSenderPriv) {
+            controller.transferMode = isDestPriv ? "priv_to_priv" : "priv_to_pub";
+        } else {
+            controller.transferMode = isDestPriv ? "pub_to_priv" : "pub_to_pub";
+        }
+
+        if (res.label && res.label.trim().length > 0) {
+            controller.lnsMessage = res.label.trim();
+        } else if (destinationInput.trim().endsWith(".lez")) {
+            controller.lnsMessage = "Resolved domain: " + destinationInput.trim();
+        } else {
+            controller.lnsMessage = "";
+        }
+    }
+
+    function executeResolution() {
+        var input = destinationInput.trim();
+        if (input.length === 0) {
+            lnsStatus = "idle";
+            lnsMessage = "";
+            resolvedTargetId = "";
+            updateDefaultMode();
+            return;
+        }
+
+        // 1. Immediate client-side resolution for explicit prefixes & raw Base58
+        var clientRes = resolveClientSide(input);
+        if (clientRes) {
+            applyResolution(clientRes);
+        }
+
+        // 2. Query backend facade (resolveAccount or fallback to resolveName for .lez)
+        bridge.invoke("resolveAccount", [input], function (res) {
             if (res && res.ok && res.account_id) {
-                controller.lnsStatus = "resolved";
-                controller.resolvedTargetId = res.account_id;
-                autoDetectMode(res.account_id);
-                controller.lnsMessage = "Resolved: " + res.account_id.substring(0, 16) + "...";
-            } else {
+                applyResolution(res);
+            } else if (res && res.error && res.error.indexOf("Method not found") !== -1) {
+                // Backend lacks resolveAccount (older binary)
+                if (input.endsWith(".lez")) {
+                    bridge.invoke("resolveName", [bridge.activeSessionId, input], function (resName) {
+                        if (resName && resName.ok && resName.account_id) {
+                            applyResolution({
+                                account_id: resName.account_id,
+                                canonical_address: "Public/" + resName.account_id,
+                                privacy: "public",
+                                label: input
+                            });
+                        } else {
+                            controller.lnsStatus = "invalid";
+                            controller.resolvedTargetId = "";
+                            controller.lnsMessage = resName && resName.error ? resName.error : "Domain not found in LNS registry";
+                            updateDefaultMode();
+                        }
+                    });
+                } else if (!clientRes) {
+                    controller.lnsStatus = "invalid";
+                    controller.resolvedTargetId = "";
+                    controller.lnsMessage = "Invalid recipient address or domain";
+                    updateDefaultMode();
+                }
+            } else if (input.endsWith(".lez")) {
                 controller.lnsStatus = "invalid";
                 controller.resolvedTargetId = "";
                 controller.lnsMessage = res && res.error ? res.error : "Domain not found in LNS registry";
+                updateDefaultMode();
+            } else if (!clientRes) {
+                controller.lnsStatus = "invalid";
+                controller.resolvedTargetId = "";
+                controller.lnsMessage = res && res.error ? res.error : "Unknown destination address";
+                updateDefaultMode();
             }
         });
     }
@@ -126,11 +292,14 @@ Item {
 
         if (selectedAsset === "token" && selectedToken) {
             var tokBal = parseFloat(selectedToken.formatted_balance ? selectedToken.formatted_balance.replace(/,/g, "") : "0") || 0;
-            amountInput = tokBal > 0 ? tokBal.toString() : "0.00";
+            amountInput = tokBal > 0 ? Math.floor(tokBal).toString() : "0";
         } else {
-            var bal = parseFloat(active.formatted_balance ? active.formatted_balance.replace(/,/g, "") : "0") || 0;
-            var spendable = Math.max(0, bal - 0.00015);
-            amountInput = spendable.toFixed(4);
+            var isSenderPriv = (transferMode === "priv_to_pub" || transferMode === "priv_to_priv");
+            var poolBalStr = isSenderPriv ? accountStore.activeShieldedBalance : accountStore.activePublicBalance;
+            var bal = parseFloat(poolBalStr ? String(poolBalStr).replace(/,/g, "") : "0") || 0;
+            var limit = controller.gasLimitValue > 0 ? controller.gasLimitValue : 34000;
+            var spendable = isSenderPriv ? bal : Math.max(0, bal - limit);
+            amountInput = spendable > 0 ? Math.floor(spendable).toString() : "0";
         }
     }
 
@@ -166,11 +335,13 @@ Item {
                 };
             }
         } else {
-            var bal = parseFloat(active.formatted_balance ? active.formatted_balance.replace(/,/g, "") : "0") || 0;
-            if (amt > bal) {
+            var isSenderPriv = (transferMode === "priv_to_pub" || transferMode === "priv_to_priv");
+            var poolBalStr = isSenderPriv ? accountStore.activeShieldedBalance : accountStore.activePublicBalance;
+            var poolBal = parseFloat(poolBalStr ? String(poolBalStr).replace(/,/g, "") : "0") || 0;
+            if (amt > poolBal) {
                 return {
                     valid: false,
-                    message: "Insufficient LEZ balance (" + amt + " > " + bal + " LEZ)"
+                    message: "Insufficient " + (isSenderPriv ? "shielded" : "public") + " balance (" + amt + " > " + poolBal + " LEZ)"
                 };
             }
         }
@@ -183,11 +354,25 @@ Item {
             };
         }
 
-        if (dest === active.account_id) {
+        var cleanDestId = dest.replace(/^public\//i, "").replace(/^private\//i, "");
+        var isSenderPrivMode = (transferMode === "priv_to_pub" || transferMode === "priv_to_priv");
+        var isDestPrivMode = (transferMode === "pub_to_priv" || transferMode === "priv_to_priv");
+        if (cleanDestId === active.account_id && isSenderPrivMode === isDestPrivMode) {
             return {
                 valid: false,
-                message: "Self-transfer is not permitted"
+                message: "Self-transfer is not permitted. Please specify a different recipient address."
             };
+        }
+
+        if (selectedAsset !== "token" && isDestPrivMode && !isSenderPrivMode) {
+            var localDest = findLocalAccount(cleanDestId);
+            var destExistingBal = localDest ? (parseFloat(localDest.balance || "0") || 0) : 0;
+            if (localDest && (localDest.is_private === true || localDest.privacy === "private") && (destExistingBal + amt <= 5070616)) {
+                return {
+                    valid: false,
+                    message: "Shielding to a 0-balance private account requires > 5,070,616 LEZ raw units to cover the private execution fee reserve."
+                };
+            }
         }
 
         if (destinationInput.trim().endsWith(".lez") && lnsStatus !== "resolved") {
@@ -219,43 +404,150 @@ Item {
         var fromAcc = active ? active.account_id : "";
         var dest = check.destination;
 
-        if (selectedAsset === "token" && selectedToken) {
-            // Fungible Token Transfer via Token Program
-            var tokenAmountRaw = Math.round(check.amount * 1000000).toString();
-            var fromHolding = selectedToken.holding_id || fromAcc;
-            var toHolding = dest;
-            var defId = selectedToken.definition_id || "Def/LOGO_GOVERNANCE_v1";
+        executeProposal(fromAcc, dest, check.amount, false);
+    }
 
-            bridge.invoke("proposeTokenTransfer", [bridge.activeSessionId, fromHolding, toHolding, defId, tokenAmountRaw], function (res) {
-                handleProposalResponse(res);
-            });
-        } else {
-            // Native LEZ Transfer (1 LEZ = 1,000,000 micro-LEZ)
-            var amountRaw = Math.round(check.amount * 1000000).toString();
-
-            bridge.invoke("proposeNativeTransfer", [bridge.activeSessionId, fromAcc, dest, amountRaw], function (res) {
-                handleProposalResponse(res);
-            });
+    Timer {
+        id: proposalStatusTimer
+        interval: 500
+        repeat: false
+        property var callback: null
+        onTriggered: {
+            if (callback)
+                callback();
         }
     }
 
+    function executeProposal(fromAcc, dest, amt, isRetry) {
+        bridge.ensureActiveSession(function (sessRes) {
+            var sessId = (sessRes && sessRes.session_id) ? sessRes.session_id : bridge.activeSessionId;
+
+            if (!sessId || sessId.length === 0) {
+                // Direct connect fallback
+                bridge.invoke("connectDApp", ["internal_wallet_ui", 1], function (connRes) {
+                    if (connRes && connRes.ok && connRes.session_id) {
+                        bridge.activeSessionId = connRes.session_id;
+                        proceedProposalWithSession(connRes.session_id, fromAcc, dest, amt, isRetry);
+                    } else {
+                        controller.isSubmitting = false;
+                        var errStr = (connRes && connRes.error) ? String(connRes.error) : "";
+                        if (errStr.indexOf("WalletLocked") !== -1 || errStr.indexOf("locked") !== -1) {
+                            controller.transferFailed("Vault is locked in backend. Please unlock your keystore vault to authorize.");
+                            controller.requestUnlock();
+                        } else {
+                            controller.transferFailed("Unable to establish active wallet session: " + (errStr || "Unknown error"));
+                        }
+                    }
+                });
+                return;
+            }
+
+            proceedProposalWithSession(sessId, fromAcc, dest, amt, isRetry);
+        });
+    }
+
+    function proceedProposalWithSession(sessId, fromAcc, dest, amt, isRetry) {
+        var cleanFrom = fromAcc.replace(/^public\//i, "").replace(/^private\//i, "");
+        var cleanDest = dest.replace(/^public\//i, "").replace(/^private\//i, "");
+
+        var isSenderPriv = (transferMode === "priv_to_pub" || transferMode === "priv_to_priv");
+        var targetFrom = isSenderPriv ? ("Private/" + cleanFrom) : ("Public/" + cleanFrom);
+
+        var isDestPriv = (transferMode === "pub_to_priv" || transferMode === "priv_to_priv");
+        var targetDest = cleanDest;
+        if (isDestPriv) {
+            targetDest = "Private/" + cleanDest;
+        } else if (!cleanDest.endsWith(".lez")) {
+            targetDest = "Public/" + cleanDest;
+        }
+
+        // Ensure internal session has propose permission on sender account
+        bridge.invoke("grantAccountAccess", [sessId, cleanFrom, "propose"], function (grantRes) {
+            if (selectedAsset === "token" && selectedToken) {
+                // Fungible Token Transfer via Token Program (atomic units)
+                var tokenAmountRaw = Math.round(amt).toString();
+                var fromHolding = selectedToken.holding_id || cleanFrom;
+                var toHolding = cleanDest;
+                var defId = selectedToken.definition_id || "Def/LOGO_GOVERNANCE_v1";
+
+                bridge.invoke("proposeTokenTransfer", [sessId, fromHolding, toHolding, defId, tokenAmountRaw], function (res) {
+                    handleProposalResponseWithRetry(res, cleanFrom, cleanDest, amt, isRetry);
+                });
+            } else {
+                // Native LEZ Transfer (atomic units)
+                var amountRaw = Math.round(amt).toString();
+
+                bridge.invoke("proposeNativeTransfer", [sessId, targetFrom, targetDest, amountRaw], function (res) {
+                    handleProposalResponseWithRetry(res, cleanFrom, cleanDest, amt, isRetry);
+                });
+            }
+        });
+    }
+
+    function handleProposalResponseWithRetry(res, fromAcc, dest, amt, isRetry) {
+        if (res && res.error && (res.error.indexOf("Session") !== -1 || res.error.indexOf("session") !== -1) && !isRetry) {
+            console.warn("[TransferController] Session rejected by backend. Resetting session and retrying...", res.error);
+            bridge.activeSessionId = "";
+            executeProposal(fromAcc, dest, amt, true);
+            return;
+        }
+
+        handleProposalResponse(res);
+    }
+
     function handleProposalResponse(res) {
-        if (res && res.ok) {
-            controller.lastRequestId = res.request_id || "req_pending";
-            // Check request confirmation / status
-            bridge.invoke("getRequestStatus", [controller.lastRequestId], function (statusRes) {
-                controller.isSubmitting = false;
-                if (statusRes && statusRes.ok && statusRes.tx_hash) {
-                    controller.lastTxHash = statusRes.tx_hash;
-                } else {
-                    controller.lastTxHash = controller.lastRequestId;
+        if (res && res.ok && res.request_id) {
+            var reqId = res.request_id;
+            controller.lastRequestId = reqId;
+
+            // Submit approval for internal wallet transfer execution
+            bridge.invoke("submitApprovalDecision", [reqId, 1], function (decRes) {
+                var pollAttempts = 0;
+                var maxAttempts = 240;
+
+                function pollStatus() {
+                    bridge.invoke("getRequestStatus", [reqId], function (statusRes) {
+                        pollAttempts++;
+                        if (statusRes && statusRes.ok) {
+                            if (statusRes.status === "submitted" && statusRes.tx_hash) {
+                                var finalTx = statusRes.tx_hash;
+                                var finalAmt = controller.amountInput;
+                                var finalDst = controller.destinationInput;
+                                controller.isSubmitting = false;
+                                controller.lastTxHash = finalTx;
+                                controller.transferSuccess(finalTx, finalAmt, finalDst);
+                                controller.amountInput = "";
+                                controller.destinationInput = "";
+                                accountStore.refreshAccounts();
+                                accountStore.refreshTokens();
+                                return;
+                            }
+                            if (statusRes.status === "failed") {
+                                controller.isSubmitting = false;
+                                controller.transferFailed(statusRes.reason || "Transfer execution failed on chain");
+                                return;
+                            }
+                            if (statusRes.status === "rejected") {
+                                controller.isSubmitting = false;
+                                controller.transferFailed("Transfer was rejected");
+                                return;
+                            }
+                        }
+
+                        if (pollAttempts < maxAttempts) {
+                            proposalStatusTimer.callback = pollStatus;
+                            proposalStatusTimer.restart();
+                        } else {
+                            controller.isSubmitting = false;
+                            controller.transferFailed("Transfer timed out waiting for network confirmation");
+                            accountStore.refreshAccounts();
+                            accountStore.refreshTokens();
+                        }
+                    });
                 }
 
-                controller.amountInput = "";
-                controller.destinationInput = "";
-                controller.transferSuccess(controller.lastTxHash);
-                accountStore.refreshAccounts();
-                accountStore.refreshTokens();
+                proposalStatusTimer.callback = pollStatus;
+                proposalStatusTimer.restart();
             });
         } else {
             controller.isSubmitting = false;

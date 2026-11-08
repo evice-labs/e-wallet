@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 import "../controls"
+import "../state"
 
 ModalOverlay {
     id: modal
@@ -15,6 +16,10 @@ ModalOverlay {
 
     Theme {
         id: theme
+    }
+
+    GasCalculator {
+        id: gasCalc
     }
 
     Timer {
@@ -59,7 +64,11 @@ ModalOverlay {
             }
 
             Text {
-                text: txData ? txData.amount : "0.00 LEZ"
+                text: {
+                    if (!txData || !txData.amount || txData.amount === "-")
+                        return "0";
+                    return String(txData.amount).replace(/\s*LEZ\b/gi, "").trim();
+                }
                 color: (txData && txData.isIncoming) ? theme.statusSuccess : theme.textPrimary
                 font.family: theme.fontFamily
                 font.pixelSize: theme.fontSizeTitle + 2
@@ -101,7 +110,7 @@ ModalOverlay {
                         Text {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
-                            text: txData ? (txData.txHash || "0x9f538361b55c890f9bd5dae00cf98d4bb677cc3bd129c0147fbe4b23fccaf184") : ""
+                            text: txData ? (txData.txHash && txData.txHash !== "-" ? txData.txHash : (txData.isIncoming ? "External Inbound Transfer (Not Indexed)" : "-")) : ""
                             color: theme.textPrimary
                             font.family: theme.fontMono
                             font.pixelSize: theme.fontSizeTiny
@@ -116,11 +125,11 @@ ModalOverlay {
                     isCompact: true
                     isPrimary: modal.copyStatus.length === 0
                     customHeight: 34
-                    customWidth: 70
+                    customWidth: 78
                     Layout.alignment: Qt.AlignVCenter
                     onClicked: {
                         if (modal.txData) {
-                            var hash = modal.txData.txHash || "0x9f538361b55c890f9bd5dae00cf98d4bb677cc3bd129c0147fbe4b23fccaf184";
+                            var hash = modal.txData.txHash || "";
                             copyHelper.text = hash;
                             copyHelper.selectAll();
                             copyHelper.copy();
@@ -155,18 +164,34 @@ ModalOverlay {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: txData ? (txData.detailedTime || (txData.time ? ("2026-10-30 17:35:10 UTC (" + txData.time + ")") : "2026-10-30 17:35:10 UTC")) : "2026-10-30 17:35:10 UTC"
+                        text: {
+                            if (!txData)
+                                return "-";
+                            var dt = (txData.detailedTime || "").replace(" (Just now)", "");
+                            var ts = Number(txData.timestamp);
+                            if (!ts && dt) {
+                                var p = Date.parse(dt.replace(" UTC", "Z"));
+                                if (!isNaN(p))
+                                    ts = p;
+                            }
+                            if (ts) {
+                                var diffMin = Math.max(0, Math.floor((Date.now() - ts) / 60000));
+                                var rel = diffMin === 0 ? " (Just now)" : (" (" + diffMin + " min" + (diffMin === 1 ? "" : "s") + " ago)");
+                                return dt + rel;
+                            }
+                            return dt || (txData.time || "Just now");
+                        }
                         color: theme.textPrimary
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall
                     }
                 }
 
-                // Row 2: Block Height
+                // Row 2: Block Inclusion
                 RowLayout {
                     Layout.fillWidth: true
                     Text {
-                        text: "Block Height Included:"
+                        text: "Block Status / Height:"
                         color: theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
@@ -175,15 +200,38 @@ ModalOverlay {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: txData ? ("Block #" + (txData.block || 43565)) : "Block #43565"
-                        color: theme.accentOrange
+                        text: {
+                            if (!txData)
+                                return "Sequencer Confirmed";
+                            var isPending = (txData.block === "Pending" || txData.block === "Pending Block" || txData.isPending === true);
+                            if (isPending && txData.timestamp && (Date.now() - txData.timestamp > 60000)) {
+                                isPending = false;
+                            }
+                            if (isPending) {
+                                return txData.isIncoming ? "Sequencer State Sync" : "Sequencer Pending";
+                            }
+                            var bStr = String(txData.block || "");
+                            if (!txData.block || bStr === "-" || bStr === "Sequencer Confirmed") {
+                                return "Sequencer Confirmed";
+                            }
+                            return bStr.startsWith("Block #") ? (bStr + " • Sequencer Confirmed") : ("Block #" + bStr + " • Sequencer Confirmed");
+                        }
+                        color: {
+                            if (!txData)
+                                return theme.statusSuccess;
+                            var isPending = (txData.block === "Pending" || txData.block === "Pending Block" || txData.isPending === true);
+                            if (isPending && txData.timestamp && (Date.now() - txData.timestamp > 60000)) {
+                                isPending = false;
+                            }
+                            return isPending ? theme.accentOrange : theme.statusSuccess;
+                        }
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall
                         font.weight: Font.DemiBold
                     }
                 }
 
-                // Row 3: Gas Used vs Gas Limit
+                // Row 3: Actual Gas Used
                 RowLayout {
                     Layout.fillWidth: true
                     Text {
@@ -196,17 +244,22 @@ ModalOverlay {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: txData ? (txData.gasUsed || "34,000 units (0.00015 LEZ)") : "34,000 units"
-                        color: theme.statusSuccess
+                        text: {
+                            if (!txData)
+                                return "0";
+                            return gasCalc.normalizeDisplay(txData.gasUsed, txData.isIncoming, txData.category, txData.status, txData.detail);
+                        }
+                        color: (txData && txData.isIncoming) ? theme.statusSuccess : theme.textPrimary
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall
                         font.weight: Font.DemiBold
                     }
                 }
 
-                // Row 4: Gas Limit
+                // Row 4: Declared Gas Limit
                 RowLayout {
                     Layout.fillWidth: true
+                    visible: !(txData && txData.isIncoming)
                     Text {
                         text: "Gas Limit Declared:"
                         color: theme.textSecondary
@@ -217,8 +270,13 @@ ModalOverlay {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: txData ? (txData.gasLimit ? (txData.gasLimit + " units") : "34,000 units") : "34,000 units"
-                        color: theme.textPrimary
+                        text: {
+                            if (!txData)
+                                return "34,000";
+                            var lim = String(txData.gasLimit || "34,000").replace(/\s*units\b/gi, "").trim();
+                            return lim || "34,000";
+                        }
+                        color: theme.textSecondary
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall
                     }
@@ -237,7 +295,7 @@ ModalOverlay {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: txData ? (txData.route || "Public ➝ Public") : "Public ➝ Public"
+                        text: (txData && txData.route) ? txData.route : "Public ➝ Public"
                         color: theme.textPrimary
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall
