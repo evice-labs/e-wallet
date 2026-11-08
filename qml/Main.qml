@@ -328,31 +328,9 @@ Rectangle {
         bridge: bridge
     }
 
-    CreateWalletModal {
-        id: createWalletModal
-        bridge: bridge
-        accountStore: accountStore
-    }
-
-    RestoreWalletModal {
-        id: restoreWalletModal
-        bridge: bridge
-        accountStore: accountStore
-    }
-
-    CreateAccountModal {
-        id: createAccountModal
-        accountStore: accountStore
-    }
-
-    ApprovalModal {
-        id: approvalModal
-        approvalManager: approvalManager
-    }
-
-    IdentityModal {
-        id: identityModal
-        bridge: bridge
-        accountStore: accountStore
-    }
+    CreateWalletModal { id: createWalletModal; bridge: bridge; accountStore: accountStore }
+    RestoreWalletModal { id: restoreWalletModal; bridge: bridge; accountStore: accountStore }
+    CreateAccountModal { id: createAccountModal; accountStore: accountStore }
+    ApprovalModal { id: approvalModal; approvalManager: approvalManager }
+    IdentityModal { id: identityModal; bridge: bridge; accountStore: accountStore }
 }

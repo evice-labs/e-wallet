@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/eWalletLogo.png" alt="eWallet Logo" width="160" />
+  <img src="assets/wallez.jpg" alt="WALLEZ Logo" width="160" />
 </p>
 
 <p align="center">
@@ -103,7 +103,8 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 ```
 e-wallet-ui/
 ├── assets/
-│   ├── eWalletLogo.png             # Official 256x256 application icon
+│   ├── wallez.jpg                  # Official WALLEZ application icon
+│   ├── eWalletLogo.png             # Compatible 256x256 application icon
 │   └── icons/                      # Source asset repository
 │       └── Refresh.png             # Refresh icon
 ├── metadata.json                   # Basecamp module manifest (type: ui_qml)
@@ -204,7 +205,7 @@ nix build .#install-portable --impure
 cp -rL result/plugins/e_wallet_ui ~/.local/share/Logos/LogosBasecamp/plugins/
 ```
 
-When you launch `LogosBasecamp`, **Evice Wallet** will automatically appear in the workspace dock with the `eWalletLogo.png` icon.
+When you launch `LogosBasecamp`, **WALLEZ** will automatically appear in the workspace dock with the `wallez.jpg` icon.
 
 ## Continuous Integration & Quality Assurance
 

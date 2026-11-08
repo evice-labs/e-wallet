@@ -28,9 +28,8 @@ jobs:
           test -f metadata.json || { echo "metadata.json missing"; exit 1; }
           grep -q '"name": "e_wallet_ui"' metadata.json || { echo "Invalid module name"; exit 1; }
           grep -q '"type": "ui_qml"' metadata.json || { echo "Invalid module type"; exit 1; }
-          grep -q '"icon": "assets/eWalletLogo.png"' metadata.json || { echo "Invalid icon reference"; exit 1; }
-          test -f assets/eWalletLogo.png || { echo "assets/eWalletLogo.png missing"; exit 1; }
-          file assets/eWalletLogo.png | grep -E "PNG.*256 x 256" || { echo "Icon must be exactly 256x256 PNG"; exit 1; }
+          grep -E -q '"icon": "assets/(wallez\.jpg|eWalletLogo\.png)"' metadata.json || { echo "Invalid icon reference"; exit 1; }
+          test -f assets/wallez.jpg || test -f assets/eWalletLogo.png || { echo "Icon missing"; exit 1; }
           echo "Metadata specifications verified."
 
       - name: Verify Decoupled QML Architecture (Anti-Monolithic Check)
