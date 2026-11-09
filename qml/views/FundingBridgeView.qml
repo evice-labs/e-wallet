@@ -19,14 +19,20 @@ Card {
 
     Connections {
         target: bridgeCtrl
+        function onDepositInitiated(amount, targetId) {
+            if (bridgeCard.ledgerViewRef) {
+                var acc = accountStore.activeAccount;
+                var label = acc ? (acc.label || acc.account_id) : "Public Account";
+                var cleanedAmt = String(amount).replace(/,/g, "").trim();
+                var formattedAmt = accountStore ? accountStore.formatThousands(cleanedAmt) : cleanedAmt;
+                bridgeCard.ledgerViewRef.addActivity(label, "Channel Bridge", "Transfers", "+" + formattedAmt, "L1 → LEZ Channel Deposit", true, "Pending Confirmation", "0 (Channel Inscription)", "Pending", "Logos L1 ➝ LEZ Channel", targetId, "0");
+            }
+        }
         function onDepositSuccess(amount, txHash) {
             if (bridgeCard.ledgerViewRef) {
                 var acc = accountStore.activeAccount;
-                var label = acc ? acc.label : "Primary Account";
                 var targetId = acc ? acc.account_id : "";
-                var cleanedAmt = String(amount).replace(/,/g, "").trim();
-                var formattedAmt = accountStore ? accountStore.formatThousands(cleanedAmt) : cleanedAmt;
-                bridgeCard.ledgerViewRef.addActivity(label, "Channel Bridge", "Transfers", "+" + formattedAmt, "L1 → LEZ Channel Deposit", true, txHash || "Pending Confirmation", "0 (Channel Inscription)", "-", "Logos L1 ➝ LEZ Channel", targetId, "0");
+                bridgeCard.ledgerViewRef.updateChannelBridgeTxHash(targetId, txHash);
             }
             resetActionTimer.restart();
         }
@@ -97,7 +103,7 @@ Card {
                     }
 
                     Text {
-                        text: bridgeCtrl ? bridgeCtrl.unbridgedL1Tokens : "0.00 LOGOS"
+                        text: bridgeCtrl ? bridgeCtrl.unbridgedL1Tokens : "0 LOGOS"
                         color: theme.textPrimary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeBody + 2

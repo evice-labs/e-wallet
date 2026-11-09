@@ -50,7 +50,7 @@ Card {
                     text: {
                         if (bridge.isLocked)
                             return "Vault Locked";
-                        if (!accountStore.isReady || accountStore.isLoading || !accountStore.activeAccount)
+                        if (!accountStore.activeAccount)
                             return "Loading Vault...";
                         return "Hola, " + accountStore.activeAccountName;
                     }
@@ -75,7 +75,7 @@ Card {
                         text: {
                             if (bridge.isLocked)
                                 return "Vault Locked";
-                            if (!accountStore.isReady || accountStore.isLoading || !accountStore.activeAccount)
+                            if (!accountStore.activeAccount)
                                 return "Syncing accounts...";
                             var isPriv = accountStore.activeAccount && accountStore.activeAccount.is_private;
                             var count = (accountStore.accounts && accountStore.accounts.length) || 0;

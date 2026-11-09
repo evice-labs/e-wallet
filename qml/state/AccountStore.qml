@@ -15,7 +15,6 @@ Item {
         property string lastKnownBalancesJson: "{}"
     }
 
-    signal depositDetected(string accountLabel, string amount, string accountId, bool isPrivate)
     signal balanceChanged(string accountId, real oldBalance, real newBalance)
 
     function formatThousands(val) {
@@ -229,15 +228,10 @@ Item {
                         acc.label = store.accountLabels[acc.account_id];
                     }
 
-                    // Balance change & inbound deposit detection
+                    // Balance change tracking
                     var prevBal = lastKnown[acc.account_id];
                     if (prevBal !== undefined && bal !== prevBal) {
                         store.balanceChanged(acc.account_id, prevBal, bal);
-                        if (bal > prevBal) {
-                            var diff = bal - prevBal;
-                            console.log("[AccountStore] Inbound deposit detected for account", acc.account_id, "amount:", diff);
-                            store.depositDetected(store.getAccountLabel(acc), store.formatThousands(diff), acc.account_id, isPriv);
-                        }
                     }
                     updatedKnown[acc.account_id] = bal;
 
@@ -252,18 +246,6 @@ Item {
                     if (targetActiveId && targetActiveId === acc.account_id) {
                         store.activeAccount = acc;
                         foundActive = true;
-                    }
-                }
-
-                // If this is first initialization and no lastKnown records existed, record baseline deposits
-                if (Object.keys(lastKnown).length === 0) {
-                    for (var d = 0; d < processedAccounts.length; d++) {
-                        var dAcc = processedAccounts[d];
-                        var dBal = parseFloat(dAcc.balance || dAcc.formatted_balance || "0") || 0;
-                        if (dBal > 0) {
-                            console.log("[AccountStore] Initial balance deposit recorded for account", dAcc.account_id, "amount:", dBal);
-                            store.depositDetected(store.getAccountLabel(dAcc), store.formatThousands(dBal), dAcc.account_id, dAcc.is_private);
-                        }
                     }
                 }
 

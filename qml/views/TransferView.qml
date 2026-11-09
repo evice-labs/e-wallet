@@ -256,9 +256,29 @@ Card {
                 Layout.fillWidth: true
                 placeholder: "Amount: 0"
                 text: transferCtrl ? transferCtrl.amountInput : ""
-                onTextChanged: {
-                    if (transferCtrl && transferCtrl.amountInput !== text) {
-                        transferCtrl.amountInput = text;
+
+                onTextEdited: {
+                    var raw = text.replace(/[^0-9.]/g, "");
+                    var parts = raw.split(".");
+                    var formattedInt = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    var formatted = parts.length > 1 ? (formattedInt + "." + parts.slice(1).join("")) : formattedInt;
+                    if (formatted !== text) {
+                        var cp = cursorPosition;
+                        var diff = formatted.length - text.length;
+                        text = formatted;
+                        cursorPosition = Math.max(0, cp + diff);
+                    }
+                    if (transferCtrl) {
+                        transferCtrl.amountInput = formatted;
+                    }
+                }
+            }
+
+            Connections {
+                target: transferCtrl
+                function onAmountInputChanged() {
+                    if (amtField.text !== (transferCtrl ? transferCtrl.amountInput : "")) {
+                        amtField.text = transferCtrl ? transferCtrl.amountInput : "";
                     }
                 }
             }

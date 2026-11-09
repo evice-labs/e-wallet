@@ -5,12 +5,15 @@ Rectangle {
     id: control
 
     property alias text: input.text
+    property alias cursorPosition: input.cursorPosition
+    property alias inputItem: input
     property string placeholder: "Enter text..."
     property string label: ""
     property int echoMode: TextInput.Normal
     property bool readOnly: false
     property alias validator: input.validator
     signal accepted
+    signal textEdited
 
     implicitWidth: 320
     implicitHeight: control.label.length > 0 ? 58 : 36
@@ -51,6 +54,7 @@ Rectangle {
             clip: true
             verticalAlignment: TextInput.AlignVCenter
             onAccepted: control.accepted()
+            onTextEdited: control.textEdited()
 
             Text {
                 anchors.fill: parent

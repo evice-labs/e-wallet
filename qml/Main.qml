@@ -12,40 +12,26 @@ Rectangle {
     height: 720
     color: theme.bgCanvas
 
-    Theme {
-        id: theme
-    }
-    WalletBridge {
-        id: bridge
-    }
+    Theme { id: theme }
+    WalletBridge { id: bridge }
     AccountStore {
         id: accountStore
         bridge: bridge
-        onDepositDetected: (accountLabel, amountStr, accountId, isPrivate) => {
-            if (ledgerView)
-                ledgerView.addActivity(accountLabel, "Deposit", "Transfers", "+" + amountStr, "Inbound Transfer (Deposit)", true, "", "0 (Paid by Sender)", "-", "External ➝ " + (isPrivate ? "Private/" : "Public/") + accountId.substring(0, 8) + "...", accountId, "0");
-        }
         onBalanceChanged: (accountId, oldBalance, newBalance) => {
             if (ledgerView)
                 ledgerView.markAccountPendingTransactionsConfirmed(accountId);
+            if (txDetailModal.visible && txDetailModal.txData) {
+                var modalTx = Object.assign({}, txDetailModal.txData);
+                modalTx.block = "Sequencer Confirmed";
+                modalTx.isPending = false;
+                txDetailModal.txData = modalTx;
+            }
         }
     }
 
-    TransferController {
-        id: transferCtrl
-        bridge: bridge
-        accountStore: accountStore
-    }
-    FundingBridgeController {
-        id: bridgeCtrl
-        bridge: bridge
-        accountStore: accountStore
-    }
-    TestimonialController {
-        id: testimonialCtrl
-        bridge: bridge
-        accountStore: accountStore
-    }
+    TransferController { id: transferCtrl; bridge: bridge; accountStore: accountStore }
+    FundingBridgeController { id: bridgeCtrl; bridge: bridge; accountStore: accountStore }
+    TestimonialController { id: testimonialCtrl; bridge: bridge; accountStore: accountStore }
     ApprovalManager {
         id: approvalManager
         bridge: bridge
