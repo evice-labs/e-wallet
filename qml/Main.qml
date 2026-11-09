@@ -21,13 +21,15 @@ Rectangle {
     AccountStore {
         id: accountStore
         bridge: bridge
-        onDepositDetected: (accountLabel, amountStr, accountId, isPrivate) => {
-            if (ledgerView)
-                ledgerView.addActivity(accountLabel, "Deposit", "Transfers", "+" + amountStr, "Inbound Transfer (Deposit)", true, "", "0 (Paid by Sender)", "-", "External ➝ " + (isPrivate ? "Private/" : "Public/") + accountId.substring(0, 8) + "...", accountId, "0");
-        }
         onBalanceChanged: (accountId, oldBalance, newBalance) => {
             if (ledgerView)
                 ledgerView.markAccountPendingTransactionsConfirmed(accountId);
+            if (txDetailModal.visible && txDetailModal.txData) {
+                var modalTx = Object.assign({}, txDetailModal.txData);
+                modalTx.block = "Sequencer Confirmed";
+                modalTx.isPending = false;
+                txDetailModal.txData = modalTx;
+            }
         }
     }
 
@@ -91,19 +93,19 @@ Rectangle {
     LockScreenView {
         id: lockScreenView
         anchors.fill: parent
-        visible: bridge.isInitialized && bridge.isLocked
+        visible: bridge.isInitialized && (bridge.isLocked || !accountStore.isReady)
         bridge: bridge
         accountStore: accountStore
         onOpenRestoreModal: restoreWalletModal.open()
     }
 
-    // RESPONSIVE DASHBOARD VIEW (Bento-Grid in Desktop / Linear Vertical in Narrow/Mobile)
+    // RESPONSIVE DASHBOARD VIEW
     ColumnLayout {
         id: dashboardContainer
         anchors.fill: parent
         anchors.margins: 20
         spacing: 0
-        visible: bridge.isInitialized && !bridge.isLocked
+        visible: bridge.isInitialized && !bridge.isLocked && accountStore.isReady
 
         readonly property int responsiveBreakpoint: 880
         readonly property bool isNarrow: width < responsiveBreakpoint
@@ -171,6 +173,7 @@ Rectangle {
                             onOpenSettingsModal: settingsModal.open()
                             onOpenUnlockModal: unlockModal.open()
                             onOpenProfileModal: profileModal.open()
+                            onOpenAddTokenModal: addTokenModal.open()
                         }
 
                         TransferView {
@@ -245,7 +248,7 @@ Rectangle {
                 }
             }
 
-            // STATIC VIEWPORT SCROLLBAR TRACK & THUMB (Active and synchronized like Wallet Settings)
+            // STATIC VIEWPORT SCROLLBAR TRACK & THUMB
             Rectangle {
                 id: scrollTrack
                 anchors.right: parent.right
@@ -337,6 +340,10 @@ Rectangle {
     IdentityModal {
         id: identityModal
         bridge: bridge
+        accountStore: accountStore
+    }
+    AddTokenModal {
+        id: addTokenModal
         accountStore: accountStore
     }
 }

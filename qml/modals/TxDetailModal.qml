@@ -204,15 +204,15 @@ ModalOverlay {
                             if (!txData)
                                 return "Sequencer Confirmed";
                             var isPending = (txData.block === "Pending" || txData.block === "Pending Block" || txData.isPending === true);
-                            if (isPending && txData.timestamp && (Date.now() - txData.timestamp > 60000)) {
-                                isPending = false;
-                            }
                             if (isPending) {
-                                return txData.isIncoming ? "Sequencer State Sync" : "Sequencer Pending";
+                                return "Sequencer Pending";
                             }
                             var bStr = String(txData.block || "");
                             if (!txData.block || bStr === "-" || bStr === "Sequencer Confirmed") {
                                 return "Sequencer Confirmed";
+                            }
+                            if (bStr === "Pending" || bStr === "Pending Block") {
+                                return "Sequencer Pending";
                             }
                             return bStr.startsWith("Block #") ? (bStr + " • Sequencer Confirmed") : ("Block #" + bStr + " • Sequencer Confirmed");
                         }
@@ -220,9 +220,6 @@ ModalOverlay {
                             if (!txData)
                                 return theme.statusSuccess;
                             var isPending = (txData.block === "Pending" || txData.block === "Pending Block" || txData.isPending === true);
-                            if (isPending && txData.timestamp && (Date.now() - txData.timestamp > 60000)) {
-                                isPending = false;
-                            }
                             return isPending ? theme.accentOrange : theme.statusSuccess;
                         }
                         font.family: theme.fontMono

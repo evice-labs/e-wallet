@@ -15,7 +15,6 @@ Item {
         property string lastKnownBalancesJson: "{}"
     }
 
-    signal depositDetected(string accountLabel, string amount, string accountId, bool isPrivate)
     signal balanceChanged(string accountId, real oldBalance, real newBalance)
 
     function formatThousands(val) {
@@ -34,10 +33,11 @@ Item {
     property var activeAccount: null
     property string totalPublicBalance: "0.00"
     property string totalShieldedBalance: "0.00"
+    property bool isReady: false
 
     readonly property string activePublicBalance: {
         if (!activeAccount)
-            return "0.00";
+            return (store.isLoading || !store.isReady) ? "..." : "0.00";
         var isPriv = (activeAccount.is_private === true) || (activeAccount.privacy === "private");
         if (isPriv)
             return "0.00";
@@ -46,7 +46,7 @@ Item {
 
     readonly property string activeShieldedBalance: {
         if (!activeAccount)
-            return "0.00";
+            return (store.isLoading || !store.isReady) ? "..." : "0.00";
         var isPriv = (activeAccount.is_private === true) || (activeAccount.privacy === "private");
         if (!isPriv)
             return "0.00";
@@ -58,7 +58,7 @@ Item {
 
     readonly property string activeTotalBalance: {
         if (!activeAccount)
-            return "0.00";
+            return (store.isLoading || !store.isReady) ? "..." : "0.00";
         var pub = parseFloat(String(activePublicBalance).replace(/,/g, "")) || 0;
         var priv = parseFloat(String(activeShieldedBalance).replace(/,/g, "")) || 0;
         return store.formatThousands(pub + priv);
@@ -86,8 +86,13 @@ Item {
     }
 
     readonly property string activeAccountName: {
-        if (!activeAccount)
-            return "Vault";
+        if (!activeAccount) {
+            if (bridge.isLocked)
+                return "Vault Locked";
+            if (store.isLoading || !store.isReady)
+                return "...";
+            return "No Account";
+        }
         var id = activeAccount.account_id;
         if (id && accountLabels[id])
             return accountLabels[id];
@@ -99,15 +104,15 @@ Item {
 
     readonly property string activeAccountInitial: {
         var name = activeAccountName;
-        return name.length > 0 ? name.charAt(0).toUpperCase() : "V";
+        return (name.length > 0 && name !== "...") ? name.charAt(0).toUpperCase() : "•";
     }
 
     function getAccountLabel(target) {
         if (!target)
-            return "Vault";
+            return "...";
         var id = typeof target === "string" ? target : target.account_id;
         if (!id)
-            return "Vault";
+            return "...";
         if (accountLabels[id])
             return accountLabels[id];
         if (typeof target === "object") {
@@ -152,6 +157,7 @@ Item {
                 store.refreshAccounts();
                 store.refreshTokens();
             } else {
+                store.isReady = false;
                 store.accounts = [];
                 store.activeAccount = null;
                 store.tokens = [];
@@ -171,9 +177,15 @@ Item {
         }
     }
 
-    function refreshAccounts() {
-        if (store.isLoading)
+    property var _refreshCallbacks: []
+
+    function refreshAccounts(callback) {
+        if (callback) {
+            _refreshCallbacks.push(callback);
+        }
+        if (store.isLoading) {
             return;
+        }
         store.isLoading = true;
         store.lastRefreshTime = Date.now();
 
@@ -216,15 +228,10 @@ Item {
                         acc.label = store.accountLabels[acc.account_id];
                     }
 
-                    // Balance change & inbound deposit detection
+                    // Balance change tracking
                     var prevBal = lastKnown[acc.account_id];
                     if (prevBal !== undefined && bal !== prevBal) {
                         store.balanceChanged(acc.account_id, prevBal, bal);
-                        if (bal > prevBal) {
-                            var diff = bal - prevBal;
-                            console.log("[AccountStore] Inbound deposit detected for account", acc.account_id, "amount:", diff);
-                            store.depositDetected(store.getAccountLabel(acc), store.formatThousands(diff), acc.account_id, isPriv);
-                        }
                     }
                     updatedKnown[acc.account_id] = bal;
 
@@ -239,18 +246,6 @@ Item {
                     if (targetActiveId && targetActiveId === acc.account_id) {
                         store.activeAccount = acc;
                         foundActive = true;
-                    }
-                }
-
-                // If this is first initialization and no lastKnown records existed, record baseline deposits
-                if (Object.keys(lastKnown).length === 0) {
-                    for (var d = 0; d < processedAccounts.length; d++) {
-                        var dAcc = processedAccounts[d];
-                        var dBal = parseFloat(dAcc.balance || dAcc.formatted_balance || "0") || 0;
-                        if (dBal > 0) {
-                            console.log("[AccountStore] Initial balance deposit recorded for account", dAcc.account_id, "amount:", dBal);
-                            store.depositDetected(store.getAccountLabel(dAcc), store.formatThousands(dBal), dAcc.account_id, dAcc.is_private);
-                        }
                     }
                 }
 
@@ -320,7 +315,20 @@ Item {
                     }
                 }
 
+                store.isReady = true;
                 store.accountsUpdated();
+            } else {
+                store.isReady = true;
+                store.accountsUpdated();
+            }
+            var cbs = _refreshCallbacks.slice();
+            _refreshCallbacks = [];
+            for (var c = 0; c < cbs.length; c++) {
+                try {
+                    cbs[c](res);
+                } catch (e) {
+                    console.error("[AccountStore] refreshAccounts callback error:", e);
+                }
             }
         });
     }
@@ -521,7 +529,12 @@ Item {
         });
     }
 
-    function refreshTokens() {
+    property var _tokenCallbacks: []
+
+    function refreshTokens(callback) {
+        if (callback) {
+            _tokenCallbacks.push(callback);
+        }
         var sid = bridge.activeSessionId || "";
         var method = sid ? "listTokenHoldings" : "listAllTokenHoldings";
         var args = sid ? [sid] : [];
@@ -532,6 +545,15 @@ Item {
                 store.selectedToken = rawList[0];
             }
             store.tokensUpdated();
+            var cbs = _tokenCallbacks.slice();
+            _tokenCallbacks = [];
+            for (var c = 0; c < cbs.length; c++) {
+                try {
+                    cbs[c](res);
+                } catch (e) {
+                    console.error("[AccountStore] refreshTokens callback error:", e);
+                }
+            }
         });
     }
 

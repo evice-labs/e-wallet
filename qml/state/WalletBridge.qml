@@ -49,28 +49,48 @@ Item {
             if (alreadyInitialized) {
                 fetchSdkInfoAndSession();
             } else {
-                // Probe engine instance with persistent storage directory and blank password
-                invoke("initEngine", [bridge.dataDir, ""], function (initRes) {
-                    if (initRes && initRes.ok) {
-                        fetchSdkInfoAndSession();
-                    } else {
-                        // If initEngine fails with path initialization error, it means an encrypted keystore
-                        // already exists on disk (wallet_storage.json) and requires the master password.
-                        var errMsg = (initRes && initRes.error) ? String(initRes.error) : "";
-                        var isLockedKeystore = errMsg.indexOf("Failed to initialize wallet engine at path") !== -1 || errMsg.indexOf("InvalidPassword") !== -1 || errMsg.indexOf("WALLET_LOCKED") !== -1;
-
-                        if (isLockedKeystore) {
-                            console.log("[WalletBridge] Persistent encrypted wallet detected on disk. Presenting lock screen.");
-                            bridge.isInitialized = true;
-                            bridge.isLocked = true;
-                            bridge.walletStateChanged();
-                        } else {
-                            console.error("[WalletBridge] initEngine failed:", JSON.stringify(initRes));
-                            bridge.isInitialized = false;
-                            bridge.isLocked = true;
-                            bridge.walletStateChanged();
+                // Query Core Module & SDK for keystore persistence status
+                invoke("hasWallet", [bridge.dataDir], function (hasRes) {
+                    var walletExists = false;
+                    if (hasRes) {
+                        if (hasRes.exists !== undefined) {
+                            walletExists = !!hasRes.exists;
+                        } else if (hasRes.value !== undefined) {
+                            walletExists = !!hasRes.value;
                         }
                     }
+
+                    if (!walletExists) {
+                        console.log("[WalletBridge] Core Module reports no existing keystore. Presenting onboarding screen.");
+                        bridge.isInitialized = false;
+                        bridge.isLocked = true;
+                        bridge.walletStateChanged();
+                        return;
+                    }
+
+                    // Persistent encrypted storage exists on disk: probe engine instance with persistent storage directory
+                    invoke("initEngine", [bridge.dataDir, ""], function (initRes) {
+                        if (initRes && initRes.ok) {
+                            fetchSdkInfoAndSession();
+                        } else {
+                            // If initEngine fails with path initialization error, it means an encrypted keystore
+                            // already exists on disk (wallet_storage.json) and requires the master password.
+                            var errMsg = (initRes && initRes.error) ? String(initRes.error) : "";
+                            var isLockedKeystore = errMsg.indexOf("Failed to initialize wallet engine at path") !== -1 || errMsg.indexOf("InvalidPassword") !== -1 || errMsg.indexOf("WALLET_LOCKED") !== -1;
+
+                            if (isLockedKeystore) {
+                                console.log("[WalletBridge] Persistent encrypted wallet detected on disk. Presenting lock screen.");
+                                bridge.isInitialized = true;
+                                bridge.isLocked = true;
+                                bridge.walletStateChanged();
+                            } else {
+                                console.error("[WalletBridge] initEngine failed:", JSON.stringify(initRes));
+                                bridge.isInitialized = false;
+                                bridge.isLocked = true;
+                                bridge.walletStateChanged();
+                            }
+                        }
+                    });
                 });
             }
         });
@@ -202,6 +222,14 @@ Item {
                 if (initParsedRest && initParsedRest.ok === true) {
                     var restRaw = logos.callModule("e_wallet_core", "restoreWallet", [mnem, newPass]);
                     parsed = parseJsonResult(restRaw);
+                }
+            } else if (method === "createWallet" && parsed && parsed.ok === false) {
+                var createPass = (args && args.length > 0) ? String(args[0]) : "";
+                var initRawCreate = logos.callModule("e_wallet_core", "initEngine", [bridge.dataDir, createPass]);
+                var initParsedCreate = parseJsonResult(initRawCreate);
+                if (initParsedCreate && initParsedCreate.ok === true) {
+                    var createRaw = logos.callModule("e_wallet_core", "createWallet", [createPass]);
+                    parsed = parseJsonResult(createRaw);
                 }
             }
 

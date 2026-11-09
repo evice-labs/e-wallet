@@ -22,7 +22,7 @@ Item {
         id: theme
     }
 
-    // Drop shadow beneath active tab to give the "timbul" physical elevation
+    // Drop shadow beneath active tab to give the physical elevation
     Rectangle {
         anchors.fill: tabBody
         anchors.topMargin: 1

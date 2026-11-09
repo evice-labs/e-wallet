@@ -3,8 +3,9 @@
 </p>
 
 <p align="center">
-  <strong>Wallez</strong>
+  <span style="font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Wallez</span>
   <br />
+  <span style="font-size: 15px; color: #888888;">Sovereign Desktop Wallet for Logos Basecamp &amp; LEZ</span>
 </p>
 
 <p align="center">

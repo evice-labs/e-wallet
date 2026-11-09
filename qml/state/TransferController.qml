@@ -312,7 +312,8 @@ Item {
             };
         }
 
-        var amt = parseFloat(amountInput);
+        var cleanAmtStr = String(amountInput || "").replace(/,/g, "").trim();
+        var amt = parseFloat(cleanAmtStr);
         if (isNaN(amt) || amt <= 0) {
             return {
                 valid: false,

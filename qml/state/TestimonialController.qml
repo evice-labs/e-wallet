@@ -38,7 +38,7 @@ Item {
         return gasCalc.calculateContractCallGas(len);
     }
 
-    // Auto-dismiss status notification timer (matching TransferView feedbackDismissTimer)
+    // Auto-dismiss status notification timer
     Timer {
         id: statusDismissTimer
         interval: 4000

@@ -3,6 +3,7 @@ UnlockModal 1.0 UnlockModal.qml
 CreateWalletModal 1.0 CreateWalletModal.qml
 RestoreWalletModal 1.0 RestoreWalletModal.qml
 CreateAccountModal 1.0 CreateAccountModal.qml
+AddTokenModal 1.0 AddTokenModal.qml
 SettingsModal 1.0 SettingsModal.qml
 ApprovalModal 1.0 ApprovalModal.qml
 IdentityModal 1.0 IdentityModal.qml

@@ -135,7 +135,7 @@ ModalOverlay {
             color: theme.borderSubtle
         }
 
-        // Modal Action Buttons (Comfortably placed inside the card)
+        // Modal Action Buttons
         RowLayout {
             Layout.fillWidth: true
             spacing: 10

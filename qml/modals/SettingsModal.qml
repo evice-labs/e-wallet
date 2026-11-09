@@ -175,7 +175,7 @@ ModalOverlay {
         anchors.fill: parent
         spacing: 12
 
-        // SCROLLABLE BODY CONTAINER (Item allows static scrollbar overlay)
+        // SCROLLABLE BODY CONTAINER
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -222,7 +222,7 @@ ModalOverlay {
                             width: parent.width
                             spacing: 12
 
-                            // 1. ADDRESS (PALING ATAS)
+                            // 1. ADDRESS
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: 8
@@ -265,7 +265,7 @@ ModalOverlay {
                                 }
                             }
 
-                            // 2. NAMA AKUN (URUTAN KEDUA)
+                            // 2. ACCOUNT NAME
                             RowLayout {
                                 Layout.fillWidth: true
                                 visible: !modal.isEditingName
@@ -334,7 +334,7 @@ ModalOverlay {
                                 color: theme.borderSubtle
                             }
 
-                            // 3. CHANGE VAULT PASSWORD (URUTAN KETIGA)
+                            // 3. CHANGE VAULT PASSWORD
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 visible: !modal.isChangingPassword
@@ -745,7 +745,7 @@ ModalOverlay {
                         }
                     }
 
-                    // CARD 2: CONNECTED dAPPS & PERMISSIONS (With Header Refresh Icon)
+                    // CARD 2: CONNECTED dAPPS & PERMISSIONS
                     Card {
                         Layout.fillWidth: true
                         title: "Connected dApps & Permissions"
@@ -985,7 +985,7 @@ ModalOverlay {
                 }
             }
 
-            // STATIC VIEWPORT SCROLLBAR TRACK & THUMB (Active and synchronized)
+            // STATIC VIEWPORT SCROLLBAR TRACK & THUMB
             Rectangle {
                 id: scrollTrack
                 anchors.right: parent.right

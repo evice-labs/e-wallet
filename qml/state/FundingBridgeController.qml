@@ -10,7 +10,7 @@ Item {
     property bool isMining: false
     property int hashrate: 0
     property string unbridgedRawBalance: "0"
-    property string unbridgedL1Tokens: "0.00 LOGOS"
+    property string unbridgedL1Tokens: "0 LOGOS"
     property int blocksMined: 0
     property string statusMessage: ""
     property bool isSuccessStatus: true
@@ -23,6 +23,7 @@ Item {
         return !isNaN(num) && num > 0;
     }
 
+    signal depositInitiated(string amount, string targetAccountId)
     signal depositSuccess(string amount, string txHash)
     signal depositFailed(string reason)
 
@@ -66,19 +67,14 @@ Item {
         }
     }
 
-    property int postDepositTicks: 0
-
     Timer {
         id: postDepositRefreshTimer
-        interval: 3000
-        repeat: true
+        interval: 2000
+        repeat: false
         running: false
         onTriggered: {
-            ctrl.postDepositTicks += 1;
-            accountStore.refreshAccounts();
-            if (ctrl.postDepositTicks >= 5) {
-                postDepositRefreshTimer.stop();
-            }
+            if (accountStore)
+                accountStore.refreshAccounts();
         }
     }
 
@@ -96,7 +92,11 @@ Item {
         if (res.unbridged_balance !== undefined) {
             ctrl.unbridgedRawBalance = String(res.unbridged_balance);
             var formatted = res.formatted_unbridged_balance ? String(res.formatted_unbridged_balance) : String(res.unbridged_balance);
-            ctrl.unbridgedL1Tokens = formatted + " LOGOS";
+            var cleanFormatted = formatted.split(".")[0];
+            if (accountStore && cleanFormatted.indexOf(",") === -1) {
+                cleanFormatted = accountStore.formatThousands(cleanFormatted);
+            }
+            ctrl.unbridgedL1Tokens = (cleanFormatted || "0") + " LOGOS";
         }
     }
 
@@ -205,6 +205,7 @@ Item {
         ctrl.isDepositing = true;
         ctrl.statusMessage = "Broadcasting on-chain ChannelDeposit transaction...";
         ctrl.isSuccessStatus = true;
+        ctrl.depositInitiated(amountStr, activeAcc.account_id);
 
         bridge.invoke("channelDeposit", [activeAcc.account_id, amountStr], function (res) {
             ctrl.isDepositing = false;
@@ -213,11 +214,10 @@ Item {
                 var creditedRaw = res.amount_deposited || amountStr;
                 var creditedFormatted = accountStore ? accountStore.formatThousands(creditedRaw) : String(creditedRaw);
                 ctrl.unbridgedRawBalance = "0";
-                ctrl.unbridgedL1Tokens = "0.00 LOGOS";
+                ctrl.unbridgedL1Tokens = "0 LOGOS";
                 ctrl.statusMessage = "ChannelDeposit confirmed! +" + creditedFormatted + " LEZ credited to " + (activeAcc.label || activeAcc.account_id) + ".";
                 ctrl.isSuccessStatus = true;
                 accountStore.refreshAccounts();
-                ctrl.postDepositTicks = 0;
                 postDepositRefreshTimer.restart();
                 ctrl.checkPowStatus();
                 ctrl.depositSuccess(creditedFormatted, txHash);

@@ -37,6 +37,29 @@ Card {
         }
     }
 
+    Component.onCompleted: {
+        // Sanitize legacy synthetic deposit records from obsolete balance polling design
+        var list = [];
+        var changed = false;
+        for (var j = 0; j < rawTransactions.length; j++) {
+            var it = rawTransactions[j];
+            var isObsoleteSynthetic = (it.status === "Deposit" && (!it.txHash || it.txHash === "-" || it.txHash === "External Inbound (Sequencer State Sync)")) || it.detail === "Inbound Transfer (Deposit)" || (it.route && String(it.route).indexOf("External ➝") !== -1);
+            if (isObsoleteSynthetic) {
+                changed = true;
+                continue;
+            }
+            list.push(it);
+        }
+        if (changed) {
+            rawTransactions = list;
+            try {
+                ledgerSettings.rawTransactionsJson = JSON.stringify(list);
+            } catch (e) {
+                console.warn("[ActivityLedger] Failed to save sanitized transactions:", e);
+            }
+        }
+    }
+
     Connections {
         target: accountStore
         function onActiveAccountChanged() {
@@ -46,18 +69,17 @@ Card {
 
     readonly property var filteredTransactions: {
         var activeId = (accountStore.activeAccount && accountStore.activeAccount.account_id) ? accountStore.activeAccount.account_id : "";
+        if (!activeId) {
+            return [];
+        }
         var result = [];
         for (var i = 0; i < rawTransactions.length; i++) {
             var tx = rawTransactions[i];
-            if (activeId.length > 0) {
-                if (tx.accountId) {
-                    if (tx.accountId !== activeId)
-                        continue;
-                } else if (tx.route && tx.route.indexOf(activeId.substring(0, 8)) !== -1)
-                // Match legacy deposit route referencing this account ID prefix
-                {} else {
+            if (tx.accountId) {
+                if (tx.accountId !== activeId)
                     continue;
-                }
+            } else if (!tx.route || tx.route.indexOf(activeId.substring(0, 8)) === -1) {
+                continue;
             }
             if (ledgerCard.activeFilter === "All" || tx.category === ledgerCard.activeFilter) {
                 result.push(tx);
@@ -124,7 +146,28 @@ Card {
         return new Date(ts).toLocaleDateString();
     }
 
+    function formatActivityTitle(item) {
+        if (!item)
+            return "Transaction";
+        var st = (item.status || "").toLowerCase();
+        var cat = (item.category || "").toLowerCase();
+        var det = (item.detail || "").toLowerCase();
+
+        if (st === "channel bridge" || det.indexOf("channel deposit") !== -1 || det.indexOf("channel bridge") !== -1) {
+            return "L1 → LEZ Channel Deposit";
+        }
+        if (st === "deposit" || det.indexOf("inbound") !== -1 || item.isIncoming === true) {
+            return "Inbound";
+        }
+        if (cat === "testimonials" || st === "ledger" || det.indexOf("zkvm") !== -1) {
+            return "zkVM Broadcast";
+        }
+        return "Transfer";
+    }
+
     function statusColor(status) {
+        if (status === "Pending")
+            return theme.accentOrange;
         if (status === "Private" || status === "Shield")
             return theme.statusShielded;
         if (status === "Unshield" || status === "Deposit")
@@ -161,19 +204,7 @@ Card {
         var nowDetailed = yyyy + "-" + mm + "-" + dd + " " + hh + ":" + min + ":" + ss + " UTC";
 
         var activeId = targetAccountId || ((accountStore.activeAccount && accountStore.activeAccount.account_id) ? accountStore.activeAccount.account_id : "");
-
-        // Deduplication for auto-detected deposits if already recorded by an intra-wallet transfer
-        if (isIncoming && (!txHash || txHash === "" || txHash === "External Inbound (Sequencer State Sync)")) {
-            for (var d = 0; d < rawTransactions.length; d++) {
-                var prevTx = rawTransactions[d];
-                if (prevTx.accountId === activeId && prevTx.isIncoming && formatActivityAmount(prevTx.amount) === formattedAmount) {
-                    var elapsed = Math.abs(now.getTime() - (prevTx.timestamp || 0));
-                    if (elapsed < 90000) {
-                        return;
-                    }
-                }
-            }
-        }
+        var cleanActiveId = String(activeId || "").replace(/^public\//i, "").replace(/^private\//i, "");
 
         var defaultGasUsed = isIncoming ? "0 (Paid by Sender)" : gasCalc.formatGasResult(gasCalc.gasPublicNative, gasCalc.storPublicNative, gasCalc.limitStandard).displayStr;
         var defaultGasLimit = isIncoming ? "0" : "34,000";
@@ -224,6 +255,60 @@ Card {
             if (isPending && (itemAccId === cleanAccId || itemAccId === "")) {
                 item.block = (confirmedBlock !== undefined && confirmedBlock !== null && confirmedBlock !== "") ? confirmedBlock : "Sequencer Confirmed";
                 item.isPending = false;
+                found = true;
+            }
+            updated.push(item);
+        }
+        if (found) {
+            rawTransactions = updated;
+            try {
+                ledgerSettings.rawTransactionsJson = JSON.stringify(updated);
+            } catch (e) {
+                console.warn("[ActivityLedger] Failed to save updated transactions to Settings:", e);
+            }
+        }
+    }
+
+    function updateChannelBridgeTxHash(targetId, txHash) {
+        var cleanTarget = String(targetId || "").replace(/^public\//i, "").replace(/^private\//i, "");
+        var found = false;
+        var updated = [];
+        for (var i = 0; i < rawTransactions.length; i++) {
+            var item = Object.assign({}, rawTransactions[i]);
+            var cleanItemAccId = String(item.accountId || "").replace(/^public\//i, "").replace(/^private\//i, "");
+            var idMatch = (cleanItemAccId === cleanTarget || cleanTarget === "" || cleanItemAccId === "");
+            if (item.status === "Channel Bridge" && idMatch) {
+                if (txHash && txHash.length > 5 && txHash !== "Pending Confirmation") {
+                    item.txHash = txHash;
+                    found = true;
+                }
+            }
+            updated.push(item);
+        }
+        if (found) {
+            rawTransactions = updated;
+            try {
+                ledgerSettings.rawTransactionsJson = JSON.stringify(updated);
+            } catch (e) {
+                console.warn("[ActivityLedger] Failed to save updated txHash:", e);
+            }
+        }
+    }
+
+    function confirmChannelBridge(targetId, txHash) {
+        var cleanTarget = String(targetId || "").replace(/^public\//i, "").replace(/^private\//i, "");
+        var found = false;
+        var updated = [];
+        for (var i = 0; i < rawTransactions.length; i++) {
+            var item = Object.assign({}, rawTransactions[i]);
+            var cleanItemAccId = String(item.accountId || "").replace(/^public\//i, "").replace(/^private\//i, "");
+            var idMatch = (cleanItemAccId === cleanTarget || cleanTarget === "" || cleanItemAccId === "");
+            if (item.status === "Channel Bridge" && (item.block === "Pending" || item.isPending) && idMatch) {
+                item.block = "Sequencer Confirmed";
+                item.isPending = false;
+                if (txHash && txHash.length > 5 && txHash !== "Pending Confirmation") {
+                    item.txHash = txHash;
+                }
                 found = true;
             }
             updated.push(item);
@@ -290,7 +375,7 @@ Card {
                 Layout.fillWidth: true
             }
 
-            // Refresh History Action Button (Pure White Icon, 34x34)
+            // Refresh History Action Button
             Button {
                 iconSource: "../assets/icons/Refresh.png"
                 isCompact: true
@@ -393,7 +478,7 @@ Card {
                             anchors.rightMargin: 6
                             spacing: 10
 
-                            // Left: Name, Status Typography (No PillBadge), Time
+                            // Left: Name, Status Typography, Time
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 2
@@ -401,7 +486,7 @@ Card {
                                 RowLayout {
                                     spacing: 8
                                     Text {
-                                        text: modelData.name
+                                        text: ledgerCard.formatActivityTitle(modelData)
                                         color: theme.textPrimary
                                         font.family: theme.fontFamily
                                         font.pixelSize: theme.fontSizeSmall
@@ -420,7 +505,7 @@ Card {
 
                                 Text {
                                     Layout.fillWidth: true
-                                    text: ledgerCard.formatRelativeTime(modelData) + " • " + modelData.detail
+                                    text: ledgerCard.formatRelativeTime(modelData)
                                     color: theme.textMuted
                                     font.family: theme.fontMono
                                     font.pixelSize: theme.fontSizeTiny
@@ -443,7 +528,7 @@ Card {
             }
         }
 
-        // FLEXIBLE EXPANDING SPACER (absorbs vertical stretch)
+        // FLEXIBLE EXPANDING SPACER
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
