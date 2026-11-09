@@ -9,7 +9,7 @@ ModalOverlay {
 
     title: "Transaction Details"
     dialogWidth: 560
-    dialogHeight: 480
+    dialogHeight: 430
 
     property var txData: null
     property string copyStatus: ""
@@ -329,26 +329,6 @@ ModalOverlay {
 
         Item {
             Layout.fillHeight: true
-        }
-
-        // FOOTER ACTIONS
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
-
-            Button {
-                text: "Open Explorer"
-                isPrimary: false
-                isCompact: true
-                onClicked: {
-                    var hash = (modal.txData && modal.txData.txHash) ? modal.txData.txHash : "";
-                    var url = "https://explorer.testnet.lez.logos.co/";
-                    if (hash && hash.length > 10) {
-                        url = "https://explorer.testnet.lez.logos.co/tx/" + hash;
-                    }
-                    Qt.openUrlExternally(url);
-                }
-            }
         }
     }
 }
