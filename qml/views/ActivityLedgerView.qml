@@ -43,9 +43,7 @@ Card {
         var changed = false;
         for (var j = 0; j < rawTransactions.length; j++) {
             var it = rawTransactions[j];
-            var isObsoleteSynthetic = (it.status === "Deposit" && (!it.txHash || it.txHash === "-" || it.txHash === "External Inbound (Sequencer State Sync)"))
-                                      || it.detail === "Inbound Transfer (Deposit)"
-                                      || (it.route && String(it.route).indexOf("External ➝") !== -1);
+            var isObsoleteSynthetic = (it.status === "Deposit" && (!it.txHash || it.txHash === "-" || it.txHash === "External Inbound (Sequencer State Sync)")) || it.detail === "Inbound Transfer (Deposit)" || (it.route && String(it.route).indexOf("External ➝") !== -1);
             if (isObsoleteSynthetic) {
                 changed = true;
                 continue;
@@ -80,9 +78,7 @@ Card {
             if (tx.accountId) {
                 if (tx.accountId !== activeId)
                     continue;
-            } else if (tx.route && tx.route.indexOf(activeId.substring(0, 8)) !== -1) {
-                // Match legacy deposit route referencing this account ID prefix
-            } else {
+            } else if (!tx.route || tx.route.indexOf(activeId.substring(0, 8)) === -1) {
                 continue;
             }
             if (ledgerCard.activeFilter === "All" || tx.category === ledgerCard.activeFilter) {
