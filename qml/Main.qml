@@ -29,9 +29,21 @@ Rectangle {
         }
     }
 
-    TransferController { id: transferCtrl; bridge: bridge; accountStore: accountStore }
-    FundingBridgeController { id: bridgeCtrl; bridge: bridge; accountStore: accountStore }
-    TestimonialController { id: testimonialCtrl; bridge: bridge; accountStore: accountStore }
+    TransferController {
+        id: transferCtrl
+        bridge: bridge
+        accountStore: accountStore
+    }
+    FundingBridgeController {
+        id: bridgeCtrl
+        bridge: bridge
+        accountStore: accountStore
+    }
+    TestimonialController {
+        id: testimonialCtrl
+        bridge: bridge
+        accountStore: accountStore
+    }
     ApprovalManager {
         id: approvalManager
         bridge: bridge
