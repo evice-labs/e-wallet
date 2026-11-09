@@ -12,8 +12,12 @@ Rectangle {
     height: 720
     color: theme.bgCanvas
 
-    Theme { id: theme }
-    WalletBridge { id: bridge }
+    Theme {
+        id: theme
+    }
+    WalletBridge {
+        id: bridge
+    }
     AccountStore {
         id: accountStore
         bridge: bridge
