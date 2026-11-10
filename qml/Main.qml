@@ -22,14 +22,11 @@ Rectangle {
         id: accountStore
         bridge: bridge
         onBalanceChanged: (accountId, oldBalance, newBalance) => {
-            if (ledgerView)
+            if (typeof ledgerView !== "undefined" && ledgerView) {
                 ledgerView.markAccountPendingTransactionsConfirmed(accountId);
-            if (txDetailModal.visible && txDetailModal.txData) {
-                var modalTx = Object.assign({}, txDetailModal.txData);
-                modalTx.block = "Sequencer Confirmed";
-                modalTx.isPending = false;
-                txDetailModal.txData = modalTx;
+                ledgerView.reconcilePendingTransactions();
             }
+            txDetailModal.markConfirmed();
         }
     }
 
@@ -239,10 +236,8 @@ Rectangle {
                             Layout.preferredWidth: dashboardContainer.isNarrow ? -1 : 1
                             bridge: bridge
                             accountStore: accountStore
-                            onOpenTxDetailModal: function (txData) {
-                                txDetailModal.txData = txData;
-                                txDetailModal.open();
-                            }
+                            onOpenTxDetailModal: txData => txDetailModal.inspect(txData)
+                            onTxStatusUpdated: (txHash, block, isPending, isFailed) => txDetailModal.updateStatus(txHash, block, isPending, isFailed)
                         }
                     }
                 }
@@ -293,7 +288,6 @@ Rectangle {
     TxDetailModal {
         id: txDetailModal
     }
-
     SettingsModal {
         id: settingsModal
         bridge: bridge
@@ -302,7 +296,6 @@ Rectangle {
         onOpenUnlockModal: unlockModal.open()
         onOpenIdentityModal: identityModal.open()
     }
-
     ProfileModal {
         id: profileModal
         bridge: bridge
@@ -313,12 +306,10 @@ Rectangle {
         onOpenUnlockModal: unlockModal.open()
         onOpenApprovalModal: approvalModal.open()
     }
-
     UnlockModal {
         id: unlockModal
         bridge: bridge
     }
-
     CreateWalletModal {
         id: createWalletModal
         bridge: bridge

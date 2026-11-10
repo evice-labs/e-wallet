@@ -94,7 +94,7 @@ QtObject {
         var isPrivate = (cat === "Shields") || (st === "Private") || (st === "Shield") || (st === "Unshield");
 
         if (isTestimonial) {
-            return calculateContractCallGas(45).displayStr; // "3,778"
+            return "275,456";
         }
         if (isPrivate) {
             return formatGasResult(gasPrivateVerify, storPrivate, limitPrivate).displayStr; // "409,764"
