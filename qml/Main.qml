@@ -22,8 +22,10 @@ Rectangle {
         id: accountStore
         bridge: bridge
         onBalanceChanged: (accountId, oldBalance, newBalance) => {
-            if (ledgerView)
+            if (typeof ledgerView !== "undefined" && ledgerView) {
                 ledgerView.markAccountPendingTransactionsConfirmed(accountId);
+                ledgerView.reconcilePendingTransactions();
+            }
             if (txDetailModal.visible && txDetailModal.txData) {
                 var modalTx = Object.assign({}, txDetailModal.txData);
                 modalTx.block = "Sequencer Confirmed";
@@ -242,6 +244,15 @@ Rectangle {
                             onOpenTxDetailModal: function (txData) {
                                 txDetailModal.txData = txData;
                                 txDetailModal.open();
+                            }
+                            onTxStatusUpdated: function (txHash, block, isPending, isFailed) {
+                                if (txDetailModal.visible && txDetailModal.txData && txDetailModal.txData.txHash === txHash) {
+                                    var modalTx = Object.assign({}, txDetailModal.txData);
+                                    modalTx.block = block;
+                                    modalTx.isPending = isPending;
+                                    modalTx.isFailed = isFailed;
+                                    txDetailModal.txData = modalTx;
+                                }
                             }
                         }
                     }

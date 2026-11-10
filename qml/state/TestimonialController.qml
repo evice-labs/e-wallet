@@ -298,6 +298,9 @@ Item {
                                         ctrl.isSuccessStatus = true;
                                         ctrl.messageInput = "";
                                         ctrl.broadcastSuccess(txHash, text);
+                                        if (accountStore) {
+                                            accountStore.refreshAccounts();
+                                        }
                                         if (callback)
                                             callback({
                                                 ok: true,
@@ -346,6 +349,9 @@ Item {
                                     ctrl.isSuccessStatus = true;
                                     ctrl.messageInput = "";
                                     ctrl.broadcastSuccess(txHash, text);
+                                    if (accountStore) {
+                                        accountStore.refreshAccounts();
+                                    }
                                     if (callback)
                                         callback({
                                             ok: true,
@@ -367,6 +373,9 @@ Item {
                     ctrl.isSuccessStatus = true;
                     ctrl.messageInput = "";
                     ctrl.broadcastSuccess(txHash, text);
+                    if (accountStore) {
+                        accountStore.refreshAccounts();
+                    }
                     if (callback)
                         callback(res);
                 }
