@@ -105,7 +105,7 @@ QtObject {
         }
 
         // Clean any residual "units", parentheses, or "LEZ" from past entries
-        var cleaned = String(rawGasUsed).replace(/\s*\([^)]*\)/g, "").replace(/\s*units\b/gi, "").replace(/\s*LEZ\b/gi, "").trim();
+        var cleaned = String(rawGasUsed).replace(/\s*\([^)]*\)/g, "").replace(/\s*units\b/gi, "").replace(/(^|\s+)LEZ\b/gi, "$1").trim();
 
         return cleaned || formatGasResult(gasPublicNative, storPublicNative, limitStandard).displayStr;
     }

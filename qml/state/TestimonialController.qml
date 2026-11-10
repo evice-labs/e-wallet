@@ -372,7 +372,7 @@ Item {
                 }
             } else {
                 ctrl.isBroadcasting = false;
-                var err = (res && res.error) ? res.error : "Unknown zkVM broadcast failure";
+                var err = (res && res.error) ? res.error : "Unknown broadcast failure";
                 ctrl.statusMessage = "Broadcast failed: " + err;
                 ctrl.isSuccessStatus = false;
                 ctrl.broadcastFailed(err);

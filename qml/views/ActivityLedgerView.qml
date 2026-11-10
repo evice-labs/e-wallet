@@ -154,13 +154,13 @@ Card {
         var det = (item.detail || "").toLowerCase();
 
         if (st === "channel bridge" || det.indexOf("channel deposit") !== -1 || det.indexOf("channel bridge") !== -1) {
-            return "L1 → LEZ Channel Deposit";
+            return "L1 → LEZ Deposit";
         }
         if (st === "deposit" || det.indexOf("inbound") !== -1 || item.isIncoming === true) {
             return "Inbound";
         }
         if (cat === "testimonials" || st === "ledger" || det.indexOf("zkvm") !== -1) {
-            return "zkVM Broadcast";
+            return "Broadcast";
         }
         return "Transfer";
     }
@@ -182,7 +182,7 @@ Card {
     function formatActivityAmount(amountStr) {
         if (!amountStr || !accountStore)
             return "0";
-        var s = String(amountStr).replace(/\s*LEZ\b/gi, "").trim();
+        var s = String(amountStr).replace(/(^|\s+)LEZ\b/gi, "$1").trim();
         var m = s.match(/^([+-]?)([0-9,]+(?:\.[0-9]+)?)(?:\s+(.+))?$/);
         if (!m)
             return s;
@@ -516,6 +516,8 @@ Card {
                             // Right: Formatted Amount
                             Text {
                                 Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                                Layout.maximumWidth: 180
+                                elide: Text.ElideRight
                                 text: ledgerCard.formatActivityAmount(modelData.amount)
                                 color: modelData.isIncoming ? theme.statusSuccess : theme.textPrimary
                                 font.family: theme.fontFamily

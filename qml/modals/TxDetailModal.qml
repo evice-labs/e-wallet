@@ -67,12 +67,16 @@ ModalOverlay {
                 text: {
                     if (!txData || !txData.amount || txData.amount === "-")
                         return "0";
-                    return String(txData.amount).replace(/\s*LEZ\b/gi, "").trim();
+                    if (txData.category === "Testimonials" || txData.status === "Ledger")
+                        return String(txData.amount).trim();
+                    return String(txData.amount).replace(/(^|\s+)LEZ\b/gi, "$1").trim();
                 }
                 color: (txData && txData.isIncoming) ? theme.statusSuccess : theme.textPrimary
                 font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTitle + 2
+                font.pixelSize: (txData && (txData.category === "Testimonials" || txData.status === "Ledger")) ? theme.fontSizeBody : (theme.fontSizeTitle + 2)
                 font.weight: Font.Bold
+                wrapMode: Text.WordWrap
+                Layout.maximumWidth: 340
             }
         }
 

@@ -53,7 +53,7 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        text: "Wallez is a native Logos Basecamp module providing multi-account key management, zero-knowledge shielded transactions, and LNS domain resolution on the Logos Execution Zone."
+                        text: "Wallez is a native Logos Basecamp module providing multi-account key management, seamless on-chain transfers, testnet token mining, zero-knowledge shielded transactions, and LNS domain resolution on the Logos Execution Zone."
                         color: theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeBody
