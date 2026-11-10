@@ -25,7 +25,7 @@ Card {
                 var label = acc ? (acc.label || acc.account_id) : "Public Account";
                 var cleanedAmt = String(amount).replace(/,/g, "").trim();
                 var formattedAmt = accountStore ? accountStore.formatThousands(cleanedAmt) : cleanedAmt;
-                bridgeCard.ledgerViewRef.addActivity(label, "Channel Bridge", "Transfers", "+" + formattedAmt, "L1 → LEZ Channel Deposit", true, "Pending Confirmation", "0 (Channel Inscription)", "Pending", "Logos L1 ➝ LEZ Channel", targetId, "0");
+                bridgeCard.ledgerViewRef.addActivity(label, "Channel Bridge", "Transfers", "+" + formattedAmt, "L1 → LEZ Deposit", true, "Pending Confirmation", "0 (Channel Inscription)", "Pending", "Logos L1 ➝ LEZ Channel", targetId, "0");
             }
         }
         function onDepositSuccess(amount, txHash) {
