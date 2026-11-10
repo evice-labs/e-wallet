@@ -26,12 +26,7 @@ Rectangle {
                 ledgerView.markAccountPendingTransactionsConfirmed(accountId);
                 ledgerView.reconcilePendingTransactions();
             }
-            if (txDetailModal.visible && txDetailModal.txData) {
-                var modalTx = Object.assign({}, txDetailModal.txData);
-                modalTx.block = "Sequencer Confirmed";
-                modalTx.isPending = false;
-                txDetailModal.txData = modalTx;
-            }
+            txDetailModal.markConfirmed();
         }
     }
 
@@ -241,19 +236,8 @@ Rectangle {
                             Layout.preferredWidth: dashboardContainer.isNarrow ? -1 : 1
                             bridge: bridge
                             accountStore: accountStore
-                            onOpenTxDetailModal: function (txData) {
-                                txDetailModal.txData = txData;
-                                txDetailModal.open();
-                            }
-                            onTxStatusUpdated: function (txHash, block, isPending, isFailed) {
-                                if (txDetailModal.visible && txDetailModal.txData && txDetailModal.txData.txHash === txHash) {
-                                    var modalTx = Object.assign({}, txDetailModal.txData);
-                                    modalTx.block = block;
-                                    modalTx.isPending = isPending;
-                                    modalTx.isFailed = isFailed;
-                                    txDetailModal.txData = modalTx;
-                                }
-                            }
+                            onOpenTxDetailModal: txData => txDetailModal.inspect(txData)
+                            onTxStatusUpdated: (txHash, block, isPending, isFailed) => txDetailModal.updateStatus(txHash, block, isPending, isFailed)
                         }
                     }
                 }
@@ -304,7 +288,6 @@ Rectangle {
     TxDetailModal {
         id: txDetailModal
     }
-
     SettingsModal {
         id: settingsModal
         bridge: bridge
@@ -313,7 +296,6 @@ Rectangle {
         onOpenUnlockModal: unlockModal.open()
         onOpenIdentityModal: identityModal.open()
     }
-
     ProfileModal {
         id: profileModal
         bridge: bridge
@@ -324,12 +306,10 @@ Rectangle {
         onOpenUnlockModal: unlockModal.open()
         onOpenApprovalModal: approvalModal.open()
     }
-
     UnlockModal {
         id: unlockModal
         bridge: bridge
     }
-
     CreateWalletModal {
         id: createWalletModal
         bridge: bridge

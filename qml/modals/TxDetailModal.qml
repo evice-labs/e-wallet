@@ -14,6 +14,30 @@ ModalOverlay {
     property var txData: null
     property string copyStatus: ""
 
+    function inspect(data) {
+        txData = data;
+        open();
+    }
+
+    function markConfirmed() {
+        if (visible && txData) {
+            var m = Object.assign({}, txData);
+            m.block = "Sequencer Confirmed";
+            m.isPending = false;
+            txData = m;
+        }
+    }
+
+    function updateStatus(txHash, block, isPending, isFailed) {
+        if (visible && txData && txData.txHash === txHash) {
+            var m = Object.assign({}, txData);
+            m.block = block;
+            m.isPending = isPending;
+            m.isFailed = isFailed;
+            txData = m;
+        }
+    }
+
     Theme {
         id: theme
     }
