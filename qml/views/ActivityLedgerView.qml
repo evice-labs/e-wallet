@@ -37,16 +37,24 @@ Card {
         }
     }
 
+    signal txStatusUpdated(string txHash, string block, bool isPending, bool isFailed)
+    property bool isReconciling: false
+
     Component.onCompleted: {
-        // Sanitize legacy synthetic deposit records from obsolete balance polling design
+        // Sanitize legacy synthetic deposit records and normalize gas fees
         var list = [];
         var changed = false;
         for (var j = 0; j < rawTransactions.length; j++) {
-            var it = rawTransactions[j];
+            var it = Object.assign({}, rawTransactions[j]);
             var isObsoleteSynthetic = (it.status === "Deposit" && (!it.txHash || it.txHash === "-" || it.txHash === "External Inbound (Sequencer State Sync)")) || it.detail === "Inbound Transfer (Deposit)" || (it.route && String(it.route).indexOf("External ➝") !== -1);
             if (isObsoleteSynthetic) {
                 changed = true;
                 continue;
+            }
+            var isTestimonial = (it.category === "Testimonials" || it.status === "Ledger" || (it.detail && it.detail.indexOf("Broadcast") !== -1));
+            if (isTestimonial && it.gasUsed !== "275,456") {
+                it.gasUsed = "275,456";
+                changed = true;
             }
             list.push(it);
         }
@@ -57,6 +65,10 @@ Card {
             } catch (e) {
                 console.warn("[ActivityLedger] Failed to save sanitized transactions:", e);
             }
+        }
+        if (hasPendingTransactions()) {
+            reconciliationTimer.start();
+            reconcilePendingTransactions();
         }
     }
 
@@ -168,6 +180,8 @@ Card {
     function statusColor(status) {
         if (status === "Pending")
             return theme.accentOrange;
+        if (status === "Channel Bridge")
+            return theme.accentDarkYellow;
         if (status === "Private" || status === "Shield")
             return theme.statusShielded;
         if (status === "Unshield" || status === "Deposit")
@@ -209,6 +223,7 @@ Card {
         var defaultGasUsed = isIncoming ? "0 (Paid by Sender)" : gasCalc.formatGasResult(gasCalc.gasPublicNative, gasCalc.storPublicNative, gasCalc.limitStandard).displayStr;
         var defaultGasLimit = isIncoming ? "0" : "34,000";
 
+        var isPend = (block === "Pending" || block === "Pending Block" || block === "Sequencer Pending");
         var item = {
             name: name || "Transaction",
             status: status || "Public",
@@ -223,6 +238,8 @@ Card {
             gasUsed: gasCalc.normalizeDisplay(gasUsed || defaultGasUsed, !!isIncoming, category, status, detail),
             gasLimit: (gasLimit && String(gasLimit).length > 0) ? String(gasLimit).replace(/\s*units\b/gi, "").trim() : defaultGasLimit,
             block: (block !== undefined && block !== null && block !== "") ? block : "-",
+            isPending: isPend,
+            isFailed: false,
             route: route || (isIncoming ? "External → Internal" : "Internal → On-Chain"),
             accountId: activeId
         };
@@ -240,6 +257,10 @@ Card {
             console.warn("[ActivityLedger] Failed to save transactions to Settings:", e);
         }
         currentPage = 0;
+        if (hasPendingTransactions()) {
+            reconciliationTimer.start();
+            reconcilePendingTransactions();
+        }
     }
 
     function markAccountPendingTransactionsConfirmed(accId, confirmedBlock) {
@@ -251,11 +272,14 @@ Card {
         for (var i = 0; i < rawTransactions.length; i++) {
             var item = Object.assign({}, rawTransactions[i]);
             var itemAccId = (item.accountId || "").replace(/^public\//i, "").replace(/^private\//i, "");
-            var isPending = (item.block === "Pending" || item.block === "Pending Block" || item.isPending === true);
+            var isPending = (item.block === "Pending" || item.block === "Pending Block" || item.block === "Sequencer Pending" || item.isPending === true);
             if (isPending && (itemAccId === cleanAccId || itemAccId === "")) {
                 item.block = (confirmedBlock !== undefined && confirmedBlock !== null && confirmedBlock !== "") ? confirmedBlock : "Sequencer Confirmed";
                 item.isPending = false;
                 found = true;
+                if (item.txHash && item.txHash.length > 5 && item.txHash !== "Pending Confirmation") {
+                    txStatusUpdated(item.txHash, item.block, false, false);
+                }
             }
             updated.push(item);
         }
@@ -292,23 +316,66 @@ Card {
             } catch (e) {
                 console.warn("[ActivityLedger] Failed to save updated txHash:", e);
             }
+            if (hasPendingTransactions()) {
+                reconciliationTimer.start();
+                reconcilePendingTransactions();
+            }
         }
     }
 
-    function confirmChannelBridge(targetId, txHash) {
-        var cleanTarget = String(targetId || "").replace(/^public\//i, "").replace(/^private\//i, "");
+    Timer {
+        id: reconciliationTimer
+        interval: 6000
+        running: false
+        repeat: true
+        onTriggered: {
+            ledgerCard.reconcilePendingTransactions();
+        }
+    }
+
+    function getPendingCandidates() {
+        var candidates = [];
+        for (var i = 0; i < rawTransactions.length; i++) {
+            var item = rawTransactions[i];
+            if (!item)
+                continue;
+            if (!item.txHash || item.txHash.length !== 64 || item.txHash.indexOf("-") !== -1)
+                continue;
+            var bStr = String(item.block || "");
+            var isSettled = bStr.startsWith("Block #") || bStr.indexOf("Drop") !== -1 || item.isFailed === true;
+            if (!isSettled)
+                candidates.push(item);
+        }
+        return candidates;
+    }
+
+    function hasPendingTransactions() {
+        return getPendingCandidates().length > 0;
+    }
+
+    function checkTransactionStatus(txHash, callback) {
+        if (!txHash || txHash.length !== 64 || !bridge) {
+            return;
+        }
+
+        bridge.invoke("getTransactionStatus", [txHash], function (res) {
+            if (res && res.ok && callback) {
+                callback(res);
+            }
+        });
+    }
+
+    function setTransactionStatus(txHash, blockStr, isPending, isFailed) {
+        if (!txHash)
+            return;
         var found = false;
         var updated = [];
         for (var i = 0; i < rawTransactions.length; i++) {
             var item = Object.assign({}, rawTransactions[i]);
-            var cleanItemAccId = String(item.accountId || "").replace(/^public\//i, "").replace(/^private\//i, "");
-            var idMatch = (cleanItemAccId === cleanTarget || cleanTarget === "" || cleanItemAccId === "");
-            if (item.status === "Channel Bridge" && (item.block === "Pending" || item.isPending) && idMatch) {
-                item.block = "Sequencer Confirmed";
-                item.isPending = false;
-                if (txHash && txHash.length > 5 && txHash !== "Pending Confirmation") {
-                    item.txHash = txHash;
-                }
+            if (item.txHash === txHash) {
+                item.block = blockStr;
+                item.isPending = !!isPending;
+                item.isFailed = !!isFailed;
                 found = true;
             }
             updated.push(item);
@@ -318,9 +385,67 @@ Card {
             try {
                 ledgerSettings.rawTransactionsJson = JSON.stringify(updated);
             } catch (e) {
-                console.warn("[ActivityLedger] Failed to save updated transactions to Settings:", e);
+                console.warn("[ActivityLedger] Failed to save updated transaction:", e);
+            }
+            txStatusUpdated(txHash, blockStr, !!isPending, !!isFailed);
+            if (accountStore) {
+                accountStore.refreshAccounts();
             }
         }
+    }
+
+    function markTxConfirmed(txHash, blockId) {
+        setTransactionStatus(txHash, "Block #" + blockId, false, false);
+    }
+
+    function markTxDropped(txHash) {
+        setTransactionStatus(txHash, "Drop from mempool", false, true);
+    }
+
+    function reconcilePendingTransactions() {
+        if (isReconciling)
+            return;
+
+        var candidates = getPendingCandidates();
+        if (candidates.length === 0) {
+            reconciliationTimer.stop();
+            return;
+        }
+
+        isReconciling = true;
+        var queue = candidates.slice();
+
+        function step() {
+            if (queue.length === 0) {
+                isReconciling = false;
+                if (!hasPendingTransactions()) {
+                    reconciliationTimer.stop();
+                }
+                return;
+            }
+
+            var cand = queue.shift();
+            var txHash = cand.txHash;
+            var ts = Number(cand.timestamp) || 0;
+            if (!ts && cand.detailedTime) {
+                var dStr = String(cand.detailedTime).replace(" UTC", "Z").replace(" (Just now)", "");
+                var parsed = Date.parse(dStr);
+                if (!isNaN(parsed))
+                    ts = parsed;
+            }
+            var ageMs = ts > 0 ? (Date.now() - ts) : 0;
+
+            checkTransactionStatus(txHash, function (res) {
+                if (res && res.status === "confirmed" && res.block_id) {
+                    ledgerCard.markTxConfirmed(txHash, res.block_id);
+                } else if (ageMs > 90000 && cand.block !== "Sequencer Confirmed") {
+                    ledgerCard.markTxDropped(txHash);
+                }
+                step();
+            });
+        }
+
+        step();
     }
 
     title: "Activity Feed & Transaction Ledger"
@@ -387,6 +512,7 @@ Card {
                         accountStore.refreshAccounts();
                         accountStore.refreshTokens();
                     }
+                    ledgerCard.reconcilePendingTransactions();
                 }
             }
         }
@@ -495,8 +621,26 @@ Card {
                                     }
 
                                     Text {
-                                        text: (modelData.status || "").toUpperCase()
-                                        color: ledgerCard.statusColor(modelData.status)
+                                        text: {
+                                            var bStr = String(modelData.block || "");
+                                            if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || modelData.isFailed === true) {
+                                                return "DROP FROM MEMPOOL";
+                                            }
+                                            if (modelData.isPending === true || bStr === "Pending" || bStr === "Pending Block" || bStr === "Sequencer Pending") {
+                                                return "PENDING";
+                                            }
+                                            return (modelData.status || "").toUpperCase();
+                                        }
+                                        color: {
+                                            var bStr = String(modelData.block || "");
+                                            if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || modelData.isFailed === true) {
+                                                return theme.statusDanger;
+                                            }
+                                            if (modelData.isPending === true || bStr === "Pending" || bStr === "Pending Block" || bStr === "Sequencer Pending") {
+                                                return theme.accentOrange;
+                                            }
+                                            return ledgerCard.statusColor(modelData.status);
+                                        }
                                         font.family: theme.fontFamily
                                         font.pixelSize: theme.fontSizeTiny
                                         font.weight: Font.Bold
@@ -519,7 +663,17 @@ Card {
                                 Layout.maximumWidth: 180
                                 elide: Text.ElideRight
                                 text: ledgerCard.formatActivityAmount(modelData.amount)
-                                color: modelData.isIncoming ? theme.statusSuccess : theme.textPrimary
+                                color: {
+                                    var bStr = String(modelData.block || "");
+                                    if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || modelData.isFailed === true) {
+                                        return theme.textMuted;
+                                    }
+                                    return modelData.isIncoming ? theme.statusSuccess : theme.textPrimary;
+                                }
+                                font.strikeout: {
+                                    var bStr = String(modelData.block || "");
+                                    return (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || modelData.isFailed === true);
+                                }
                                 font.family: theme.fontFamily
                                 font.pixelSize: theme.fontSizeSmall
                                 font.weight: Font.Bold

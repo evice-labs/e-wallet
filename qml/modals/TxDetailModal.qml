@@ -41,11 +41,31 @@ ModalOverlay {
             spacing: 12
 
             Text {
-                text: txData ? (txData.status || "Public").toUpperCase() : "PUBLIC"
+                text: {
+                    if (!txData)
+                        return "PUBLIC";
+                    var bStr = String(txData.block || "");
+                    if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || txData.isFailed === true) {
+                        return "DROP FROM MEMPOOL";
+                    }
+                    if (txData.isPending === true || bStr === "Pending" || bStr === "Pending Block" || bStr === "Sequencer Pending") {
+                        return "PENDING";
+                    }
+                    return (txData.status || "Public").toUpperCase();
+                }
                 color: {
                     if (!txData)
                         return theme.statusPublic;
+                    var bStr = String(txData.block || "");
+                    if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || txData.isFailed === true) {
+                        return theme.statusDanger;
+                    }
+                    if (txData.isPending === true || bStr === "Pending" || bStr === "Pending Block" || bStr === "Sequencer Pending") {
+                        return theme.accentOrange;
+                    }
                     var st = txData.status;
+                    if (st === "Channel Bridge")
+                        return theme.accentDarkYellow;
                     if (st === "Private" || st === "Shield")
                         return theme.statusShielded;
                     if (st === "Unshield")
@@ -71,7 +91,21 @@ ModalOverlay {
                         return String(txData.amount).trim();
                     return String(txData.amount).replace(/(^|\s+)LEZ\b/gi, "$1").trim();
                 }
-                color: (txData && txData.isIncoming) ? theme.statusSuccess : theme.textPrimary
+                color: {
+                    if (!txData)
+                        return theme.textPrimary;
+                    var bStr = String(txData.block || "");
+                    if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || txData.isFailed === true) {
+                        return theme.textMuted;
+                    }
+                    return txData.isIncoming ? theme.statusSuccess : theme.textPrimary;
+                }
+                font.strikeout: {
+                    if (!txData)
+                        return false;
+                    var bStr = String(txData.block || "");
+                    return (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || txData.isFailed === true);
+                }
                 font.family: theme.fontFamily
                 font.pixelSize: (txData && (txData.category === "Testimonials" || txData.status === "Ledger")) ? theme.fontSizeBody : (theme.fontSizeTitle + 2)
                 font.weight: Font.Bold
@@ -207,23 +241,27 @@ ModalOverlay {
                         text: {
                             if (!txData)
                                 return "Sequencer Confirmed";
-                            var isPending = (txData.block === "Pending" || txData.block === "Pending Block" || txData.isPending === true);
+                            var bStr = String(txData.block || "");
+                            if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || txData.isFailed === true) {
+                                return "Drop from mempool";
+                            }
+                            var isPending = (txData.block === "Pending" || txData.block === "Pending Block" || txData.block === "Sequencer Pending" || txData.isPending === true);
                             if (isPending) {
                                 return "Sequencer Pending";
                             }
-                            var bStr = String(txData.block || "");
                             if (!txData.block || bStr === "-" || bStr === "Sequencer Confirmed") {
                                 return "Sequencer Confirmed";
-                            }
-                            if (bStr === "Pending" || bStr === "Pending Block") {
-                                return "Sequencer Pending";
                             }
                             return bStr.startsWith("Block #") ? (bStr + " • Sequencer Confirmed") : ("Block #" + bStr + " • Sequencer Confirmed");
                         }
                         color: {
                             if (!txData)
                                 return theme.statusSuccess;
-                            var isPending = (txData.block === "Pending" || txData.block === "Pending Block" || txData.isPending === true);
+                            var bStr = String(txData.block || "");
+                            if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || txData.isFailed === true) {
+                                return theme.statusDanger;
+                            }
+                            var isPending = (txData.block === "Pending" || txData.block === "Pending Block" || txData.block === "Sequencer Pending" || txData.isPending === true);
                             return isPending ? theme.accentOrange : theme.statusSuccess;
                         }
                         font.family: theme.fontMono
@@ -245,11 +283,7 @@ ModalOverlay {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: {
-                            if (!txData)
-                                return "0";
-                            return gasCalc.normalizeDisplay(txData.gasUsed, txData.isIncoming, txData.category, txData.status, txData.detail);
-                        }
+                        text: txData ? gasCalc.normalizeDisplay(txData.gasUsed, txData.isIncoming, txData.category, txData.status, txData.detail) : "0"
                         color: (txData && txData.isIncoming) ? theme.statusSuccess : theme.textPrimary
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall

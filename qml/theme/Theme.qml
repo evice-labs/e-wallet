@@ -45,6 +45,7 @@ QtObject {
     readonly property color accentOrange: "#FF8438"
     readonly property color accentCyan: "#00E5FF"
     readonly property color accentYellow: "#EAB308"
+    readonly property color accentDarkYellow: "#D4A017"
     readonly property color statusSuccess: "#00E575"
     readonly property color statusWarning: "#EAB308"
     readonly property color statusDanger: "#EF4444"
