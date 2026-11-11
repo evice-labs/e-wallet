@@ -22,7 +22,9 @@ ModalOverlay {
     function markConfirmed() {
         if (visible && txData) {
             var m = Object.assign({}, txData);
-            m.block = "Sequencer Confirmed";
+            if (!m.block || !String(m.block).startsWith("Block #")) {
+                m.block = "Block #...";
+            }
             m.isPending = false;
             txData = m;
         }
@@ -264,7 +266,7 @@ ModalOverlay {
                     Text {
                         text: {
                             if (!txData)
-                                return "Sequencer Confirmed";
+                                return "Block #...";
                             var bStr = String(txData.block || "");
                             if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || txData.isFailed === true) {
                                 return "Drop from mempool";
@@ -273,10 +275,13 @@ ModalOverlay {
                             if (isPending) {
                                 return "Sequencer Pending";
                             }
-                            if (!txData.block || bStr === "-" || bStr === "Sequencer Confirmed") {
-                                return "Sequencer Confirmed";
+                            if (bStr.startsWith("Block #")) {
+                                return bStr;
                             }
-                            return bStr.startsWith("Block #") ? (bStr + " • Sequencer Confirmed") : ("Block #" + bStr + " • Sequencer Confirmed");
+                            if (bStr && bStr !== "-" && bStr !== "Sequencer Confirmed") {
+                                return "Block #" + bStr;
+                            }
+                            return "Block #...";
                         }
                         color: {
                             if (!txData)
