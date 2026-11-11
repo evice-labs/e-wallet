@@ -274,7 +274,7 @@ Card {
             var itemAccId = (item.accountId || "").replace(/^public\//i, "").replace(/^private\//i, "");
             var isPending = (item.block === "Pending" || item.block === "Pending Block" || item.block === "Sequencer Pending" || item.isPending === true);
             if (isPending && (itemAccId === cleanAccId || itemAccId === "")) {
-                item.block = (confirmedBlock !== undefined && confirmedBlock !== null && confirmedBlock !== "") ? confirmedBlock : "Sequencer Confirmed";
+                item.block = (confirmedBlock !== undefined && confirmedBlock !== null && confirmedBlock !== "") ? confirmedBlock : "Block #...";
                 item.isPending = false;
                 found = true;
                 if (item.txHash && item.txHash.length > 5 && item.txHash !== "Pending Confirmation") {
@@ -293,6 +293,22 @@ Card {
         }
     }
 
+    function hasPendingBridgeDeposit(accId) {
+        var cleanAcc = String(accId || "").replace(/^public\//i, "").replace(/^private\//i, "");
+        for (var i = 0; i < rawTransactions.length; i++) {
+            var tx = rawTransactions[i];
+            if (tx.status === "Channel Bridge") {
+                var itemAcc = String(tx.accountId || "").replace(/^public\//i, "").replace(/^private\//i, "");
+                if (itemAcc === cleanAcc || cleanAcc === "") {
+                    var isPending = (tx.isPending === true || tx.block === "Pending" || tx.block === "Pending Block" || tx.block === "Sequencer Pending");
+                    if (isPending)
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+
     function updateChannelBridgeTxHash(targetId, txHash) {
         var cleanTarget = String(targetId || "").replace(/^public\//i, "").replace(/^private\//i, "");
         var found = false;
@@ -301,7 +317,7 @@ Card {
             var item = Object.assign({}, rawTransactions[i]);
             var cleanItemAccId = String(item.accountId || "").replace(/^public\//i, "").replace(/^private\//i, "");
             var idMatch = (cleanItemAccId === cleanTarget || cleanTarget === "" || cleanItemAccId === "");
-            if (item.status === "Channel Bridge" && idMatch) {
+            if (!found && item.status === "Channel Bridge" && idMatch && (item.txHash === "Pending Confirmation" || !item.txHash || item.txHash === "-")) {
                 if (txHash && txHash.length > 5 && txHash !== "Pending Confirmation") {
                     item.txHash = txHash;
                     found = true;
@@ -438,7 +454,7 @@ Card {
             checkTransactionStatus(txHash, function (res) {
                 if (res && res.status === "confirmed" && res.block_id) {
                     ledgerCard.markTxConfirmed(txHash, res.block_id);
-                } else if (ageMs > 90000 && cand.block !== "Sequencer Confirmed") {
+                } else if (ageMs > 90000 && !String(cand.block).startsWith("Block #")) {
                     ledgerCard.markTxDropped(txHash);
                 }
                 step();

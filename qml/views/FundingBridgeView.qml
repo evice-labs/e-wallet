@@ -13,6 +13,19 @@ Card {
     property string activeAction: "mining" // "mining" | "bridge"
 
     readonly property bool isPrivateActive: accountStore.activeAccount ? (accountStore.activeAccount.is_private === true || accountStore.activeAccount.privacy === "private") : false
+    readonly property bool isBridgePending: {
+        if (!accountStore || !accountStore.activeAccount || !ledgerViewRef)
+            return false;
+        var _txs = ledgerViewRef.rawTransactions;
+        return ledgerViewRef.hasPendingBridgeDeposit(accountStore.activeAccount.account_id);
+    }
+    readonly property bool isBridgingOrPending: (bridgeCtrl && bridgeCtrl.isDepositing) || isBridgePending
+
+    onIsBridgingOrPendingChanged: {
+        if (!isBridgingOrPending) {
+            bridgeCard.activeAction = "mining";
+        }
+    }
 
     implicitHeight: 186
     title: "EmPoWer Mining & L1 → LEZ Bridge"
@@ -161,20 +174,27 @@ Card {
 
                 TabButton {
                     id: miningSegment
-                    readonly property bool canMine: !bridgeCard.isPrivateActive
+                    readonly property bool canMine: !bridgeCard.isPrivateActive && !bridgeCard.isBridgingOrPending
                     customWidth: 112
                     text: (bridgeCtrl && bridgeCtrl.isMining) ? "Stop Mining" : (bridgeCard.isPrivateActive ? "Public Only" : "Start Mining")
-                    isActive: bridgeCard.activeAction === "mining"
-                    isDestructive: (bridgeCtrl && bridgeCtrl.isMining) && bridgeCard.activeAction === "mining"
+                    isActive: !bridgeCard.isBridgingOrPending && bridgeCard.activeAction === "mining"
+                    isDestructive: (bridgeCtrl && bridgeCtrl.isMining) && miningSegment.isActive
                     isMuted: bridgeCard.isPrivateActive && !(bridgeCtrl && bridgeCtrl.isMining)
                     inactiveTextColor: bridgeCard.isPrivateActive ? theme.accentOrange : "transparent"
                     opacity: (bridgeCtrl && bridgeCtrl.isMining) ? 1.0 : (miningSegment.canMine ? 1.0 : 0.35)
-                    cursorShape: (bridgeCtrl && bridgeCtrl.isMining) ? Qt.PointingHandCursor : (miningSegment.canMine ? Qt.PointingHandCursor : Qt.ForbiddenCursor)
+                    cursorShape: (bridgeCtrl && bridgeCtrl.isMining) ? Qt.PointingHandCursor : (miningSegment.canMine ? Qt.PointingHandCursor : (bridgeCard.isPrivateActive ? Qt.ForbiddenCursor : Qt.ArrowCursor))
                     onClicked: {
                         if (bridgeCard.isPrivateActive && (!bridgeCtrl || !bridgeCtrl.isMining)) {
                             if (bridgeCtrl) {
                                 bridgeCtrl.statusMessage = "Notice: EmPoWer Mining only supports Public accounts. Switch to a Public account to mine.";
                                 bridgeCtrl.isSuccessStatus = false;
+                            }
+                            return;
+                        }
+                        if (bridgeCard.isBridgingOrPending) {
+                            if (bridgeCtrl) {
+                                bridgeCtrl.statusMessage = "Notice: Deposit pending block confirmation. Please wait for sequencer confirmation before mining.";
+                                bridgeCtrl.isSuccessStatus = true;
                             }
                             return;
                         }
@@ -191,19 +211,24 @@ Card {
 
                 TabButton {
                     id: bridgeSegment
-                    readonly property bool canBridge: !bridge.isLocked && accountStore.activeAccount !== null && !bridgeCard.isPrivateActive && bridgeCtrl !== null && bridgeCtrl.hasUnbridgedTokens && !bridgeCtrl.isDepositing
+                    readonly property bool canBridge: !bridge.isLocked && accountStore.activeAccount !== null && !bridgeCard.isPrivateActive && bridgeCtrl !== null && bridgeCtrl.hasUnbridgedTokens && !bridgeCard.isBridgingOrPending
                     customWidth: 115
-                    text: (bridgeCtrl && bridgeCtrl.isDepositing) ? "Bridging..." : (bridgeCard.isPrivateActive ? "Public Only" : "Bridge Tokens")
-                    isActive: bridgeCard.activeAction === "bridge"
+                    text: bridgeCard.isBridgingOrPending ? "Bridging..." : (bridgeCard.isPrivateActive ? "Public Only" : "Bridge Tokens")
+                    isActive: bridgeCard.isBridgingOrPending || bridgeCard.activeAction === "bridge"
                     isMuted: bridgeCard.isPrivateActive
                     inactiveTextColor: bridgeCard.isPrivateActive ? theme.accentOrange : "transparent"
-                    opacity: bridgeCard.activeAction === "bridge" ? 1.0 : (bridgeSegment.canBridge ? 1.0 : (bridgeCard.isPrivateActive ? 0.35 : 0.45))
+                    opacity: bridgeSegment.isActive ? 1.0 : (bridgeSegment.canBridge ? 1.0 : (bridgeCard.isPrivateActive ? 0.35 : 0.45))
                     cursorShape: bridgeSegment.canBridge ? Qt.PointingHandCursor : (bridgeCard.isPrivateActive ? Qt.ForbiddenCursor : Qt.ArrowCursor)
                     onClicked: {
                         if (bridgeCard.isPrivateActive) {
                             if (bridgeCtrl) {
                                 bridgeCtrl.statusMessage = "Notice: L1 Channel Bridge only supports Public accounts. Switch to a Public account to bridge tokens.";
                                 bridgeCtrl.isSuccessStatus = false;
+                            }
+                        } else if (bridgeCard.isBridgingOrPending) {
+                            if (bridgeCtrl) {
+                                bridgeCtrl.statusMessage = "Notice: A previous bridge deposit is currently in the sequencer mempool awaiting block inclusion.";
+                                bridgeCtrl.isSuccessStatus = true;
                             }
                         } else if (bridgeSegment.canBridge) {
                             bridgeCard.activeAction = "bridge";
