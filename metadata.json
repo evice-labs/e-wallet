@@ -5,7 +5,7 @@
   "type": "ui_qml",
   "interface": "universal",
   "category": "wallet",
-  "description": "Evice Wallet Provider UI for Logos Basecamp",
+  "description": "Your gateway wallet into the Logos Ecosystem.",
   "view": "qml/Main.qml",
   "icon": "assets/wallez.png",
   "dependencies": ["e_wallet_core"],
