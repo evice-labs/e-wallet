@@ -9,7 +9,7 @@ ModalOverlay {
     title: "Add Token Holding"
     subtitle: "Track and Manage Fungible Token Program Assets on LEZ"
     dialogWidth: 520
-    dialogHeight: 485
+    dialogHeight: 525
 
     required property var accountStore
 
@@ -86,7 +86,7 @@ ModalOverlay {
         // CARD 1: TOKEN SPECIFICATION
         Rectangle {
             Layout.fillWidth: true
-            implicitHeight: tokenSpecCol.implicitHeight + 20
+            implicitHeight: tokenSpecCol.implicitHeight + 24
             radius: theme.radiusSmall
             color: theme.bgSurface
             border.color: theme.borderSubtle
@@ -172,7 +172,7 @@ ModalOverlay {
         // CARD 2: HOLDING ACCOUNT & PRIVACY CONFIGURATION
         Rectangle {
             Layout.fillWidth: true
-            implicitHeight: holdingSpecCol.implicitHeight + 20
+            implicitHeight: holdingSpecCol.implicitHeight + 24
             radius: theme.radiusSmall
             color: theme.bgSurface
             border.color: theme.borderSubtle
@@ -246,50 +246,47 @@ ModalOverlay {
                         wrapMode: Text.WordWrap
                     }
                 }
+            }
+        }
 
-                // Error message notification
-                Text {
-                    visible: modal.errorMessage.length > 0
-                    Layout.fillWidth: true
-                    text: modal.errorMessage
-                    color: theme.statusDanger
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeSmall
-                    wrapMode: Text.WordWrap
-                }
+        // Error message notification
+        Text {
+            visible: modal.errorMessage.length > 0
+            Layout.fillWidth: true
+            text: modal.errorMessage
+            color: theme.statusDanger
+            font.family: theme.fontFamily
+            font.pixelSize: theme.fontSizeSmall
+            wrapMode: Text.WordWrap
+        }
 
-                // Card Divider before buttons
-                Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: 1
-                    color: theme.borderSubtle
-                }
+        Item {
+            Layout.fillHeight: true
+        }
 
-                // Card Action Buttons
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
+        // Modal Action Buttons
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
 
-                    Button {
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 1
-                        text: "Cancel"
-                        isPrimary: false
-                        isCompact: true
-                        customHeight: 34
-                        onClicked: modal.close()
-                    }
+            Button {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                text: "Cancel"
+                isPrimary: false
+                isCompact: true
+                customHeight: 34
+                onClicked: modal.close()
+            }
 
-                    Button {
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 1
-                        text: "Add Token Holding"
-                        isPrimary: true
-                        isCompact: true
-                        customHeight: 34
-                        onClicked: submitAddToken()
-                    }
-                }
+            Button {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                text: "Add Token Holding"
+                isPrimary: true
+                isCompact: true
+                customHeight: 34
+                onClicked: submitAddToken()
             }
         }
     }
