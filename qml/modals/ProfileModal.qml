@@ -12,12 +12,9 @@ ModalOverlay {
 
     required property var bridge
     required property var accountStore
-    required property var approvalManager
 
     signal openCreateAccount
     signal openSettingsModal
-    signal openUnlockModal
-    signal openApprovalModal
 
     Theme {
         id: theme
@@ -77,128 +74,13 @@ ModalOverlay {
             }
         }
 
-        // dApp Approval Request Notification / Preview List (Max 3)
-        Repeater {
-            model: approvalManager ? approvalManager.pendingRequests.slice(0, 3) : []
-
-            delegate: Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: dappPreviewCol.implicitHeight + 14
-                radius: theme.radiusButton
-                color: theme.bgSurfaceSubtle
-                border.color: theme.borderActive
-                border.width: 1
-
-                ColumnLayout {
-                    id: dappPreviewCol
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    spacing: 4
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 6
-
-                        Rectangle {
-                            width: 6
-                            height: 6
-                            radius: 3
-                            color: theme.accentCyan
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "dApp Request"
-                            color: theme.textPrimary
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeTiny
-                            font.weight: Font.Bold
-                        }
-
-                        Text {
-                            text: modelData.verification_status || "VERIFIED"
-                            color: theme.statusSuccess
-                            font.family: theme.fontMono
-                            font.pixelSize: theme.fontSizeTiny
-                            font.weight: Font.Bold
-                        }
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: (modelData.dapp_name || "Unknown dApp") + " • " + (modelData.grant_kind || "GrantKind::Propose")
-                        color: theme.textSecondary
-                        font.family: theme.fontMono
-                        font.pixelSize: theme.fontSizeTiny
-                        elide: Text.ElideRight
-                    }
-
-                    Button {
-                        Layout.fillWidth: true
-                        text: "View dApp Request"
-                        isCompact: true
-                        customHeight: 26
-                        onClicked: {
-                            modal.close();
-                            approvalManager.selectAndReviewRequest(modelData);
-                            modal.openApprovalModal();
-                        }
-                    }
-                }
-            }
-        }
-
-        // Queue Overflow Indicator (when more than 3 requests in queue)
-        Rectangle {
-            Layout.fillWidth: true
-            height: 24
-            radius: theme.radiusButton
-            color: Qt.rgba(1.0, 0.52, 0.22, 0.12)
-            border.color: theme.accentOrange
-            border.width: 1
-            visible: approvalManager && approvalManager.pendingRequests.length > 3
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                spacing: 6
-
-                Rectangle {
-                    width: 6
-                    height: 6
-                    radius: 3
-                    color: theme.accentOrange
-                }
-
-                Text {
-                    text: approvalManager ? ("+" + (approvalManager.pendingRequests.length - 3) + " more request(s) in queue") : ""
-                    color: theme.accentOrange
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTiny
-                    font.weight: Font.Bold
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                }
-
-                Text {
-                    text: "Shifts in order on sign/reject"
-                    color: theme.textMuted
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTiny
-                }
-            }
-        }
-
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 1
             color: theme.borderSubtle
         }
 
-        // Quick Actions: Account List (Excluding Currently Active Account)
+        // Quick Actions: Account List
         Text {
             text: "SWITCH ACCOUNT"
             color: theme.textMuted
@@ -346,17 +228,12 @@ ModalOverlay {
 
             Button {
                 Layout.fillWidth: true
-                text: bridge.isLocked ? "Unlock" : "Lock"
+                text: "Lock"
                 isCompact: true
-                isDestructive: !bridge.isLocked
-                isPrimary: bridge.isLocked
+                isDestructive: true
                 onClicked: {
                     modal.close();
-                    if (bridge.isLocked) {
-                        modal.openUnlockModal();
-                    } else {
-                        bridge.invoke("lockWallet", []);
-                    }
+                    bridge.invoke("lockWallet", []);
                 }
             }
         }

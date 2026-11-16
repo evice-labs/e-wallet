@@ -77,27 +77,8 @@ Item {
             }
         }
 
-        border.color: control.isActive ? (control.isMuted ? theme.borderSubtle : (control.isDestructive ? "#EF4444" : theme.btnPrimaryBorderSides)) : "transparent"
-        border.width: control.isActive ? 1 : 0
-
-        // Top highlight bevel (authentic tactile edge)
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: 1
-            height: 1
-            color: "#FFFFFF"
-            opacity: control.isActive ? 0.22 : 0.0
-            radius: 5
-            visible: opacity > 0
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: 150
-                }
-            }
-        }
+        border.color: "transparent"
+        border.width: 0
 
         Text {
             id: tabLabel

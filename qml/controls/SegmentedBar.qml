@@ -12,8 +12,8 @@ Rectangle {
 
     color: theme.bgInsetTrough
     radius: 8
-    border.color: theme.borderSubtle
-    border.width: 1
+    border.color: "transparent"
+    border.width: 0
 
     Theme {
         id: theme

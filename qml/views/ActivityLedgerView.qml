@@ -25,7 +25,7 @@ Card {
         property string rawTransactionsJson: "[]"
     }
 
-    property string activeFilter: "All" // "All" | "Transfers" | "Shields" | "Testimonials"
+    property string activeFilter: "All" // "All" | "Transfers" | "Shields" | "Testimonials" | "dApps"
     property int currentPage: 0
     readonly property int pageSize: 7
 
@@ -56,6 +56,15 @@ Card {
                 it.gasUsed = "275,456";
                 changed = true;
             }
+            var isDapp = (it.category === "dApps" || String(it.status || "").toUpperCase() === "DAPP");
+            if (isDapp && it.amount && !/^[+-]?[0-9,]+(?:\.[0-9]+)?(?:\s+[A-Za-z]+)?$/.test(String(it.amount).trim())) {
+                it.amount = "0";
+                changed = true;
+            }
+            if (!it.receiver && it.name && it.name.indexOf("...") === -1 && it.name.length >= 40) {
+                it.receiver = it.name;
+                changed = true;
+            }
             list.push(it);
         }
         if (changed) {
@@ -66,9 +75,9 @@ Card {
                 console.warn("[ActivityLedger] Failed to save sanitized transactions:", e);
             }
         }
+        reconcilePendingTransactions();
         if (hasPendingTransactions()) {
             reconciliationTimer.start();
-            reconcilePendingTransactions();
         }
     }
 
@@ -171,6 +180,9 @@ Card {
         if (st === "deposit" || det.indexOf("inbound") !== -1 || item.isIncoming === true) {
             return "Inbound";
         }
+        if (cat === "dapps" || st === "dapp") {
+            return item.dappName || item.name || "External dApp";
+        }
         if (cat === "testimonials" || st === "ledger" || det.indexOf("zkvm") !== -1) {
             return "Broadcast";
         }
@@ -182,6 +194,8 @@ Card {
             return theme.accentOrange;
         if (status === "Channel Bridge")
             return theme.accentDarkYellow;
+        if (status === "DAPP" || status === "dApp")
+            return theme.statusShielded;
         if (status === "Private" || status === "Shield")
             return theme.statusShielded;
         if (status === "Unshield" || status === "Deposit")
@@ -206,7 +220,7 @@ Card {
         return sign + accountStore.formatThousands(rawNum) + tokenSymbol;
     }
 
-    function addActivity(name, status, category, amount, detail, isIncoming, txHash, gasUsed, block, route, targetAccountId, gasLimit) {
+    function addActivity(name, status, category, amount, detail, isIncoming, txHash, gasUsed, block, route, targetAccountId, gasLimit, sender, receiver) {
         var formattedAmount = formatActivityAmount(amount || "0");
         var now = new Date();
         var yyyy = now.getUTCFullYear();
@@ -241,7 +255,9 @@ Card {
             isPending: isPend,
             isFailed: false,
             route: route || (isIncoming ? "External → Internal" : "Internal → On-Chain"),
-            accountId: activeId
+            accountId: activeId,
+            sender: sender || (isIncoming ? "External Sender" : activeId),
+            receiver: receiver || (!isIncoming ? (name || "Destination Address") : activeId)
         };
         var list = [item];
         for (var i = 0; i < rawTransactions.length; i++) {
@@ -257,9 +273,9 @@ Card {
             console.warn("[ActivityLedger] Failed to save transactions to Settings:", e);
         }
         currentPage = 0;
+        reconcilePendingTransactions();
         if (hasPendingTransactions()) {
             reconciliationTimer.start();
-            reconcilePendingTransactions();
         }
     }
 
@@ -272,9 +288,10 @@ Card {
         for (var i = 0; i < rawTransactions.length; i++) {
             var item = Object.assign({}, rawTransactions[i]);
             var itemAccId = (item.accountId || "").replace(/^public\//i, "").replace(/^private\//i, "");
-            var isPending = (item.block === "Pending" || item.block === "Pending Block" || item.block === "Sequencer Pending" || item.isPending === true);
+            var isPending = (item.block === "Pending" || item.block === "Pending Block" || item.block === "Sequencer Pending" || item.block === "Block #..." || item.isPending === true);
             if (isPending && (itemAccId === cleanAccId || itemAccId === "")) {
-                item.block = (confirmedBlock !== undefined && confirmedBlock !== null && confirmedBlock !== "") ? confirmedBlock : "Block #...";
+                var hasRealBlock = (confirmedBlock !== undefined && confirmedBlock !== null && confirmedBlock !== "" && confirmedBlock !== "Block #...");
+                item.block = hasRealBlock ? confirmedBlock : "Block #...";
                 item.isPending = false;
                 found = true;
                 if (item.txHash && item.txHash.length > 5 && item.txHash !== "Pending Confirmation") {
@@ -358,7 +375,7 @@ Card {
             if (!item.txHash || item.txHash.length !== 64 || item.txHash.indexOf("-") !== -1)
                 continue;
             var bStr = String(item.block || "");
-            var isSettled = bStr.startsWith("Block #") || bStr.indexOf("Drop") !== -1 || item.isFailed === true;
+            var isSettled = /^Block #\d+$/.test(bStr);
             if (!isSettled)
                 candidates.push(item);
         }
@@ -366,16 +383,26 @@ Card {
     }
 
     function hasPendingTransactions() {
-        return getPendingCandidates().length > 0;
+        for (var i = 0; i < rawTransactions.length; i++) {
+            var item = rawTransactions[i];
+            if (!item)
+                continue;
+            var bStr = String(item.block || "");
+            if (item.isPending === true || bStr === "Pending" || bStr === "Pending Block" || bStr === "Sequencer Pending" || bStr === "Block #...")
+                return true;
+        }
+        return false;
     }
 
     function checkTransactionStatus(txHash, callback) {
         if (!txHash || txHash.length !== 64 || !bridge) {
+            if (callback)
+                callback(null);
             return;
         }
 
         bridge.invoke("getTransactionStatus", [txHash], function (res) {
-            if (res && res.ok && callback) {
+            if (callback) {
                 callback(res);
             }
         });
@@ -388,7 +415,7 @@ Card {
         var updated = [];
         for (var i = 0; i < rawTransactions.length; i++) {
             var item = Object.assign({}, rawTransactions[i]);
-            if (item.txHash === txHash) {
+            if (item.txHash && txHash && String(item.txHash).trim().toLowerCase() === String(txHash).trim().toLowerCase()) {
                 item.block = blockStr;
                 item.isPending = !!isPending;
                 item.isFailed = !!isFailed;
@@ -450,11 +477,23 @@ Card {
                     ts = parsed;
             }
             var ageMs = ts > 0 ? (Date.now() - ts) : 0;
+            var candBlock = String(cand.block || "");
+            var wasAlreadyDropped = candBlock.indexOf("Drop") !== -1 || cand.isFailed === true;
 
             checkTransactionStatus(txHash, function (res) {
-                if (res && res.status === "confirmed" && res.block_id) {
+                if (res && res.status === "confirmed" && (res.block_id !== undefined && res.block_id !== null)) {
                     ledgerCard.markTxConfirmed(txHash, res.block_id);
-                } else if (ageMs > 90000 && !String(cand.block).startsWith("Block #")) {
+                } else if (res && (res.status === "dropped" || res.status === "rejected" || res.status === "failed" || res.status === "invalid")) {
+                    ledgerCard.markTxDropped(txHash);
+                } else if (res && res.ok === false && res.error) {
+                    var errStr = String(res.error);
+                    if (errStr.indexOf("TransactionRejected") !== -1 || errStr.indexOf("DropFromMempool") !== -1 || errStr.indexOf("InvalidTransaction") !== -1) {
+                        ledgerCard.markTxDropped(txHash);
+                    }
+                } else if (!wasAlreadyDropped && ageMs > 600000 && (!res || res.status === "pending" || !res.block_id)) {
+                    // Aligned with logos-blockchain mempool retention (REMOVED_ITEM_GRACE_PERIOD = 10 mins):
+                    // If an active pending tx has not been included in any block after 10 minutes and sequencer returns pending/null,
+                    // the transaction has officially expired and dropped from mempool.
                     ledgerCard.markTxDropped(txHash);
                 }
                 step();
@@ -510,6 +549,14 @@ Card {
                         ledgerCard.currentPage = 0;
                     }
                 }
+                TabButton {
+                    text: "dApps"
+                    isActive: ledgerCard.activeFilter === "dApps"
+                    onClicked: {
+                        ledgerCard.activeFilter = "dApps";
+                        ledgerCard.currentPage = 0;
+                    }
+                }
             }
 
             Item {
@@ -533,17 +580,11 @@ Card {
             }
         }
 
-        // Divider
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: theme.borderSubtle
-        }
-
         // Empty State Display
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.topMargin: 10
             Layout.alignment: Qt.AlignCenter
             visible: ledgerCard.filteredTransactions.length === 0
             spacing: 8
@@ -576,9 +617,10 @@ Card {
             }
         }
 
-        // Activity Items List (Window of 10 items)
+        // Activity Items List
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.topMargin: 10
             spacing: 0
             visible: ledgerCard.filteredTransactions.length > 0
 
@@ -704,13 +746,6 @@ Card {
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-        }
-
-        // STATIC FOOTER: Windowing Pagination Controls
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: theme.borderSubtle
         }
 
         // Windowing Pagination Controls

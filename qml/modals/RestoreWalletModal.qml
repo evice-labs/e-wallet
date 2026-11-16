@@ -69,12 +69,6 @@ ModalOverlay {
         RowLayout {
             Layout.fillWidth: true
 
-            Button {
-                text: "Cancel"
-                isPrimary: false
-                onClicked: modal.close()
-            }
-
             Item {
                 Layout.fillWidth: true
             }
@@ -82,7 +76,8 @@ ModalOverlay {
             Button {
                 text: "Restore & Unlock"
                 isPrimary: true
-                onClicked: submitRestore()
+                isFlat: true
+                onClicked: modal.submitRestore()
             }
         }
     }

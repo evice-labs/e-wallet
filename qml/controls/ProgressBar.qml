@@ -50,8 +50,8 @@ Item {
             height: 8
             radius: theme.radiusProgress
             color: theme.bgInsetTrough
-            border.color: theme.borderSubtle
-            border.width: 1
+            border.color: "transparent"
+            border.width: 0
 
             // Illuminated Progress Fill
             Rectangle {

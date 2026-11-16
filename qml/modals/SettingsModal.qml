@@ -10,7 +10,6 @@ ModalOverlay {
     required property var accountStore
 
     signal openRestoreWalletModal
-    signal openUnlockModal
     signal openIdentityModal
 
     property bool isEditingName: false
@@ -39,7 +38,9 @@ ModalOverlay {
     property string deleteError: ""
 
     onVisibleChanged: {
-        if (!visible) {
+        if (visible) {
+            refreshSessions(true);
+        } else {
             isConfirmingDelete = false;
             deleteError = "";
         }
@@ -90,18 +91,45 @@ ModalOverlay {
         visible: false
     }
 
-    Component.onCompleted: {
-        refreshSessions();
+    Connections {
+        target: modal.bridge
+        function onWalletStateChanged() {
+            if (modal.visible) {
+                modal.refreshSessions(false);
+            }
+        }
     }
 
-    function refreshSessions() {
+    Connections {
+        target: Qt.application
+        function onStateChanged() {
+            if (Qt.application.state === Qt.ApplicationActive && modal.visible) {
+                modal.refreshSessions(false);
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        refreshSessions(true);
+    }
+
+    function refreshSessions(showLoading) {
         if (!modal.bridge)
             return;
-        modal.isLoadingSessions = true;
+        if (showLoading)
+            modal.isLoadingSessions = true;
         modal.bridge.invoke("listSessions", [], function (res) {
             modal.isLoadingSessions = false;
             if (res && res.ok && Array.isArray(res.sessions)) {
-                modal.connectedSessions = res.sessions;
+                var externalSessions = [];
+                for (var i = 0; i < res.sessions.length; i++) {
+                    var s = res.sessions[i];
+                    // Filter out internal wallet sessions so only genuine third-party dApps are displayed
+                    if (s && s.caller_identity && s.caller_identity !== "internal_wallet_ui" && !s.caller_identity.startsWith("internal_")) {
+                        externalSessions.push(s);
+                    }
+                }
+                modal.connectedSessions = externalSessions;
             } else {
                 modal.connectedSessions = [];
             }
@@ -112,7 +140,7 @@ ModalOverlay {
         if (!sessionId || !modal.bridge)
             return;
         modal.bridge.invoke("revokeSession", [sessionId], function (res) {
-            refreshSessions();
+            refreshSessions(false);
         });
     }
 
@@ -232,8 +260,8 @@ ModalOverlay {
                                     height: 36
                                     radius: theme.radiusSmall
                                     color: theme.bgSurfaceSubtle
-                                    border.color: theme.borderSubtle
-                                    border.width: 1
+                                    border.color: "transparent"
+                                    border.width: 0
 
                                     Text {
                                         anchors.fill: parent
@@ -519,8 +547,8 @@ ModalOverlay {
                                         implicitHeight: warningText.implicitHeight + 14
                                         radius: theme.radiusSmall
                                         color: Qt.rgba(theme.accentOrange.r, theme.accentOrange.g, theme.accentOrange.b, 0.12)
-                                        border.color: Qt.rgba(theme.accentOrange.r, theme.accentOrange.g, theme.accentOrange.b, 0.3)
-                                        border.width: 1
+                                        border.color: "transparent"
+                                        border.width: 0
 
                                         Text {
                                             id: warningText
@@ -540,8 +568,8 @@ ModalOverlay {
                                         implicitHeight: keyCol.implicitHeight + 16
                                         radius: theme.radiusSmall
                                         color: theme.bgSurfaceSubtle
-                                        border.color: theme.borderSubtle
-                                        border.width: 1
+                                        border.color: "transparent"
+                                        border.width: 0
 
                                         ColumnLayout {
                                             id: keyCol
@@ -663,8 +691,8 @@ ModalOverlay {
                                     implicitHeight: confirmDeleteCol.implicitHeight + 16
                                     radius: theme.radiusSmall
                                     color: Qt.rgba(theme.statusDanger.r, theme.statusDanger.g, theme.statusDanger.b, 0.10)
-                                    border.color: Qt.rgba(theme.statusDanger.r, theme.statusDanger.g, theme.statusDanger.b, 0.35)
-                                    border.width: 1
+                                    border.color: "transparent"
+                                    border.width: 0
 
                                     ColumnLayout {
                                         id: confirmDeleteCol
@@ -749,15 +777,6 @@ ModalOverlay {
                     Card {
                         Layout.fillWidth: true
                         title: "Connected dApps & Permissions"
-                        headerRight: Component {
-                            Button {
-                                iconSource: "../assets/icons/Refresh.png"
-                                isCompact: true
-                                customWidth: 26
-                                customHeight: 26
-                                onClicked: refreshSessions()
-                            }
-                        }
 
                         ColumnLayout {
                             width: parent.width
@@ -769,13 +788,14 @@ ModalOverlay {
 
                                 delegate: Rectangle {
                                     Layout.fillWidth: true
-                                    height: 48
+                                    implicitHeight: Math.max(48, sessionRow.implicitHeight + 16)
                                     radius: theme.radiusSmall
                                     color: theme.bgSurfaceSubtle
-                                    border.color: theme.borderSubtle
-                                    border.width: 1
+                                    border.color: "transparent"
+                                    border.width: 0
 
                                     RowLayout {
+                                        id: sessionRow
                                         anchors.fill: parent
                                         anchors.leftMargin: 10
                                         anchors.rightMargin: 10
@@ -801,20 +821,13 @@ ModalOverlay {
                                             }
 
                                             Text {
-                                                text: "Session: " + (modelData.session_id ? modelData.session_id.substring(0, 16) + "..." : "active")
+                                                Layout.fillWidth: true
+                                                text: "Session: " + (modelData.session_id ? modelData.session_id : "active")
                                                 color: theme.textMuted
                                                 font.family: theme.fontMono
                                                 font.pixelSize: theme.fontSizeTiny
-                                                elide: Text.ElideMiddle
+                                                wrapMode: Text.WrapAnywhere
                                             }
-                                        }
-
-                                        Button {
-                                            text: "Revoke"
-                                            isCompact: true
-                                            isDestructive: true
-                                            customHeight: 24
-                                            onClicked: revokeDApp(modelData.session_id)
                                         }
                                     }
                                 }
@@ -863,8 +876,8 @@ ModalOverlay {
                                         height: 36
                                         radius: theme.radiusSmall
                                         color: theme.bgSurfaceSubtle
-                                        border.color: theme.borderSubtle
-                                        border.width: 1
+                                        border.color: "transparent"
+                                        border.width: 0
 
                                         Text {
                                             anchors.fill: parent
@@ -906,8 +919,8 @@ ModalOverlay {
                                     height: 36
                                     radius: theme.radiusSmall
                                     color: theme.bgSurfaceSubtle
-                                    border.color: theme.borderSubtle
-                                    border.width: 1
+                                    border.color: "transparent"
+                                    border.width: 0
 
                                     RowLayout {
                                         anchors.fill: parent
@@ -941,8 +954,8 @@ ModalOverlay {
                                     height: 36
                                     radius: theme.radiusSmall
                                     color: theme.bgSurfaceSubtle
-                                    border.color: theme.borderSubtle
-                                    border.width: 1
+                                    border.color: "transparent"
+                                    border.width: 0
 
                                     RowLayout {
                                         anchors.fill: parent
@@ -1054,17 +1067,12 @@ ModalOverlay {
             Button {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
-                text: modal.bridge.isLocked ? "Unlock Vault" : "Lock Vault"
+                text: "Lock Vault"
                 isCompact: true
-                isDestructive: !modal.bridge.isLocked
-                isPrimary: modal.bridge.isLocked
+                isDestructive: true
                 onClicked: {
                     modal.close();
-                    if (modal.bridge.isLocked) {
-                        modal.openUnlockModal();
-                    } else {
-                        modal.bridge.invoke("lockWallet", []);
-                    }
+                    modal.bridge.invoke("lockWallet", []);
                 }
             }
         }

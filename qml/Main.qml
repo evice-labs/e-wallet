@@ -49,6 +49,7 @@ Rectangle {
         id: approvalManager
         bridge: bridge
         accountStore: accountStore
+        ledgerViewRef: ledgerView
         onPromptReceived: prompt => approvalModal.open()
     }
 
@@ -165,10 +166,7 @@ Rectangle {
                             Layout.preferredWidth: dashboardContainer.isNarrow ? -1 : 1
                             bridge: bridge
                             accountStore: accountStore
-                            approvalManager: approvalManager
                             onOpenCreateAccount: createAccountModal.open()
-                            onOpenSettingsModal: settingsModal.open()
-                            onOpenUnlockModal: unlockModal.open()
                             onOpenProfileModal: profileModal.open()
                             onOpenAddTokenModal: addTokenModal.open()
                         }
@@ -183,7 +181,6 @@ Rectangle {
                             accountStore: accountStore
                             transferCtrl: transferCtrl
                             ledgerViewRef: ledgerView
-                            onOpenUnlockModal: unlockModal.open()
                         }
                     }
 
@@ -287,33 +284,21 @@ Rectangle {
     // GLOBAL MODAL DIALOGS
     TxDetailModal {
         id: txDetailModal
+        accountStore: accountStore
     }
     SettingsModal {
         id: settingsModal
         bridge: bridge
         accountStore: accountStore
         onOpenRestoreWalletModal: restoreWalletModal.open()
-        onOpenUnlockModal: unlockModal.open()
         onOpenIdentityModal: identityModal.open()
     }
     ProfileModal {
         id: profileModal
         bridge: bridge
         accountStore: accountStore
-        approvalManager: approvalManager
         onOpenCreateAccount: createAccountModal.open()
         onOpenSettingsModal: settingsModal.open()
-        onOpenUnlockModal: unlockModal.open()
-        onOpenApprovalModal: approvalModal.open()
-    }
-    UnlockModal {
-        id: unlockModal
-        bridge: bridge
-    }
-    CreateWalletModal {
-        id: createWalletModal
-        bridge: bridge
-        accountStore: accountStore
     }
     RestoreWalletModal {
         id: restoreWalletModal

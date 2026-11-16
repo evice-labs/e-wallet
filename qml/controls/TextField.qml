@@ -19,8 +19,8 @@ Rectangle {
     implicitHeight: control.label.length > 0 ? 58 : 36
 
     color: theme.bgInsetTrough
-    border.color: input.activeFocus ? theme.borderActive : theme.borderSubtle
-    border.width: input.activeFocus ? 1.5 : 1
+    border.color: input.activeFocus ? theme.borderActive : "transparent"
+    border.width: input.activeFocus ? 1.5 : 0
 
     Theme {
         id: theme

@@ -64,8 +64,8 @@ Item {
         anchors.centerIn: parent
         radius: theme.radiusCard
         color: theme.bgSurfaceElevated
-        border.color: theme.borderCard
-        border.width: 1
+        border.color: "transparent"
+        border.width: 0
         clip: true
 
         // Eat clicks inside modal dialog
@@ -106,8 +106,9 @@ Item {
                 }
 
                 Button {
+                    Layout.alignment: Qt.AlignTop
                     visible: overlay.dismissible
-                    text: "Close"
+                    text: "✖"
                     isCompact: true
                     isPrimary: false
                     onClicked: overlay.close()

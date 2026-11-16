@@ -9,7 +9,7 @@ ModalOverlay {
     title: "Add Token Holding"
     subtitle: "Track and Manage Fungible Token Program Assets on LEZ"
     dialogWidth: 520
-    dialogHeight: 525
+    dialogHeight: 550
 
     required property var accountStore
 
@@ -89,8 +89,8 @@ ModalOverlay {
             implicitHeight: tokenSpecCol.implicitHeight + 24
             radius: theme.radiusSmall
             color: theme.bgSurface
-            border.color: theme.borderSubtle
-            border.width: 1
+            border.color: "transparent"
+            border.width: 0
 
             ColumnLayout {
                 id: tokenSpecCol
@@ -175,8 +175,8 @@ ModalOverlay {
             implicitHeight: holdingSpecCol.implicitHeight + 24
             radius: theme.radiusSmall
             color: theme.bgSurface
-            border.color: theme.borderSubtle
-            border.width: 1
+            border.color: "transparent"
+            border.width: 0
 
             ColumnLayout {
                 id: holdingSpecCol
@@ -284,6 +284,7 @@ ModalOverlay {
                 Layout.preferredWidth: 1
                 text: "Add Token Holding"
                 isPrimary: true
+                isFlat: true
                 isCompact: true
                 customHeight: 34
                 onClicked: submitAddToken()

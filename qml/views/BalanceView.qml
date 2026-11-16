@@ -12,12 +12,8 @@ Card {
     implicitHeight: 295
 
     signal openCreateAccount
-    signal openSettingsModal
-    signal openUnlockModal
     signal openProfileModal
     signal openAddTokenModal
-    signal triggerDappPreview
-    property var approvalManager: null
     property bool isCascadeExpanded: false
     property string activeAssetTab: "native" // "native" | "tokens"
 
@@ -123,8 +119,8 @@ Card {
                     }
 
                     color: cascadedAvatarContainer.secondaryAcc ? (backHoverArea.containsMouse ? "#2a4365" : "#1e293b") : (backHoverArea.containsMouse ? theme.bgSurfaceSubtle : "#252b42")
-                    border.color: cascadedAvatarContainer.secondaryAcc ? (backHoverArea.containsMouse ? theme.statusPublic : "#3b4261") : (backHoverArea.containsMouse ? theme.borderActive : theme.borderSubtle)
-                    border.width: 1.5
+                    border.color: "transparent"
+                    border.width: 0
 
                     // Secondary Profile Exists -> Show Initial Letter + ⇄ badge
                     Item {
@@ -219,32 +215,6 @@ Card {
                         font.bold: true
                         font.pixelSize: 15
                         color: theme.textPrimary
-                    }
-
-                    // Notification Badge for pending dApp authorization queue
-                    Rectangle {
-                        id: notifBadge
-                        visible: approvalManager && approvalManager.pendingRequests && approvalManager.pendingRequests.length > 0
-                        width: 15
-                        height: 15
-                        radius: 7.5
-                        color: theme.accentOrange
-                        border.color: theme.bgSurface
-                        border.width: 1.5
-                        anchors.top: parent.top
-                        anchors.right: parent.right
-                        anchors.topMargin: -3
-                        anchors.rightMargin: -3
-                        z: 10
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: approvalManager ? (approvalManager.pendingRequests.length > 9 ? "9+" : approvalManager.pendingRequests.length) : ""
-                            color: "#ffffff"
-                            font.family: theme.fontFamily
-                            font.pixelSize: 8
-                            font.bold: true
-                        }
                     }
 
                     MouseArea {
@@ -358,14 +328,6 @@ Card {
             }
         }
 
-        // Line Divider (Tokens View)
-        Rectangle {
-            visible: balanceCard.activeAssetTab === "tokens"
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: theme.borderSubtle
-        }
-
         // VIEW 2: Token Program Holdings List
         ColumnLayout {
             visible: balanceCard.activeAssetTab === "tokens"
@@ -379,8 +341,8 @@ Card {
                     height: 46
                     radius: theme.radiusSmall
                     color: theme.bgSurfaceElevated
-                    border.color: theme.borderSubtle
-                    border.width: 1
+                    border.color: "transparent"
+                    border.width: 0
 
                     RowLayout {
                         anchors.fill: parent
@@ -487,37 +449,6 @@ Card {
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-        }
-
-        // STATIC FOOTER: Keystore Security & Sequencer Telemetry
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: theme.borderSubtle
-        }
-
-        // Vault Security & Sequencer Telemetry Footer Bar
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            Text {
-                text: balanceCard.width >= 560 ? "BIP-39 Keystore: AES-256-GCM (Argon2id)" : "Keystore: AES-256-GCM"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeBody
-                Layout.fillWidth: true
-                elide: Text.ElideRight
-            }
-
-            Text {
-                text: balanceCard.width >= 560 ? "LEZ Sequencer: testnet.lez.logos.co" : "testnet.lez.logos.co"
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
-                Layout.alignment: Qt.AlignRight
-                elide: Text.ElideRight
-            }
         }
     }
 }

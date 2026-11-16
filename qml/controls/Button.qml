@@ -9,6 +9,7 @@ Item {
     property bool isPrimary: false
     property bool isCompact: false
     property bool isDestructive: false
+    property bool isFlat: !isPrimary
     property int customWidth: 0
     property int customHeight: 0
     signal clicked
@@ -42,41 +43,50 @@ Item {
         radius: theme.radiusButton
         color: control.isPrimary ? theme.btnPrimaryShadow : theme.btnSecondaryShadow
         opacity: mouseArea.pressed ? 0.2 : 0.8
+        visible: !control.isFlat && control.isPrimary
+    }
+
+    // Skeuomorphic Gradient for Primary CTA Buttons
+    Gradient {
+        id: primaryGradient
+        GradientStop {
+            position: 0.0
+            color: control.isPrimary ? (mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverTop : theme.btnPrimaryTop)) : theme.btnSecondaryTop
+        }
+        GradientStop {
+            position: 1.0
+            color: control.isPrimary ? (mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverBottom : theme.btnPrimaryBottom)) : theme.btnSecondaryBottom
+        }
     }
 
     // Button Physical Body
     Rectangle {
         id: buttonBody
         anchors.fill: parent
-        anchors.topMargin: mouseArea.pressed ? 1 : 0
-        anchors.bottomMargin: mouseArea.pressed ? -1 : 0
+        anchors.topMargin: (!control.isFlat && mouseArea.pressed) ? 1 : 0
+        anchors.bottomMargin: (!control.isFlat && mouseArea.pressed) ? -1 : 0
         radius: theme.radiusButton
 
-        gradient: Gradient {
-            GradientStop {
-                position: 0.0
-                color: {
-                    if (control.isDestructive)
-                        return mouseArea.pressed ? "#991B1B" : (mouseArea.containsMouse ? "#DC2626" : "#B91C1C");
-                    if (control.isPrimary)
-                        return mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverTop : theme.btnPrimaryTop);
-                    return mouseArea.pressed ? theme.btnSecondaryPressed : (mouseArea.containsMouse ? theme.btnSecondaryHoverTop : theme.btnSecondaryTop);
-                }
-            }
-            GradientStop {
-                position: 1.0
-                color: {
-                    if (control.isDestructive)
-                        return mouseArea.pressed ? "#7F1D1D" : (mouseArea.containsMouse ? "#B91C1C" : "#991B1B");
-                    if (control.isPrimary)
-                        return mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverBottom : theme.btnPrimaryBottom);
-                    return mouseArea.pressed ? theme.btnSecondaryPressed : (mouseArea.containsMouse ? theme.btnSecondaryHoverBottom : theme.btnSecondaryBottom);
-                }
-            }
+        color: {
+            if (!control.isFlat)
+                return "transparent";
+            if (control.isDestructive)
+                return mouseArea.pressed ? "#7F1D1D" : (mouseArea.containsMouse ? "#B91C1C" : "#991B1B");
+            if (control.isPrimary)
+                return mouseArea.pressed ? theme.btnPrimaryPressed : (mouseArea.containsMouse ? theme.btnPrimaryHoverTop : theme.btnPrimaryTop);
+            return mouseArea.pressed ? theme.btnSecondaryPressed : (mouseArea.containsMouse ? theme.btnSecondaryHoverTop : theme.btnSecondaryTop);
         }
 
-        border.color: control.isPrimary ? theme.btnPrimaryBorderSides : theme.btnSecondaryBorderSides
-        border.width: 1
+        gradient: control.isFlat ? null : primaryGradient
+
+        border.color: {
+            if (control.isPrimary)
+                return "transparent";
+            if (control.isDestructive)
+                return mouseArea.containsMouse ? "#DC2626" : theme.btnSecondaryBorderSides;
+            return theme.btnSecondaryBorderSides;
+        }
+        border.width: control.isPrimary ? 0 : 1
 
         Row {
             anchors.centerIn: parent
