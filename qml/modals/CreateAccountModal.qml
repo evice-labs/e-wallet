@@ -61,8 +61,8 @@ ModalOverlay {
             implicitHeight: privacyDescText.implicitHeight + 14
             radius: theme.radiusSmall
             color: modal.isPrivate ? Qt.rgba(theme.statusShielded.r, theme.statusShielded.g, theme.statusShielded.b, 0.10) : Qt.rgba(theme.statusPublic.r, theme.statusPublic.g, theme.statusPublic.b, 0.10)
-            border.color: modal.isPrivate ? Qt.rgba(theme.statusShielded.r, theme.statusShielded.g, theme.statusShielded.b, 0.30) : Qt.rgba(theme.statusPublic.r, theme.statusPublic.g, theme.statusPublic.b, 0.30)
-            border.width: 1
+            border.color: "transparent"
+            border.width: 0
 
             RowLayout {
                 anchors.fill: parent
@@ -140,14 +140,6 @@ ModalOverlay {
             Layout.fillWidth: true
             spacing: 10
 
-            Button {
-                text: "Cancel"
-                isPrimary: false
-                isCompact: true
-                customHeight: 32
-                onClicked: modal.close()
-            }
-
             Item {
                 Layout.fillWidth: true
             }
@@ -155,6 +147,7 @@ ModalOverlay {
             Button {
                 text: "Create Account"
                 isPrimary: true
+                isFlat: true
                 isCompact: true
                 customHeight: 32
                 onClicked: submitCreate()

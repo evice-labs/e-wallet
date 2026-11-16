@@ -78,15 +78,35 @@ Card {
             }
         }
 
-        // Status Feedback Readout
-        Text {
-            visible: !!(testimonialCtrl && testimonialCtrl.statusMessage.length > 0)
+        // Input Metadata Row
+        RowLayout {
             Layout.fillWidth: true
-            text: testimonialCtrl ? testimonialCtrl.statusMessage : ""
-            color: (testimonialCtrl && testimonialCtrl.isSuccessStatus) ? theme.statusSuccess : theme.accentOrange
-            font.family: theme.fontFamily
-            font.pixelSize: theme.fontSizeSmall
-            elide: Text.ElideRight
+            spacing: 8
+
+            // Status Feedback Readout
+            Text {
+                visible: !!(testimonialCtrl && testimonialCtrl.statusMessage.length > 0)
+                Layout.fillWidth: true
+                text: testimonialCtrl ? testimonialCtrl.statusMessage : ""
+                color: (testimonialCtrl && testimonialCtrl.isSuccessStatus) ? theme.statusSuccess : theme.accentOrange
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSizeSmall
+                elide: Text.ElideRight
+            }
+
+            Item {
+                visible: !(testimonialCtrl && testimonialCtrl.statusMessage.length > 0)
+                Layout.fillWidth: true
+            }
+
+            // Compact Byte Counter
+            Text {
+                text: (testimonialCtrl ? testimonialCtrl.currentByteLength : 0) + "/280 B"
+                color: (testimonialCtrl && testimonialCtrl.remainingBytes < 0) ? theme.statusDanger : theme.textMuted
+                font.family: theme.fontMono
+                font.pixelSize: theme.fontSizeSmall
+                Layout.alignment: Qt.AlignRight
+            }
         }
 
         // Flexible Expanding Spacer
@@ -95,28 +115,10 @@ Card {
             Layout.fillHeight: true
         }
 
-        // Skeuomorphic Divider
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: theme.borderSubtle
-        }
-
         // Footer Action Row
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
-
-            Text {
-                text: {
-                    if (!testimonialCtrl)
-                        return "280 bytes remaining";
-                    return testimonialCtrl.remainingBytes + " bytes remaining (" + testimonialCtrl.currentByteLength + "/280)";
-                }
-                color: (testimonialCtrl && testimonialCtrl.remainingBytes < 0) ? theme.statusDanger : theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
-            }
 
             Item {
                 Layout.fillWidth: true

@@ -13,8 +13,6 @@ Card {
 
     implicitHeight: 295
 
-    signal openUnlockModal
-
     property string feedbackMessage: ""
     property bool isSuccessFeedback: false
 
@@ -46,37 +44,27 @@ Card {
                 var formattedInAmount = symbol.length > 0 ? ("+" + actualAmount + " " + symbol) : ("+" + actualAmount);
                 var senderId = (accountStore && accountStore.activeAccount) ? accountStore.activeAccount.account_id : "";
                 var destTarget = (destination && String(destination).length > 0) ? destination : (transferCtrl.destinationInput || "Recipient");
-                var destLabel = (accountStore && accountStore.getAccountLabel) ? accountStore.getAccountLabel(destTarget) : destTarget;
                 var isToken = transferCtrl.selectedAsset === "token";
                 var gasInfo = transferCtrl.calculateGas ? transferCtrl.calculateGas(transferCtrl.transferMode, isToken) : null;
                 var gasFeeStr = gasInfo ? gasInfo.displayStr : "2,968";
                 var gasLimitStr = gasInfo ? gasInfo.gasLimitFormatted : "34,000";
 
                 var senderIsPriv = transferCtrl.transferMode === "priv_to_pub" || transferCtrl.transferMode === "priv_to_priv";
-                var senderPrefix = senderIsPriv ? "Private/" : "Public/";
-                var senderShort = senderId.length > 8 ? (senderId.substring(0, 8) + "...") : senderId;
-                var senderRouteStr = senderPrefix + senderShort;
-
                 var destIsPriv = transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv";
-                var destPrefix = destIsPriv ? "Private/" : "Public/";
                 var cleanDestId = destTarget.replace("Private/", "").replace("Public/", "");
-                var destShort = cleanDestId.length > 8 ? (cleanDestId.substring(0, 8) + "...") : cleanDestId;
-                var destRouteStr = destPrefix + destShort;
-
-                var detailedRoute = senderRouteStr + " ➝ " + destRouteStr;
+                var pureRoute = (senderIsPriv ? "Private" : "Public") + " ➝ " + (destIsPriv ? "Private" : "Public");
 
                 // 1. Record Outbound Activity on Sender Account
-                transferCard.ledgerViewRef.addActivity(destLabel, modeLabel, cat, formattedOutAmount, isPriv ? "Zero-Knowledge Transfer" : "Public Transfer", false, txHash, gasFeeStr, "Pending", detailedRoute, senderId, gasLimitStr);
+                transferCard.ledgerViewRef.addActivity(destTarget, modeLabel, cat, formattedOutAmount, isPriv ? "Zero-Knowledge Transfer" : "Public Transfer", false, txHash, gasFeeStr, "Pending", pureRoute, senderId, gasLimitStr, senderId, destTarget);
 
                 // 2. If Intra-Wallet, immediately record Inbound Activity on Recipient Account
                 if (accountStore && accountStore.accounts) {
                     for (var a = 0; a < accountStore.accounts.length; a++) {
                         var rAcc = accountStore.accounts[a];
                         if (rAcc.account_id === cleanDestId) {
-                            var senderName = accountStore.getAccountLabel(accountStore.activeAccount);
                             var recStatus = destIsPriv ? "Shield" : "Deposit";
                             var recDetail = destIsPriv ? "Zero-Knowledge Inbound Transfer" : "Inbound Transfer";
-                            transferCard.ledgerViewRef.addActivity(senderName, recStatus, "Transfers", formattedInAmount, recDetail, true, txHash, "0 (Paid by Sender)", "-", detailedRoute, rAcc.account_id, "0");
+                            transferCard.ledgerViewRef.addActivity(senderId, recStatus, "Transfers", formattedInAmount, recDetail, true, txHash, "0 (Paid by Sender)", "-", pureRoute, rAcc.account_id, "0", senderId, rAcc.account_id);
                             break;
                         }
                     }
@@ -354,54 +342,24 @@ Card {
             Layout.bottomMargin: 2
         }
 
-        // STATIC FOOTER: Telemetry & Action Button
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: theme.borderSubtle
-        }
-
-        // Telemetry & Submit Action (Inline)
+        // Submit Action Button
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
-
-            // 1. Est. Gas Telemetry
-            Text {
-                text: "Gas Limit: " + (transferCtrl ? String(transferCtrl.estimatedGas || "34,000").replace(/\s*units\b/gi, "").trim() : "34,000")
-                color: theme.textMuted
-                font.family: theme.fontMono
-                font.pixelSize: theme.fontSizeSmall
-                Layout.alignment: Qt.AlignVCenter
-            }
 
             Item {
                 Layout.fillWidth: true
             }
 
-            // 2. Submit Action Button
+            // Submit Action Button
             Button {
-                text: {
-                    if (transferCtrl && transferCtrl.isSubmitting)
-                        return "Submitting...";
-                    if (bridge.isLocked)
-                        return "Unlock Vault";
-                    return "Send Transfer";
-                }
+                text: (transferCtrl && transferCtrl.isSubmitting) ? "Submitting..." : "Send Transfer"
                 isPrimary: true
                 isCompact: true
                 customHeight: 34
                 Layout.alignment: Qt.AlignVCenter
                 enabled: !transferCtrl || (!transferCtrl.isSubmitting)
                 onClicked: {
-                    if (bridge.isLocked) {
-                        transferCard.feedbackMessage = "Vault is locked. Please unlock your keystore.";
-                        transferCard.isSuccessFeedback = false;
-                        feedbackDismissTimer.restart();
-                        transferCard.openUnlockModal();
-                        return;
-                    }
-
                     if (transferCtrl) {
                         transferCard.feedbackMessage = "";
                         transferCtrl.submitTransfer();

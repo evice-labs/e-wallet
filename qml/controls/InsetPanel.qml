@@ -11,8 +11,8 @@ Rectangle {
     radius: theme.radiusInset
 
     color: theme.bgInsetTrough
-    border.color: theme.borderSubtle
-    border.width: 1
+    border.color: "transparent"
+    border.width: 0
     clip: true
 
     Theme {

@@ -25,21 +25,39 @@ Rectangle {
 
         Card {
             anchors.centerIn: parent
-            width: Math.min(parent.width - 40, 480)
-            title: "KEYSTORE LOCKED"
+            width: Math.min(parent.width - 40, 380)
+            title: "Keystore Locked"
             subtitle: "Argon2id + AES-256-GCM Memory Protection"
 
             ColumnLayout {
                 width: parent.width
                 spacing: 16
 
-                TextField {
-                    id: passInput
+                Rectangle {
                     Layout.fillWidth: true
-                    label: "Master Vault Password"
-                    placeholder: "Enter master passphrase to decrypt..."
-                    echoMode: TextInput.Password
-                    onAccepted: unlock()
+                    implicitHeight: 1
+                    color: theme.borderSubtle
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    Text {
+                        text: "Master Vault Password"
+                        color: theme.textSecondary
+                        font.family: theme.fontFamily
+                        font.pixelSize: theme.fontSizeSmall
+                        font.weight: Font.DemiBold
+                    }
+
+                    TextField {
+                        id: passInput
+                        Layout.fillWidth: true
+                        placeholder: "Enter master passphrase to decrypt..."
+                        echoMode: TextInput.Password
+                        onAccepted: lockScreen.unlock()
+                    }
                 }
 
                 Text {
@@ -53,26 +71,28 @@ Rectangle {
 
                 RowLayout {
                     Layout.fillWidth: true
+                    Layout.topMargin: 12
                     spacing: 12
 
                     Button {
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
                         text: "Restore from Seed"
                         isPrimary: false
-                        isCompact: true
+                        isFlat: true
                         onClicked: {
                             lockScreen.openRestoreModal();
                         }
                     }
 
-                    Item {
-                        Layout.fillWidth: true
-                    }
-
                     Button {
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
                         text: lockScreen.isUnlocking ? "Decrypting Vault..." : "Unlock Keystore"
                         isPrimary: true
+                        isFlat: true
                         enabled: !lockScreen.isUnlocking && passInput.text.length > 0
-                        onClicked: unlock()
+                        onClicked: lockScreen.unlock()
                     }
                 }
             }

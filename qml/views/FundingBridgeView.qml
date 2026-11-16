@@ -132,39 +132,13 @@ Card {
             Layout.fillHeight: true
         }
 
-        // SKEUOMORPHIC DIVIDER
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: theme.borderSubtle
-        }
-
-        // FOOTER: PoW Telemetry Status (Left) & Segmented Dark Action Console (Right)
+        // FOOTER
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
 
-            // Left: Real-Time PoW Node Telemetry
-            RowLayout {
-                spacing: 6
+            Item {
                 Layout.fillWidth: true
-
-                Rectangle {
-                    implicitWidth: 6
-                    implicitHeight: 6
-                    radius: 3
-                    color: bridgeCard.isPrivateActive ? theme.accentOrange : ((bridgeCtrl && bridgeCtrl.isMining) ? theme.statusSuccess : theme.textMuted)
-                }
-
-                Text {
-                    text: bridgeCard.isPrivateActive ? "SHIELDED ACCOUNT • PUBLIC BRIDGE LOCKED" : ((bridgeCtrl && bridgeCtrl.isMining) ? ("POW ACTIVE • " + bridgeCtrl.hashrate + " H/S") : ((bridgeCtrl && !bridgeCtrl.isSuccessStatus && bridgeCtrl.statusMessage.length > 0) ? bridgeCtrl.statusMessage : "NODE IDLE • SHA-256"))
-                    color: bridgeCard.isPrivateActive ? theme.accentOrange : ((bridgeCtrl && bridgeCtrl.isMining) ? theme.statusSuccess : ((bridgeCtrl && !bridgeCtrl.isSuccessStatus && bridgeCtrl.statusMessage.length > 0) ? theme.statusDanger : theme.textMuted))
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTiny
-                    font.weight: (bridgeCtrl && bridgeCtrl.isMining || bridgeCard.isPrivateActive) ? Font.Bold : Font.Normal
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
             }
 
             // Right: Tactile Segmented Pill Console

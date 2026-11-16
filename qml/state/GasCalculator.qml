@@ -91,8 +91,15 @@ QtObject {
         var det = String(detail || "");
 
         var isTestimonial = (cat === "Testimonials") || (st === "Ledger") || (det.indexOf("Broadcast") !== -1) || (det.indexOf("zkVM") !== -1);
+        var isDapp = (cat === "dApps") || (st.toUpperCase() === "DAPP");
         var isPrivate = (cat === "Shields") || (st === "Private") || (st === "Shield") || (st === "Unshield");
 
+        if (isDapp) {
+            if (rawGasUsed && String(rawGasUsed).trim().length > 0 && rawGasUsed !== "-" && String(rawGasUsed).indexOf("2,968") === -1) {
+                return String(rawGasUsed).replace(/\s*\([^)]*\)/g, "").replace(/\s*units\b/gi, "").replace(/(^|\s+)LEZ\b/gi, "$1").trim();
+            }
+            return "275,640";
+        }
         if (isTestimonial) {
             return "275,456";
         }

@@ -13,21 +13,21 @@ Rectangle {
     implicitWidth: 400
     implicitHeight: Math.max(80, cardMainLayout.implicitHeight + 32)
     Layout.fillWidth: true
-    radius: 0
 
     Theme {
         id: theme
     }
 
+    radius: theme.radiusCard
     color: theme.bgSurface
-    border.color: theme.borderSubtle
-    border.width: 1
+    border.color: "transparent"
+    border.width: 0
 
     ColumnLayout {
         id: cardMainLayout
         anchors.fill: parent
-        anchors.margins: 16
-        spacing: 12
+        anchors.margins: theme.spacingLarge
+        spacing: theme.spacingMedium
 
         // Card Header
         Item {
@@ -40,25 +40,27 @@ Rectangle {
                 id: headerCol
                 anchors.left: parent.left
                 anchors.right: (headerRightLoader.item !== null) ? headerRightLoader.left : parent.right
-                anchors.rightMargin: (headerRightLoader.item !== null) ? 12 : 0
+                anchors.rightMargin: (headerRightLoader.item !== null) ? theme.spacingMedium : 0
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 4
+                spacing: theme.spacingTiny
 
+                // 3. Card Title
                 Text {
                     width: parent.width
                     text: control.title
                     color: theme.textPrimary
                     font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeTitle
-                    font.weight: Font.DemiBold
+                    font.pixelSize: theme.panelTitleText
+                    font.weight: Font.Bold
                 }
 
+                // 3. Subtitle / Description Card
                 Text {
                     width: parent.width
                     text: control.subtitle
                     color: theme.textSecondary
                     font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeSmall
+                    font.pixelSize: theme.secondaryText
                     visible: control.subtitle.length > 0
                     wrapMode: Text.WordWrap
                 }

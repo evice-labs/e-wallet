@@ -28,12 +28,36 @@ ModalOverlay {
             Layout.fillWidth: true
             spacing: 10
 
+            // DApp Icon
+            Rectangle {
+                id: dappIconBox
+                readonly property string iconSrc: modal.prompt && modal.prompt.dapp_icon ? modal.prompt.dapp_icon.trim() : ""
+                readonly property bool hasIcon: iconSrc.length > 0
+                visible: hasIcon && (dappImg.status === Image.Ready || dappImg.status === Image.Loading) && dappImg.status !== Image.Error
+                Layout.preferredWidth: visible ? 36 : 0
+                Layout.preferredHeight: visible ? 36 : 0
+                implicitWidth: visible ? 36 : 0
+                implicitHeight: visible ? 36 : 0
+                radius: theme.radiusSmall
+                color: "transparent"
+                clip: true
+
+                Image {
+                    id: dappImg
+                    anchors.fill: parent
+                    source: dappIconBox.hasIcon ? dappIconBox.iconSrc : ""
+                    fillMode: Image.PreserveAspectFit
+                    mipmap: true
+                    asynchronous: true
+                }
+            }
+
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 2
 
                 Text {
-                    text: modal.prompt ? (modal.prompt.dapp_name || "Unknown dApp") : "Connecting dApp"
+                    text: modal.prompt ? (modal.prompt.dapp_name || modal.prompt.dapp_identity || "External dApp") : "Connecting dApp"
                     color: theme.textPrimary
                     font.family: theme.fontFamily
                     font.pixelSize: theme.fontSizeBody + 2
@@ -41,11 +65,12 @@ ModalOverlay {
                 }
 
                 Text {
-                    text: modal.prompt ? (modal.prompt.origin || "Origin Unknown") : ""
+                    text: modal.prompt ? (modal.prompt.origin || (modal.prompt.session_id ? ("Session: " + modal.prompt.session_id) : "Origin Verified")) : ""
                     color: theme.textSecondary
                     font.family: theme.fontMono
                     font.pixelSize: theme.fontSizeSmall
-                    elide: Text.ElideRight
+                    elide: Text.ElideMiddle
+                    Layout.fillWidth: true
                 }
             }
 
@@ -86,7 +111,20 @@ ModalOverlay {
             }
 
             Text {
-                text: modal.prompt ? (modal.prompt.grant_kind || "GrantKind::Propose") : "GrantKind::Read"
+                text: {
+                    if (!modal.prompt)
+                        return "GrantKind::Propose";
+                    if (modal.prompt.grant_kind)
+                        return modal.prompt.grant_kind;
+                    var rk = modal.prompt.request_kind || "contract_call";
+                    if (rk === "contract_call" || rk === "generic_call")
+                        return "GrantKind::Propose (ContractCall)";
+                    if (rk === "native_transfer")
+                        return "GrantKind::Propose (NativeTransfer)";
+                    if (rk === "token_transfer")
+                        return "GrantKind::Propose (TokenTransfer)";
+                    return "GrantKind::Propose";
+                }
                 color: theme.statusPublic
                 font.family: theme.fontFamily
                 font.pixelSize: theme.fontSizeTiny
@@ -201,6 +239,7 @@ ModalOverlay {
                 text: "Authorize & Sign (1)"
                 Layout.preferredWidth: 190
                 isPrimary: true
+                isFlat: true
                 onClicked: {
                     if (modal.approvalManager) {
                         modal.approvalManager.approve(modal.prompt ? modal.prompt.request_id : null);
