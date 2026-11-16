@@ -88,10 +88,10 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 
 ### 8. Informed Consent dApp Approvals & Program Source Verification
 - **Automatic Cross-Module Approval Discovery.** `ApprovalManager.qml` discovers pending external dApp requests via `listPendingApprovals` and cross-module approval envelopes, verifies active `pending_approval` state via `getRequestStatus`, and automatically opens `ApprovalModal.qml`.
-- **Permission Scope Assignment.** Displays requested permission scopes (`GrantKind::Propose (ContractCall)`, `GrantKind::Propose (NativeTransfer)`, `GrantKind::Propose (TokenTransfer)`).
-- **Plain-Language Effect Simulation.** Invokes `simulatePromptEffect` to synthesize caller identity, human-readable contract execution summary, net state diff, and estimated gas fees before user authorization.
-- **Program Source Verification.** Evaluates caller origin and displays verified status badges (`VERIFIED`, `UNVERIFIED SOURCE`, `UNTRUSTED`).
-- **Dual Consent Affordance & Post-Approval Settlement.** Explicit action buttons (`Reject (0)` vs `Authorize & Sign (1)`). Upon authorization, `ApprovalManager.qml` polls `getRequestStatus` until the on-chain `tx_hash` is emitted, records the transaction to `ActivityLedgerView.qml`, and triggers post-block account balance refreshes.
+- **Permission Scope Assignment.** Displays requested permission scopes (`Propose • Contract Call`, `Propose • Native Transfer`, `Propose • Token Transfer`).
+- **Plain-Language Effect Simulation.** Invokes `simulatePromptEffect` combined with `GasCalculator.qml` and `WallezKit` envelope metadata to present the dApp action, target program/recipient, decoded simulation summary, and estimated gas units before user authorization.
+- **Program Source Verification.** Evaluates verification output (`Verified`, `[!] Unverified`, `Untrusted`) and displays aligned status badges (`VERIFIED`, `UNVERIFIED`, `UNTRUSTED`).
+- **Dual Consent Affordance & Lifecycle Sync.** Equal-width action buttons (`Reject` vs `Authorize & Sign`) with automatic modal dismissal on external dApp cancellation or approval timeout. Upon authorization, `ApprovalManager.qml` polls `getRequestStatus` until the on-chain `tx_hash` is emitted, records the transaction to `ActivityLedgerView.qml`, and triggers post-block account balance refreshes.
 
 ### 9. Zero-Knowledge Identity Accountability (Domain 6)
 - **Direct Cryptographic Wiring (Zero Mock Fallbacks).** Purged all hardcoded mock strings. All identity operations interact directly with the Rust SDK engine via C-ABI FFI and `e-wallet-core`.

@@ -7,8 +7,8 @@ ModalOverlay {
     id: modal
 
     title: "dApp Permission Request"
-    dialogWidth: 540
-    dialogHeight: 500
+    dialogWidth: 500
+    dialogHeight: contentCol ? Math.max(400, Math.round(contentCol.implicitHeight + 109)) : 460
 
     required property var approvalManager
 
@@ -18,212 +18,262 @@ ModalOverlay {
 
     readonly property var prompt: approvalManager ? approvalManager.currentPrompt : null
     readonly property var sim: approvalManager ? approvalManager.simulatedEffect : null
+    property bool _actionHandled: false
+
+    onClosed: {
+        if (!_actionHandled && approvalManager && approvalManager.isPromptActive && modal.prompt && modal.prompt.request_id) {
+            approvalManager.reject(modal.prompt.request_id);
+        }
+        _actionHandled = false;
+    }
+
+    Connections {
+        target: modal.approvalManager
+        function onPromptReceived() {
+            modal._actionHandled = false;
+        }
+        function onPromptDismissed(reqId) {
+            if (modal.visible && modal.prompt && modal.prompt.request_id === reqId) {
+                modal._actionHandled = true;
+                modal.close();
+            }
+        }
+    }
+
+    function scopeLabel() {
+        if (!modal.prompt)
+            return "Propose";
+        var rk = modal.prompt.request_kind || "contract_call";
+        if (rk === "native_transfer")
+            return "Propose • Native Transfer";
+        if (rk === "token_transfer")
+            return "Propose • Token Transfer";
+        return "Propose • Contract Call";
+    }
+
+    function targetLabel() {
+        if (!modal.prompt)
+            return "-";
+        var target = modal.prompt.program_id || modal.prompt.program || modal.prompt.to || "";
+        if (!target)
+            return "-";
+        var clean = String(target).trim();
+        if (clean.toLowerCase().startsWith("public/") || clean.toLowerCase().startsWith("private/"))
+            return clean;
+        return "Public/" + clean;
+    }
 
     ColumnLayout {
+        id: contentCol
         anchors.fill: parent
-        spacing: 14
+        spacing: 12
 
-        // CALLER IDENTITY & SECURITY VERIFICATION
-        RowLayout {
+        // 1. CALLER IDENTITY & VERIFICATION STATUS
+        ColumnLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 2
 
-            // DApp Icon
-            Rectangle {
-                id: dappIconBox
-                readonly property string iconSrc: modal.prompt && modal.prompt.dapp_icon ? modal.prompt.dapp_icon.trim() : ""
-                readonly property bool hasIcon: iconSrc.length > 0
-                visible: hasIcon && (dappImg.status === Image.Ready || dappImg.status === Image.Loading) && dappImg.status !== Image.Error
-                Layout.preferredWidth: visible ? 36 : 0
-                Layout.preferredHeight: visible ? 36 : 0
-                implicitWidth: visible ? 36 : 0
-                implicitHeight: visible ? 36 : 0
-                radius: theme.radiusSmall
-                color: "transparent"
-                clip: true
-
-                Image {
-                    id: dappImg
-                    anchors.fill: parent
-                    source: dappIconBox.hasIcon ? dappIconBox.iconSrc : ""
-                    fillMode: Image.PreserveAspectFit
-                    mipmap: true
-                    asynchronous: true
-                }
-            }
-
-            ColumnLayout {
+            RowLayout {
                 Layout.fillWidth: true
-                spacing: 2
+                spacing: 10
 
                 Text {
-                    text: modal.prompt ? (modal.prompt.dapp_name || modal.prompt.dapp_identity || "External dApp") : "Connecting dApp"
+                    Layout.fillWidth: true
+                    text: modal.prompt ? (modal.prompt.dapp_name || modal.prompt.dapp_identity || "External dApp") : "External dApp"
                     color: theme.textPrimary
                     font.family: theme.fontFamily
                     font.pixelSize: theme.fontSizeBody + 2
                     font.weight: Font.Bold
+                    elide: Text.ElideRight
                 }
 
                 Text {
-                    text: modal.prompt ? (modal.prompt.origin || (modal.prompt.session_id ? ("Session: " + modal.prompt.session_id) : "Origin Verified")) : ""
-                    color: theme.textSecondary
-                    font.family: theme.fontMono
-                    font.pixelSize: theme.fontSizeSmall
-                    elide: Text.ElideMiddle
-                    Layout.fillWidth: true
+                    text: {
+                        var status = modal.approvalManager ? modal.approvalManager.verificationStatus : "Verified";
+                        if (status === "Verified")
+                            return "VERIFIED";
+                        if (status === "Unverified")
+                            return "UNVERIFIED";
+                        return "UNTRUSTED";
+                    }
+                    color: {
+                        var status = modal.approvalManager ? modal.approvalManager.verificationStatus : "Verified";
+                        if (status === "Verified")
+                            return theme.statusSuccess;
+                        if (status === "Unverified")
+                            return theme.accentOrange;
+                        return theme.statusDanger;
+                    }
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeTiny
+                    font.weight: Font.Bold
+                    Layout.alignment: Qt.AlignVCenter
                 }
             }
 
-            // Source Verification Typography
             Text {
-                text: {
-                    var status = modal.approvalManager ? modal.approvalManager.verificationStatus : "Verified";
-                    if (status === "Verified")
-                        return "VERIFIED";
-                    if (status === "Unverified")
-                        return "UNVERIFIED SOURCE";
-                    return "UNTRUSTED";
-                }
-                color: {
-                    var status = modal.approvalManager ? modal.approvalManager.verificationStatus : "Verified";
-                    if (status === "Verified")
-                        return theme.statusSuccess;
-                    if (status === "Unverified")
-                        return theme.accentOrange;
-                    return theme.statusDanger;
-                }
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTiny
-                font.weight: Font.Bold
-            }
-        }
-
-        // Permission Scope Badge
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            Text {
-                text: "REQUESTED SCOPE:"
+                text: modal.prompt ? (modal.prompt.origin || (modal.prompt.session_id ? ("Session: " + modal.prompt.session_id) : "")) : ""
+                visible: text.length > 0
                 color: theme.textSecondary
                 font.family: theme.fontMono
                 font.pixelSize: theme.fontSizeTiny
-            }
-
-            Text {
-                text: {
-                    if (!modal.prompt)
-                        return "GrantKind::Propose";
-                    if (modal.prompt.grant_kind)
-                        return modal.prompt.grant_kind;
-                    var rk = modal.prompt.request_kind || "contract_call";
-                    if (rk === "contract_call" || rk === "generic_call")
-                        return "GrantKind::Propose (ContractCall)";
-                    if (rk === "native_transfer")
-                        return "GrantKind::Propose (NativeTransfer)";
-                    if (rk === "token_transfer")
-                        return "GrantKind::Propose (TokenTransfer)";
-                    return "GrantKind::Propose";
-                }
-                color: theme.statusPublic
-                font.family: theme.fontFamily
-                font.pixelSize: theme.fontSizeTiny
-                font.weight: Font.Bold
-            }
-
-            Item {
+                elide: Text.ElideMiddle
                 Layout.fillWidth: true
             }
         }
 
-        // PLAIN-LANGUAGE EFFECT SIMULATION
-        Text {
-            text: "TRANSACTION EFFECT SIMULATION"
-            color: theme.textSecondary
-            font.family: theme.fontMono
-            font.pixelSize: theme.fontSizeSmall
-        }
-
-        InsetPanel {
+        // 2. REQUEST SUMMARY CARD
+        Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: Math.max(96, effectCol.implicitHeight + 24)
+            implicitHeight: actionCardCol.implicitHeight + 24
+            radius: theme.radiusCard
+            color: theme.bgSurface
+            border.color: "transparent"
+            border.width: 0
 
             ColumnLayout {
-                id: effectCol
+                id: actionCardCol
                 anchors.fill: parent
+                anchors.margins: 12
                 spacing: 8
 
                 Text {
-                    Layout.fillWidth: true
-                    text: modal.sim ? (modal.sim.effect || "Smart contract transaction proposal.") : "Simulating execution impact..."
+                    text: "Action"
                     color: theme.textPrimary
                     font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeBody
+                    font.pixelSize: theme.fontSizeSmall
+                    font.weight: Font.Medium
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: modal.sim ? (modal.sim.effect || "Smart contract execution") : "Simulating execution..."
+                    color: theme.textSecondary
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeSmall
                     wrapMode: Text.WordWrap
                 }
 
-                Rectangle {
+                Text {
+                    visible: modal.targetLabel() !== "-"
+                    text: (modal.prompt && modal.prompt.request_kind === "native_transfer") ? "Recipient" : "Target Program"
+                    color: theme.textPrimary
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeSmall
+                    font.weight: Font.Medium
+                }
+
+                Text {
+                    visible: modal.targetLabel() !== "-"
                     Layout.fillWidth: true
-                    implicitHeight: 1
-                    color: theme.borderSubtle
+                    text: modal.targetLabel()
+                    color: theme.textSecondary
+                    font.family: theme.fontMono
+                    font.pixelSize: theme.fontSizeSmall
+                    wrapMode: Text.WrapAnywhere
+                }
+            }
+        }
+
+        // 3. EXECUTION TELEMETRY CARD
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: telemetryCol.implicitHeight + 24
+            radius: theme.radiusCard
+            color: theme.bgSurface
+            border.color: "transparent"
+            border.width: 0
+
+            ColumnLayout {
+                id: telemetryCol
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 7
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        text: "Requested Scope"
+                        color: theme.textPrimary
+                        font.family: theme.fontFamily
+                        font.pixelSize: theme.fontSizeSmall
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                    Text {
+                        text: modal.scopeLabel()
+                        color: theme.statusPublic
+                        font.family: theme.fontMono
+                        font.pixelSize: theme.fontSizeSmall
+                        font.weight: Font.DemiBold
+                    }
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 12
-
                     Text {
-                        text: "Gas Fee: " + (modal.sim ? (modal.sim.gas_fee || "0.001 LEZ") : "0.001 LEZ")
-                        color: theme.textSecondary
-                        font.family: theme.fontMono
+                        text: "Simulation"
+                        color: theme.textPrimary
+                        font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
                     }
-
                     Item {
                         Layout.fillWidth: true
                     }
-
                     Text {
-                        text: "Net State Diff: " + (modal.sim ? (modal.sim.state_diff || "Pending") : "Pending")
+                        Layout.maximumWidth: 260
+                        elide: Text.ElideRight
+                        text: modal.sim ? (modal.sim.state_diff || "Pending") : "Pending"
                         color: theme.accentOrange
                         font.family: theme.fontMono
                         font.pixelSize: theme.fontSizeSmall
                     }
                 }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        text: "Estimated Gas"
+                        color: theme.textPrimary
+                        font.family: theme.fontFamily
+                        font.pixelSize: theme.fontSizeSmall
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                    Text {
+                        text: modal.sim ? (modal.sim.gas_fee || "~275,640 units") : "~275,640 units"
+                        color: theme.textSecondary
+                        font.family: theme.fontMono
+                        font.pixelSize: theme.fontSizeSmall
+                    }
+                }
             }
         }
 
-        // Informed Consent Warning
         Text {
             Layout.fillWidth: true
-            text: "Security Advisory: Only authorize transactions from dApps you trust. Approving grants the caller permission to execute transactions within the simulated scope."
+            text: "Only authorize transactions from dApps you trust."
             color: theme.textMuted
             font.family: theme.fontFamily
             font.pixelSize: theme.fontSizeTiny
             wrapMode: Text.WordWrap
         }
 
-        Item {
-            Layout.fillHeight: true
-        }
-
-        // Skeuomorphic Divider
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: theme.borderSubtle
-        }
-
         // ACTION BUTTONS
         RowLayout {
             Layout.fillWidth: true
+            Layout.topMargin: 4
             spacing: 12
 
             Button {
-                text: "Reject (0)"
-                Layout.preferredWidth: 140
+                text: "Reject"
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
                 isDestructive: true
                 onClicked: {
+                    modal._actionHandled = true;
                     if (modal.approvalManager) {
                         modal.approvalManager.reject(modal.prompt ? modal.prompt.request_id : null);
                     }
@@ -231,16 +281,14 @@ ModalOverlay {
                 }
             }
 
-            Item {
-                Layout.fillWidth: true
-            }
-
             Button {
-                text: "Authorize & Sign (1)"
-                Layout.preferredWidth: 190
+                text: "Authorize & Sign"
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
                 isPrimary: true
                 isFlat: true
                 onClicked: {
+                    modal._actionHandled = true;
                     if (modal.approvalManager) {
                         modal.approvalManager.approve(modal.prompt ? modal.prompt.request_id : null);
                     }
