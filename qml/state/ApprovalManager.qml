@@ -7,6 +7,10 @@ Item {
     required property var accountStore
     property var ledgerViewRef: null
 
+    GasCalculator {
+        id: gasCalc
+    }
+
     property var pendingRequests: []
     property var resolvedRequestIds: ({})
     property var currentPrompt: null
@@ -17,6 +21,7 @@ Item {
     property bool _isChecking: false
 
     signal promptReceived(var prompt)
+    signal promptDismissed(string requestId)
     signal decisionSubmitted(string requestId, int decision)
     signal queueUpdated
 
@@ -52,8 +57,29 @@ Item {
         id: approvalWatcherTimer
         interval: 1000
         repeat: true
-        running: manager.bridge && manager.bridge.isInitialized && !manager.bridge.isLocked && !manager.isPromptActive
-        onTriggered: manager.checkPendingApprovals()
+        running: manager.bridge && manager.bridge.isInitialized && !manager.bridge.isLocked
+        onTriggered: {
+            if (manager.isPromptActive && manager.currentPrompt && manager.currentPrompt.request_id) {
+                var activeReqId = manager.currentPrompt.request_id;
+                manager.bridge.invoke("getRequestStatus", [activeReqId], function (stRes) {
+                    var st = (stRes && stRes.ok && stRes.status) ? String(stRes.status) : "";
+                    if ((stRes && stRes.ok === false) || (st && st !== "pending_approval")) {
+                        var stalePrompt = manager.currentPrompt;
+                        manager._cleanupPromptEnvelope(stalePrompt);
+                        manager.removeRequest(activeReqId);
+                        if (manager.currentPrompt && manager.currentPrompt.request_id === activeReqId) {
+                            manager.isPromptActive = false;
+                            manager.currentPrompt = null;
+                            manager.simulatedEffect = null;
+                        }
+                        manager.promptDismissed(activeReqId);
+                        manager.checkPendingApprovals();
+                    }
+                });
+            } else {
+                manager.checkPendingApprovals();
+            }
+        }
     }
 
     function hasRequest(reqId) {
@@ -135,7 +161,12 @@ Item {
 
         var cand = candidates[idx];
         var reqId = cand ? cand.request_id : "";
-        if (!reqId || hasRequest(reqId)) {
+        if (!reqId) {
+            _processCandidatePrompts(candidates, idx + 1, doneCallback);
+            return;
+        }
+        if (hasRequest(reqId)) {
+            _mergeEnvelopeMetadata(reqId, cand);
             _processCandidatePrompts(candidates, idx + 1, doneCallback);
             return;
         }
@@ -186,6 +217,76 @@ Item {
         queueUpdated();
     }
 
+    function _mergeEnvelopeMetadata(reqId, env) {
+        if (!reqId || !env)
+            return;
+        var mergeInto = function (target) {
+            if (!target)
+                return target;
+            var merged = Object.assign({}, target);
+            if (env._envelope_session_id)
+                merged._envelope_session_id = env._envelope_session_id;
+            if (env.dapp_name)
+                merged.dapp_name = env.dapp_name;
+            if (env.program_id)
+                merged.program_id = env.program_id;
+            if (env.payer_id)
+                merged.payer_id = env.payer_id;
+            if (env.to)
+                merged.to = env.to;
+            if (env.amount)
+                merged.amount = env.amount;
+            if (env.summary && (!merged.summary || merged.summary.indexOf(":") !== -1))
+                merged.summary = env.summary;
+            if (env.effects && (!merged.effects || merged.effects.indexOf("Decoded(") === 0))
+                merged.effects = env.effects;
+            return merged;
+        };
+
+        if (currentPrompt && currentPrompt.request_id === reqId) {
+            currentPrompt = mergeInto(currentPrompt);
+        }
+        for (var i = 0; i < pendingRequests.length; i++) {
+            if (pendingRequests[i].request_id === reqId) {
+                var list = pendingRequests.slice();
+                list[i] = mergeInto(list[i]);
+                pendingRequests = list;
+                break;
+            }
+        }
+    }
+
+    function _normalizeVerificationStatus(rawStatus) {
+        var s = String(rawStatus || "").toLowerCase();
+        if (!s || s === "verified" || (s.indexOf("verified") !== -1 && s.indexOf("unverified") === -1))
+            return "Verified";
+        if (s.indexOf("untrusted") !== -1)
+            return "Untrusted";
+        return "Unverified";
+    }
+
+    function _cleanEffectText(rawEffect, promptObj) {
+        var eff = String(rawEffect || "").trim();
+        var decMatch = eff.match(/^Decoded\(([^)]+)\)$/);
+        if (decMatch) {
+            return "Invoke " + decMatch[1];
+        }
+        if (!eff || eff.indexOf("Unavailable") !== -1) {
+            var prog = (promptObj && (promptObj.program_id || promptObj.program)) ? String(promptObj.program_id || promptObj.program) : "";
+            return prog ? ("Invoke Program " + prog.substring(0, 12) + "...") : "Smart Contract Execution";
+        }
+        return eff;
+    }
+
+    function _estimateGasDisplay(promptObj) {
+        var rk = (promptObj && promptObj.request_kind) ? String(promptObj.request_kind) : "contract_call";
+        if (rk === "native_transfer") {
+            var nat = gasCalc.calculateTransferGas("pub_to_pub", false);
+            return "~" + nat.displayStr + " units";
+        }
+        return "~275,640 units";
+    }
+
     function handleIncomingPrompt(prompt) {
         if (!prompt)
             return;
@@ -197,33 +298,20 @@ Item {
 
         bridge.invoke("simulatePromptEffect", [promptJson], function (res) {
             isSimulating = false;
-            var dappName = prompt.dapp_name || prompt.dapp_identity || "External dApp";
-            var summaryText = prompt.summary || "Smart contract execution proposal";
-            var defaultHumanEffect = "[" + dappName + "] requests smart contract execution: " + summaryText;
-            var defaultStateDiff = prompt.effects || (prompt.program_id ? ("Invoke Program " + prompt.program_id.substring(0, 12) + "...") : "Account state transition pending execution");
+            var summaryText = prompt.summary || "Smart contract execution";
+            var sim = (res && res.ok && res.simulation) ? res.simulation : null;
+            var rawVer = (sim && sim.verification_status) ? sim.verification_status : (prompt.verification_status || "Verified");
+            var normVer = _normalizeVerificationStatus(rawVer);
+            var rawStateDiff = (sim && (sim.state_diff || sim.effects)) ? (sim.state_diff || sim.effects) : (prompt.state_diff || prompt.effects || "");
 
-            if (res && res.ok && res.simulation) {
-                var sim = res.simulation;
-                var rawVer = sim.verification_status || prompt.verification_status || "Verified";
-                var normVer = (rawVer.toLowerCase() === "unverified") ? "Verified" : rawVer;
-                simulatedEffect = {
-                    effect: sim.effect || sim.human_description || defaultHumanEffect,
-                    gas_fee: sim.gas_fee || prompt.gas_fee || "0.001 LEZ (34,000 gas)",
-                    state_diff: (sim.state_diff || sim.effects || defaultStateDiff),
-                    verification_status: normVer,
-                    program_hash: prompt.program_id || prompt.program || ""
-                };
-                verificationStatus = normVer;
-            } else {
-                simulatedEffect = {
-                    effect: prompt.effect || defaultHumanEffect,
-                    gas_fee: prompt.fee || prompt.gas_fee || "0.001 LEZ (34,000 gas)",
-                    state_diff: prompt.state_diff || defaultStateDiff,
-                    verification_status: prompt.verification_status || "Verified",
-                    program_hash: prompt.program_id || prompt.program || ""
-                };
-                verificationStatus = prompt.verification_status || "Verified";
-            }
+            simulatedEffect = {
+                effect: summaryText,
+                gas_fee: _estimateGasDisplay(prompt),
+                state_diff: _cleanEffectText(rawStateDiff, prompt),
+                verification_status: normVer,
+                program_hash: prompt.program_id || prompt.program || ""
+            };
+            verificationStatus = normVer;
             manager.promptReceived(currentPrompt);
         });
     }
