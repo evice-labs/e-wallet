@@ -254,7 +254,7 @@ Rectangle {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        
+
                         Item {
                             Layout.fillWidth: true
                         }
