@@ -49,8 +49,8 @@ ModalOverlay {
                     anchors.centerIn: parent
                     text: accountStore.activeAccountInitial
                     font.family: theme.fontFamily
-                    font.bold: true
-                    font.pixelSize: 13
+                    font.weight: theme.weightBold
+                    font.pixelSize: theme.fontSizeBody
                     color: theme.textPrimary
                 }
             }

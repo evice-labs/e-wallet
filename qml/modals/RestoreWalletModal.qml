@@ -8,7 +8,7 @@ ModalOverlay {
 
     title: "Restore Vault from Secret Phrase"
     dialogWidth: 520
-    dialogHeight: 380
+    dialogHeight: Math.max(390, contentCol.implicitHeight + 124)
 
     required property var bridge
     required property var accountStore
@@ -20,12 +20,13 @@ ModalOverlay {
     }
 
     ColumnLayout {
+        id: contentCol
         anchors.fill: parent
         spacing: 14
 
         Text {
             Layout.fillWidth: true
-            text: "Enter your 12 or 24 word mnemonic phrase separated by spaces, followed by a new master encryption password."
+            text: "Enter your 15 word mnemonic phrase separated by spaces, followed by a new master encryption password."
             color: theme.textSecondary
             font.family: theme.fontFamily
             font.pixelSize: theme.fontSizeBody
@@ -35,7 +36,7 @@ ModalOverlay {
         TextField {
             id: mnemonicInput
             Layout.fillWidth: true
-            placeholder: "Enter 12 or 24 words separated by spaces..."
+            placeholder: "Enter 15 words separated by spaces..."
         }
 
         TextField {
@@ -68,6 +69,7 @@ ModalOverlay {
 
         RowLayout {
             Layout.fillWidth: true
+            Layout.topMargin: 4
 
             Item {
                 Layout.fillWidth: true
@@ -82,12 +84,21 @@ ModalOverlay {
         }
     }
 
+    function formatRestoreError(rawErr) {
+        var msg = String(rawErr || "");
+        if (msg.indexOf("InvalidChecksum") !== -1 || msg.indexOf("Invalid mnemonic") !== -1 || msg.indexOf("UnknownWord") !== -1 || msg.indexOf("BadWordCount") !== -1) {
+            return "Invalid seed phrase for this keystore: words or word order do not match a valid BIP-39 checksum (" + msg + "). Please verify your seed or create a new wallet.";
+        }
+        return msg || "Failed to restore wallet";
+    }
+
     function submitRestore() {
         modal.errorMessage = "";
         var m = mnemonicInput.text.trim();
-        var words = m.split(/\s+/);
-        if (words.length !== 12 && words.length !== 24) {
-            modal.errorMessage = "Mnemonic phrase must be exactly 12 or 24 words (got " + words.length + ")";
+        var words = m.length > 0 ? m.split(/\s+/) : [];
+        var validCounts = [12, 15, 18, 21, 24];
+        if (validCounts.indexOf(words.length) === -1) {
+            modal.errorMessage = "Mnemonic phrase must be 15 words (got " + words.length + ")";
             return;
         }
 
@@ -110,7 +121,7 @@ ModalOverlay {
                 accountStore.refreshAccounts();
                 modal.close();
             } else {
-                modal.errorMessage = res && res.error ? res.error : "Failed to restore wallet";
+                modal.errorMessage = modal.formatRestoreError(res && res.error ? res.error : "");
             }
         });
     }

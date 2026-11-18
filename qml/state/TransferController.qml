@@ -342,7 +342,7 @@ Item {
             if (amt > poolBal) {
                 return {
                     valid: false,
-                    message: "Insufficient " + (isSenderPriv ? "shielded" : "public") + " balance (" + amt + " > " + poolBal + " LEZ)"
+                    message: "Insufficient " + (isSenderPriv ? "shielded" : "public") + " balance (" + amt + " > " + poolBal + " LGO)"
                 };
             }
         }
@@ -371,7 +371,7 @@ Item {
             if (localDest && (localDest.is_private === true || localDest.privacy === "private") && (destExistingBal + amt <= 5070616)) {
                 return {
                     valid: false,
-                    message: "Shielding to a 0-balance private account requires > 5,070,616 LEZ raw units to cover the private execution fee reserve."
+                    message: "Shielding to a 0-balance private account requires > 5,070,616 LGO raw units to cover the private execution fee reserve."
                 };
             }
         }

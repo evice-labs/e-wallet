@@ -111,7 +111,7 @@ Item {
                 text: control.text
                 color: theme.textPrimary
                 font.family: theme.fontFamily
-                font.pixelSize: control.isCompact ? (control.text.length <= 2 ? 14 : theme.fontSizeSmall) : theme.fontSizeBody
+                font.pixelSize: control.isCompact ? (control.text.length <= 2 ? theme.fontSizeBody : theme.fontSizeSmall) : theme.fontSizeBody
                 font.weight: control.isPrimary ? Font.DemiBold : Font.Medium
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter

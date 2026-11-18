@@ -91,7 +91,7 @@ Card {
 
         // BODY: Asset, Recipient & Amount Inputs
 
-        // Asset Selector (Native LEZ vs Token Program)
+        // Asset Selector (Native vs Token Program)
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -105,7 +105,7 @@ Card {
 
             SegmentedBar {
                 TabButton {
-                    text: "Native LEZ"
+                    text: "Native LGO"
                     isActive: !transferCtrl || transferCtrl.selectedAsset === "native"
                     onClicked: {
                         if (transferCtrl)
@@ -147,13 +147,23 @@ Card {
 
             Repeater {
                 model: accountStore.tokens || []
-                delegate: Button {
-                    isCompact: true
+                delegate: Text {
+                    readonly property bool isSel: !!(transferCtrl && transferCtrl.selectedToken && transferCtrl.selectedToken.holding_id === modelData.holding_id)
                     text: modelData.symbol + " (" + (modelData.formatted_balance || "0") + ")"
-                    isPrimary: transferCtrl && transferCtrl.selectedToken && transferCtrl.selectedToken.holding_id === modelData.holding_id
-                    onClicked: {
-                        if (transferCtrl)
-                            transferCtrl.selectedToken = modelData;
+                    color: isSel ? theme.textPrimary : (tokMouse.containsMouse ? theme.textPrimary : theme.textSecondary)
+                    font.family: theme.fontFamily
+                    font.pixelSize: theme.fontSizeSmall
+                    font.weight: isSel ? theme.weightBold : theme.weightMedium
+
+                    MouseArea {
+                        id: tokMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (transferCtrl)
+                                transferCtrl.selectedToken = modelData;
+                        }
                     }
                 }
             }
