@@ -53,7 +53,7 @@ Card {
                     color: theme.textPrimary
                     font.family: theme.fontFamily
                     font.pixelSize: theme.fontSizeBody
-                    font.weight: Font.DemiBold
+                    font.weight: theme.weightBold
                 }
 
                 RowLayout {
@@ -79,7 +79,7 @@ Card {
                         }
                         color: theme.textSecondary
                         font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeTiny
+                        font.pixelSize: theme.fontSizeSmall
                     }
                 }
             }
@@ -118,7 +118,7 @@ Card {
                         }
                     }
 
-                    color: cascadedAvatarContainer.secondaryAcc ? (backHoverArea.containsMouse ? "#2a4365" : "#1e293b") : (backHoverArea.containsMouse ? theme.bgSurfaceSubtle : "#252b42")
+                    color: backHoverArea.containsMouse ? theme.bgSurfaceSubtle : theme.bgSurfaceElevated
                     border.color: "transparent"
                     border.width: 0
 
@@ -131,8 +131,8 @@ Card {
                             anchors.centerIn: parent
                             text: accountStore.getAccountLabel(cascadedAvatarContainer.secondaryAcc).substring(0, 1).toUpperCase()
                             font.family: theme.fontFamily
-                            font.bold: true
-                            font.pixelSize: 14
+                            font.weight: theme.weightBold
+                            font.pixelSize: theme.fontSizeBody
                             color: theme.statusPublic
                         }
 
@@ -149,9 +149,9 @@ Card {
                             Text {
                                 anchors.centerIn: parent
                                 text: "⇄"
-                                font.pixelSize: 7
-                                color: "#0d1117"
-                                font.bold: true
+                                font.pixelSize: theme.fontSizeTiny
+                                color: theme.textPrimary
+                                font.weight: theme.weightBold
                             }
                         }
                     }
@@ -165,8 +165,8 @@ Card {
                             anchors.centerIn: parent
                             text: "+"
                             font.family: theme.fontFamily
-                            font.bold: true
-                            font.pixelSize: 18
+                            font.weight: theme.weightBold
+                            font.pixelSize: theme.fontSizeSubtitle
                             color: backHoverArea.containsMouse ? theme.textPrimary : theme.textMuted
                         }
                     }
@@ -212,8 +212,8 @@ Card {
                         anchors.centerIn: parent
                         text: accountStore.activeAccountInitial
                         font.family: theme.fontFamily
-                        font.bold: true
-                        font.pixelSize: 15
+                        font.weight: theme.weightBold
+                        font.pixelSize: theme.fontSizeBody
                         color: theme.textPrimary
                     }
 
@@ -251,7 +251,7 @@ Card {
                     Layout.fillWidth: true
 
                     Text {
-                        text: balanceCard.activeAssetTab === "native" ? "Total LEZ Balance (units)" : "Fungible Token Holdings"
+                        text: balanceCard.activeAssetTab === "native" ? "Total LGO Balance (units)" : "Fungible Token Holdings"
                         color: theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall
@@ -270,9 +270,9 @@ Card {
                         font.family: theme.fontFamily
                         font.pixelSize: {
                             if (balanceCard.activeAssetTab === "native") {
-                                return balanceCard.width < 460 ? 34 : theme.fontSizeDisplay;
+                                return balanceCard.width < 460 ? theme.fontSizeHero : theme.fontSizeDisplay;
                             }
-                            return balanceCard.width < 460 ? theme.fontSizeHero : (theme.fontSizeHero + 2);
+                            return balanceCard.width < 460 ? theme.fontSizeTitle : theme.fontSizeHero;
                         }
                         font.weight: Font.Bold
                         elide: Text.ElideRight
@@ -291,7 +291,7 @@ Card {
                     Layout.alignment: Qt.AlignVCenter
 
                     TabButton {
-                        text: "LEZ Native"
+                        text: "LGO Native"
                         isActive: balanceCard.activeAssetTab === "native"
                         onClicked: balanceCard.activeAssetTab = "native"
                     }
@@ -312,7 +312,7 @@ Card {
                 visible: balanceCard.width < 500
 
                 TabButton {
-                    text: "LEZ Native"
+                    text: "LGO Native"
                     isActive: balanceCard.activeAssetTab === "native"
                     onClicked: balanceCard.activeAssetTab = "native"
                 }
@@ -385,7 +385,7 @@ Card {
 
                         // Token Balance
                         Text {
-                            text: (modelData.formatted_balance || "0.00") + " " + modelData.symbol
+                            text: (modelData.formatted_balance || "0") + " " + modelData.symbol
                             color: theme.textPrimary
                             font.family: theme.fontFamily
                             font.pixelSize: theme.fontSizeTitle
@@ -406,7 +406,6 @@ Card {
 
             Text {
                 id: addTokenActionText
-                visible: !accountStore.tokens || accountStore.tokens.length === 0
                 text: "+ Add Token Holding"
                 color: addTokenMouseArea.containsMouse ? theme.borderActive : theme.textPrimary
                 font.family: theme.fontFamily
@@ -424,22 +423,6 @@ Card {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: balanceCard.openAddTokenModal()
-                }
-            }
-
-            RowLayout {
-                visible: accountStore.tokens && accountStore.tokens.length > 0
-                Layout.fillWidth: true
-
-                Item {
-                    Layout.fillWidth: true
-                }
-
-                Button {
-                    text: "+ Add Token Holding"
-                    isCompact: true
-                    customHeight: 28
                     onClicked: balanceCard.openAddTokenModal()
                 }
             }

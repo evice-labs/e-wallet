@@ -335,12 +335,12 @@ ModalOverlay {
                 horizontalAlignment: Text.AlignHCenter
                 text: {
                     if (!txData || !txData.amount || txData.amount === "-")
-                        return "0 LEZ";
+                        return "0 LGO";
                     var amtStr = String(txData.amount).trim();
                     if (txData.category === "Testimonials" || txData.status === "Ledger")
                         return amtStr;
                     if (!/\s+[A-Za-z]+$/.test(amtStr)) {
-                        return amtStr + " LEZ";
+                        return amtStr + " LGO";
                     }
                     return amtStr;
                 }
@@ -360,7 +360,7 @@ ModalOverlay {
                     return (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || txData.isFailed === true);
                 }
                 font.family: theme.fontFamily
-                font.pixelSize: 28
+                font.pixelSize: theme.titleText
                 font.weight: Font.Bold
             }
 
@@ -449,7 +449,7 @@ ModalOverlay {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    // Tx Hash Label (Judul warna putih)
+                    // Tx Hash Label
                     Text {
                         text: "Tx Hash"
                         color: theme.textPrimary

@@ -199,7 +199,7 @@ Rectangle {
                     }
                 }
 
-                // 12-WORD MNEMONIC DISPLAY
+                // MNEMONIC DISPLAY
                 ColumnLayout {
                     visible: onboardingView.currentStep === 3
                     Layout.fillWidth: true
@@ -207,7 +207,7 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        text: "Write down these 12 secret words in numerical order and keep them in a safe offline location. Do not share or store them in plain text."
+                        text: "Write down these " + onboardingView.mnemonicWords.length + " secret words in numerical order and keep them in a safe offline location. Do not share or store them in plain text."
                         color: theme.accentOrange
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeBody
@@ -217,25 +217,28 @@ Rectangle {
 
                     InsetPanel {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 180
+                        Layout.preferredHeight: Math.max(180, seedGrid.implicitHeight + 32)
 
                         GridLayout {
-                            anchors.fill: parent
-                            anchors.margins: 14
+                            id: seedGrid
+                            anchors.centerIn: parent
                             columns: 3
-                            rowSpacing: 10
-                            columnSpacing: 12
+                            rowSpacing: 12
+                            columnSpacing: 24
 
                             Repeater {
                                 model: onboardingView.mnemonicWords
                                 delegate: Row {
+                                    Layout.preferredWidth: 120
+                                    Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
                                     spacing: 6
                                     Text {
                                         text: (index + 1) + "."
                                         color: theme.textMuted
                                         font.family: theme.fontMono
                                         font.pixelSize: theme.fontSizeSmall
-                                        width: 22
+                                        width: 24
+                                        horizontalAlignment: Text.AlignRight
                                     }
                                     Text {
                                         text: modelData
@@ -251,15 +254,7 @@ Rectangle {
 
                     RowLayout {
                         Layout.fillWidth: true
-
-                        Text {
-                            text: "BIP-39 STANDARD ROOT SEED"
-                            color: theme.statusSuccess
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeTiny
-                            font.weight: Font.Bold
-                        }
-
+                        
                         Item {
                             Layout.fillWidth: true
                         }

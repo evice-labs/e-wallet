@@ -215,7 +215,7 @@ Item {
                 var creditedFormatted = accountStore ? accountStore.formatThousands(creditedRaw) : String(creditedRaw);
                 ctrl.unbridgedRawBalance = "0";
                 ctrl.unbridgedL1Tokens = "0 LOGOS";
-                ctrl.statusMessage = "Deposit broadcasted! +" + creditedFormatted + " LEZ submitted to mempool, awaiting block inclusion...";
+                ctrl.statusMessage = "Deposit broadcasted! +" + creditedFormatted + " LGO submitted to mempool, awaiting block inclusion...";
                 ctrl.isSuccessStatus = true;
                 accountStore.refreshAccounts();
                 postDepositRefreshTimer.restart();

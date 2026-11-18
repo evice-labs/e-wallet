@@ -46,7 +46,7 @@ Card {
                 Layout.fillWidth: true
             }
 
-            // System-derived Author Affordance (Zero Manual Input)
+            // System-derived Author Affordance
             RowLayout {
                 spacing: 4
                 Text {
