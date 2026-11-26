@@ -26,88 +26,160 @@ Rectangle {
     Item {
         anchors.fill: parent
 
-        // Centered Neo-Skeuomorphic Onboarding Card
+        // Step 1: Two-column split card
+        Rectangle {
+            id: welcomeCard
+            visible: onboardingView.currentStep === 1
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 40, 760)
+            height: Math.max(welcomeLeftCol.implicitHeight + theme.spacingXlarge * 2, 360)
+            radius: theme.radiusCard
+            color: theme.bgSurface
+            clip: true
+
+            RowLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.fillHeight: true
+
+                    ColumnLayout {
+                        id: welcomeLeftCol
+                        anchors.fill: parent
+                        anchors.margins: theme.spacingXlarge
+                        spacing: 14
+
+                        // Header
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Welcome to Wallez"
+                            color: theme.textPrimary
+                            font.family: theme.fontFamily
+                            font.pixelSize: 34
+                            font.weight: Font.Bold
+                            wrapMode: Text.WordWrap
+                        }
+
+                        Item {
+                            Layout.fillHeight: true
+                        }
+
+                        // Body
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 14
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: 1
+                                color: theme.borderSubtle
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: "Wallez is a native Logos Basecamp app providing multi-account key management, seamless on-chain transfers, testnet token mining, zero-knowledge shielded transactions, and LNS domain resolution on the Logos Execution Zone."
+                                color: theme.textSecondary
+                                font.family: theme.fontFamily
+                                font.pixelSize: theme.fontSizeBody
+                                wrapMode: Text.WordWrap
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 12
+
+                                Text {
+                                    text: "LOGOS LEZ TESTNET"
+                                    color: theme.statusSuccess
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: theme.fontSizeTiny
+                                    font.weight: Font.Bold
+                                }
+
+                                Text {
+                                    text: "ZK-SNARK SHIELDED CIRCUIT"
+                                    color: theme.statusShielded
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: theme.fontSizeTiny
+                                    font.weight: Font.Bold
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
+                                }
+                            }
+                        }
+
+                        Item {
+                            Layout.fillHeight: true
+                        }
+
+                        // Footer
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            Button {
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 1
+                                text: "Restore Existing Vault"
+                                isPrimary: false
+                                isFlat: true
+                                onClicked: {
+                                    onboardingView.openRestoreModal();
+                                }
+                            }
+
+                            Button {
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 1
+                                text: "Create New Vault"
+                                isPrimary: true
+                                isFlat: true
+                                onClicked: {
+                                    onboardingView.currentStep = 2;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.fillHeight: true
+                    clip: true
+
+                    Image {
+                        anchors.fill: parent
+                        source: Qt.resolvedUrl("../assets/sailBroad.jpg")
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                    }
+                }
+            }
+        }
+
+        // Steps 2-4: Standard Onboarding Card
         Card {
             id: mainCard
+            visible: onboardingView.currentStep !== 1
             anchors.centerIn: parent
             width: Math.min(parent.width - 40, 600)
             title: {
-                if (currentStep === 1)
-                    return "WELCOME TO WALLEZ";
                 if (currentStep === 2)
-                    return "STEP 1: SECURE YOUR KEYSTORE";
+                    return "Step 1: Secure Your Keystore";
                 if (currentStep === 3)
-                    return "STEP 2: BACKUP RECOVERY PHRASE";
-                return "SETUP COMPLETE";
+                    return "Step 2: Backup Recovery Phrase";
+                return "Setup Complete";
             }
 
             ColumnLayout {
                 width: parent.width
                 spacing: 16
-
-                // INITIAL CHOICE
-                ColumnLayout {
-                    visible: onboardingView.currentStep === 1
-                    Layout.fillWidth: true
-                    spacing: 16
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: "Wallez is a native Logos Basecamp module providing multi-account key management, seamless on-chain transfers, testnet token mining, zero-knowledge shielded transactions, and LNS domain resolution on the Logos Execution Zone."
-                        color: theme.textSecondary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeBody
-                        wrapMode: Text.WordWrap
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 12
-
-                        Text {
-                            text: "LOGOS LEZ TESTNET"
-                            color: theme.statusSuccess
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeTiny
-                            font.weight: Font.Bold
-                        }
-
-                        Text {
-                            text: "ZK-SNARK SHIELDED CIRCUIT"
-                            color: theme.statusShielded
-                            font.family: theme.fontFamily
-                            font.pixelSize: theme.fontSizeTiny
-                            font.weight: Font.Bold
-                        }
-
-                        Item {
-                            Layout.fillWidth: true
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 12
-
-                        Button {
-                            Layout.fillWidth: true
-                            text: "Restore Existing Vault"
-                            isPrimary: false
-                            onClicked: {
-                                onboardingView.openRestoreModal();
-                            }
-                        }
-
-                        Button {
-                            Layout.fillWidth: true
-                            text: "Create New Vault"
-                            isPrimary: true
-                            onClicked: {
-                                onboardingView.currentStep = 2;
-                            }
-                        }
-                    }
-                }
 
                 // MASTER PASSWORD
                 ColumnLayout {
@@ -168,6 +240,7 @@ Rectangle {
                         Button {
                             text: onboardingView.isCreating ? "Generating Seed..." : "Generate Recovery Phrase"
                             isPrimary: true
+                            isFlat: true
                             enabled: !onboardingView.isCreating
                             onClicked: {
                                 onboardingView.errorMessage = "";
@@ -262,6 +335,7 @@ Rectangle {
                         Button {
                             text: "I Have Saved My Seed Phrase"
                             isPrimary: true
+                            isFlat: true
                             onClicked: {
                                 bridge.isInitialized = true;
                                 bridge.isLocked = false;

@@ -23,76 +23,144 @@ Rectangle {
     Item {
         anchors.fill: parent
 
-        Card {
+        // Two-column split card
+        Rectangle {
             anchors.centerIn: parent
-            width: Math.min(parent.width - 40, 380)
-            title: "Keystore Locked"
-            subtitle: "Argon2id + AES-256-GCM Memory Protection"
+            width: Math.min(parent.width - 40, 760)
+            height: Math.max(lockLeftCol.implicitHeight + theme.spacingXlarge * 2, 360)
+            radius: theme.radiusCard
+            color: theme.bgSurface
+            clip: true
 
-            ColumnLayout {
-                width: parent.width
-                spacing: 16
+            RowLayout {
+                anchors.fill: parent
+                spacing: 0
 
-                Rectangle {
+                Item {
                     Layout.fillWidth: true
-                    implicitHeight: 1
-                    color: theme.borderSubtle
-                }
+                    Layout.preferredWidth: 1
+                    Layout.fillHeight: true
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 6
+                    ColumnLayout {
+                        id: lockLeftCol
+                        anchors.fill: parent
+                        anchors.margins: theme.spacingXlarge
+                        spacing: 14
 
-                    Text {
-                        text: "Master Vault Password"
-                        color: theme.textSecondary
-                        font.family: theme.fontFamily
-                        font.pixelSize: theme.fontSizeSmall
-                        font.weight: Font.DemiBold
-                    }
+                        // Header
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: theme.spacingTiny
 
-                    TextField {
-                        id: passInput
-                        Layout.fillWidth: true
-                        placeholder: "Enter master passphrase to decrypt..."
-                        echoMode: TextInput.Password
-                        onAccepted: lockScreen.unlock()
-                    }
-                }
+                            Text {
+                                Layout.fillWidth: true
+                                text: "Keystore Locked"
+                                color: theme.textPrimary
+                                font.family: theme.fontFamily
+                                font.pixelSize: theme.titleText
+                                font.weight: Font.Bold
+                            }
 
-                Text {
-                    visible: lockScreen.errorMessage.length > 0
-                    Layout.fillWidth: true
-                    text: lockScreen.errorMessage
-                    color: theme.statusDanger
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSizeSmall
-                }
+                            Text {
+                                Layout.fillWidth: true
+                                text: "Argon2id + AES-256-GCM Memory Protection"
+                                color: theme.textSecondary
+                                font.family: theme.fontFamily
+                                font.pixelSize: theme.secondaryText
+                                wrapMode: Text.WordWrap
+                            }
+                        }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.topMargin: 12
-                    spacing: 12
+                        Item {
+                            Layout.fillHeight: true
+                        }
 
-                    Button {
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 1
-                        text: "Restore from Seed"
-                        isPrimary: false
-                        isFlat: true
-                        onClicked: {
-                            lockScreen.openRestoreModal();
+                        // Body
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 14
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: 1
+                                color: theme.borderSubtle
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Text {
+                                    text: "Master Vault Password"
+                                    color: theme.textSecondary
+                                    font.family: theme.fontFamily
+                                    font.pixelSize: theme.fontSizeSmall
+                                    font.weight: Font.DemiBold
+                                }
+
+                                TextField {
+                                    id: passInput
+                                    Layout.fillWidth: true
+                                    placeholder: "Enter master passphrase to decrypt..."
+                                    echoMode: TextInput.Password
+                                    onAccepted: lockScreen.unlock()
+                                }
+                            }
+
+                            Text {
+                                visible: lockScreen.errorMessage.length > 0
+                                Layout.fillWidth: true
+                                text: lockScreen.errorMessage
+                                color: theme.statusDanger
+                                font.family: theme.fontFamily
+                                font.pixelSize: theme.fontSizeSmall
+                            }
+                        }
+
+                        Item {
+                            Layout.fillHeight: true
+                        }
+
+                        // Footer
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            Button {
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 1
+                                text: "Restore from Seed"
+                                isPrimary: false
+                                isFlat: true
+                                onClicked: {
+                                    lockScreen.openRestoreModal();
+                                }
+                            }
+
+                            Button {
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 1
+                                text: lockScreen.isUnlocking ? "Decrypting Vault..." : "Unlock Keystore"
+                                isPrimary: true
+                                isFlat: true
+                                enabled: !lockScreen.isUnlocking && passInput.text.length > 0
+                                onClicked: lockScreen.unlock()
+                            }
                         }
                     }
+                }
 
-                    Button {
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 1
-                        text: lockScreen.isUnlocking ? "Decrypting Vault..." : "Unlock Keystore"
-                        isPrimary: true
-                        isFlat: true
-                        enabled: !lockScreen.isUnlocking && passInput.text.length > 0
-                        onClicked: lockScreen.unlock()
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.fillHeight: true
+                    clip: true
+
+                    Image {
+                        anchors.fill: parent
+                        source: Qt.resolvedUrl("../assets/sailBerth.jpg")
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
                     }
                 }
             }

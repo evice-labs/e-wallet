@@ -96,8 +96,8 @@ QtObject {
     readonly property int radiusMedium: 6
     readonly property int radiusLarge: 8      // Theme.spacing.radiusLarge
     readonly property int radiusPill: 999     // Theme.spacing.radiusPill
-    readonly property int radiusButton: 6
-    readonly property int radiusCard: 8       // matches radiusLarge (8)
-    readonly property int radiusInset: 6
+    readonly property int radiusButton: 4
+    readonly property int radiusCard: 4
+    readonly property int radiusInset: 4
     readonly property int radiusProgress: 4
 }

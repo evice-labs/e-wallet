@@ -18,6 +18,7 @@ Rectangle {
     implicitWidth: 320
     implicitHeight: control.label.length > 0 ? 58 : 36
 
+    radius: theme.radiusSmall
     color: theme.bgInsetTrough
     border.color: input.activeFocus ? theme.borderActive : "transparent"
     border.width: input.activeFocus ? 1.5 : 0
