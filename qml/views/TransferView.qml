@@ -105,7 +105,7 @@ Card {
 
             SegmentedBar {
                 TabButton {
-                    text: "Native LGO"
+                    text: "Native LEZ"
                     isActive: !transferCtrl || transferCtrl.selectedAsset === "native"
                     onClicked: {
                         if (transferCtrl)

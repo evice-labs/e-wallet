@@ -291,7 +291,7 @@ Card {
                     Layout.alignment: Qt.AlignVCenter
 
                     TabButton {
-                        text: "LGO Native"
+                        text: "LEZ Native"
                         isActive: balanceCard.activeAssetTab === "native"
                         onClicked: balanceCard.activeAssetTab = "native"
                     }
@@ -312,7 +312,7 @@ Card {
                 visible: balanceCard.width < 500
 
                 TabButton {
-                    text: "LGO Native"
+                    text: "LEZ Native"
                     isActive: balanceCard.activeAssetTab === "native"
                     onClicked: balanceCard.activeAssetTab = "native"
                 }

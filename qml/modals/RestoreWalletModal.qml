@@ -14,6 +14,12 @@ ModalOverlay {
     required property var accountStore
 
     property string errorMessage: ""
+    readonly property int enteredWordCount: {
+        var trimmed = mnemonicInput.text.trim();
+        if (!trimmed)
+            return 0;
+        return trimmed.split(/\s+/).length;
+    }
 
     Theme {
         id: theme
@@ -26,7 +32,7 @@ ModalOverlay {
 
         Text {
             Layout.fillWidth: true
-            text: "Enter your 15 word mnemonic phrase separated by spaces, followed by a new master encryption password."
+            text: modal.enteredWordCount > 0 ? ("Detected " + modal.enteredWordCount + " words (supports 12, 15, 18, 21, or 24-word BIP-39 phrases), followed by a new master encryption password.") : "Enter your 12, 15, 18, 21, or 24-word BIP-39 mnemonic phrase separated by spaces, followed by a new master encryption password."
             color: theme.textSecondary
             font.family: theme.fontFamily
             font.pixelSize: theme.fontSizeBody
@@ -36,7 +42,7 @@ ModalOverlay {
         TextField {
             id: mnemonicInput
             Layout.fillWidth: true
-            placeholder: "Enter 15 words separated by spaces..."
+            placeholder: "Enter 12, 15, 18, 21, or 24 words separated by spaces..."
         }
 
         TextField {

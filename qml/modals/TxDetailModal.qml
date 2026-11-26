@@ -335,13 +335,10 @@ ModalOverlay {
                 horizontalAlignment: Text.AlignHCenter
                 text: {
                     if (!txData || !txData.amount || txData.amount === "-")
-                        return "0 LGO";
+                        return "0";
                     var amtStr = String(txData.amount).trim();
                     if (txData.category === "Testimonials" || txData.status === "Ledger")
                         return amtStr;
-                    if (!/\s+[A-Za-z]+$/.test(amtStr)) {
-                        return amtStr + " LGO";
-                    }
                     return amtStr;
                 }
                 color: {

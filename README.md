@@ -40,7 +40,7 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 - **Account Switcher & Active Persistence.** Seamlessly toggle between transparent public accounts (`Public/...`) and shielded zero-knowledge accounts (`Private/...`) with distinct visual status badges (`BalanceView.qml`). Active account selections are persisted across wallet lock/unlock cycles in `AccountStore.qml`.
 - **Unified Canonical Telemetry & Address Copy.** Clear visual presentation tailored to each account type. Displays the account's authentic balance, cryptographic privacy model (`PUBLIC ACCOUNT` vs `SHIELDED ZERO-KNOWLEDGE ACCOUNT`), and canonical address (`Public/<id>` or `Private/<id>`) with a 1-click clipboard copy affordance.
 - **Streamlined Account Creation with Privacy Context.** Create new accounts (`CreateAccountModal.qml`) with clear `Public Unshielded` vs `Private Shielded` selectors and dynamic context cards explaining transparent on-chain addresses vs zero-knowledge commitments and nullifiers.
-- **Asset Balances & Token Program Holdings.** Real-time balance queries across Native LGO, Shielded Zero-Knowledge pools, and Logos Token Program holdings. `AccountStore.qml` dynamically queries `listTokenHoldings` and `listAllTokenHoldings` from the Core Module, mapping active tokens without hardcoded mock fallbacks.
+- **Asset Balances & Token Program Holdings.** Real-time balance queries across Native LEZ (`LEZ Native` / `Native LEZ` UI selectors), Shielded Zero-Knowledge pools, and Logos Token Program holdings. `AccountStore.qml` dynamically queries `listTokenHoldings` and `listAllTokenHoldings` from the Core Module, mapping active tokens without hardcoded mock fallbacks.
 - **Account Deletion & Safety Safeguards.** Safely delete non-primary accounts via the danger zone in `SettingsModal.qml`. Built-in safeguards enforce a minimum of 1 active account, automatically re-route to an adjacent account, persist deletion state (`deletedAccountsJson`), and immediately redirect the user back to the dashboard.
 
 ### 3. 4-Way Asset Transfers & Instant LNS Domain Resolution
@@ -68,9 +68,9 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 
 ### 6. Activity Feed & Transaction Ledger
 - **Expanded 7-Item Activity Window.** Displays up to 7 rich transaction items per view with calibrated 40px row heights and pagination controls (`‹ Page 1 of N ›`) (`ActivityLedgerView.qml`).
-- **Universal dApp Activity Tracking (`dApps` Filter & `DAPP` Badge).** Automatically records external dApp transactions approved via `ApprovalManager.qml` under the `dApps` category and `DAPP` status badge. Displays the originating dApp name as the activity title, records standard numeric transfer value (`0` / `0 LGO` for pure contract calls, or the transferred token amount for value-bearing calls), and surfaces `dApp Origin` and `Contract Action` telemetry inside `TxDetailModal.qml`.
+- **Universal dApp Activity Tracking (`dApps` Filter & `DAPP` Badge).** Automatically records external dApp transactions approved via `ApprovalManager.qml` under the `dApps` category and `DAPP` status badge. Displays the originating dApp name as the activity title, records standard numeric transfer value (`0` for pure contract calls, or the transferred token amount for value-bearing calls), and surfaces `dApp Origin` and `Contract Action` telemetry inside `TxDetailModal.qml`.
 - **Deterministic zkVM Gas Telemetry & Reserve Normalization.** Evaluates and normalizes gas execution cycles in `TxDetailModal.qml` and `ActivityLedgerView.qml` via `GasCalculator.qml` (`gasCalc.normalizeDisplay(...)`), accurately reflecting execution gas baselines (`275,640` raw units for external dApp zkVM contract invocations, `275,456` for on-chain Testimonials, `2,968` for standard public transfers, `12,400` for note shielding, and `409,764` for private ZK verifications).
-- **Protocol-Adaptive Sequencer Reconciliation Engine.** All transactions requiring sequencer inclusion (Transfers, Channel Bridge Deposits, Testimonials, and External dApp Contract Invocations) share a unified, event-driven reconciliation pipeline (`reconciliationTimer`). The poller queries `getTransactionStatus` directly via `e-wallet-core` (adhering to Basecamp's zero-network sandbox), dynamically tracking `Pending` status until confirmed with height (`Block #<height>`), or marking as dropped if missing from mempool after retry cycles. The timer runs strictly on-demand when pending transactions exist, auto-stopping upon settlement.
+- **Protocol-Adaptive Sequencer Reconciliation Engine.** All transactions requiring sequencer inclusion (Transfers, Channel Bridge Deposits, Testimonials, and External dApp Contract Invocations) share a unified, event-driven reconciliation pipeline (`reconciliationTimer`). The poller queries `getTransactionStatus` directly via `e-wallet-core` (adhering to Basecamp's zero-network sandbox), tracking `PENDING` status until confirmed with height (`Block #<height>`), surfacing a non-destructive `STALLED >10M` delay badge if still pending past 10 minutes while continuing reconciliation, and marking `DROP FROM MEMPOOL` only when factually reported as `"dropped"`. The timer runs strictly on-demand when pending transactions exist, auto-stopping upon settlement.
 - **Strict Status Taxonomy & Theme Palette.** Enforces consistent, non-redundant visual status cues: dark yellow (`theme.accentDarkYellow`, `#D4A017`) for `CHANNEL BRIDGE` in-flight deposits, shielded accent (`theme.statusShielded`) for `DAPP` and `PRIVATE` / `SHIELD` operations, amber for pending sequencer states, status-success green (`theme.statusSuccess`) for confirmed inbound transfers, and destructive red (`theme.statusDanger`) for reverted/failed operations.
 - **Inline Refresh Action.** High-contrast tactile action button utilizing a white alpha-cutout refresh icon (`Refresh.png`) located directly alongside the filter tabs.
 - **Segmented Filter Tabs.** Real-time chronological transaction history filterable by *All*, *Transfers*, *Shields*, *Testimonials*, and *dApps*.
@@ -81,7 +81,6 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
   - **Account Customization & Labeling:** Copy full account ID, inline label renaming with instantaneous UI feedback and disk persistence (`labelsJson`).
   - **Danger Zone (Account Deletion):** Secure inline confirmation with automatic fallback account selection and dashboard redirection.
   - **Master Vault Password Change:** Re-encrypt the Argon2id keystore with new passphrase credentials directly from the settings interface.
-  - **Secret Key Inspector & Export:** Protected 32-byte private key inspection with explicit security disclosure and auto-clearing clipboard feedback.
   - **Event-Driven Connected dApp Session Management:** Automatically refreshes active external dApp sessions on modal visibility, wallet state changes, and application focus without background polling timers, displaying full untruncated `session_id`s with 1-click session revocation.
   - **Storage Telemetry & Keystore Actions:** Instant copy for on-disk vault storage locations, seed phrase restore triggers, and quick access to ZK identity accountability.
   - **Synchronized Scrollbar Navigation:** Integrated scroll track and thumb providing effortless navigation across all settings categories.
@@ -110,6 +109,8 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 e-wallet-ui/
 ├── assets/
 │   ├── wallez.png                  # Official WALLEZ 256x256 application icon
+│   ├── sailBerth.jpg               # Lockscreen split-card visual asset
+│   ├── sailBroad.jpg               # Onboarding split-card visual asset
 │   └── icons/                      # Source asset repository
 │       └── Refresh.png             # Refresh icon
 ├── metadata.json                   # Basecamp module manifest (type: ui_qml)
@@ -119,17 +120,18 @@ e-wallet-ui/
 ├── qml/
 │   ├── Main.qml                    # Bento Grid + Responsive Breakpoint + Adaptive Scrollbar
 │   ├── assets/
+│   │   ├── sailBerth.jpg           # Bundled lockscreen split-card visual asset
+│   │   ├── sailBroad.jpg           # Bundled onboarding split-card visual asset
 │   │   └── icons/
 │   │       └── Refresh.png         # White alpha-cutout icon for plugin sandbox compatibility
 │   ├── theme/
 │   │   ├── Theme.qml               # Design tokens (#171717 canvas, #262626 card, #141414 inset)
 │   │   └── qmldir
 │   ├── controls/                   # Reusable tactile components (Zero Icon)
-│   │   ├── Button.qml              # Tactile pill button (Primary Blue, Charcoal, Destructive, Icons)
+│   │   ├── Button.qml              # Tactile flat/primary button (Primary Blue, Charcoal, Destructive, Icons)
 │   │   ├── Card.qml                # Beveled physical container with standardized 38px header & spacing
 │   │   ├── InsetPanel.qml          # Sunken OLED/LCD display panel
 │   │   ├── TextField.qml           # Recessed input field with focus glow
-│   │   ├── ProgressBar.qml         # Recessed grooved progress track
 │   │   ├── SegmentedBar.qml        # Inset capsule for tactile multi-tab selections
 │   │   ├── TabButton.qml           # Segmented tactile tab switch button
 │   │   ├── ModalOverlay.qml        # Tactile modal dialog backdrop & card
@@ -158,7 +160,7 @@ e-wallet-ui/
 │       ├── ApprovalModal.qml       # dApp permission & effect simulation consent modal
 │       ├── IdentityModal.qml       # Zero-knowledge identity commitment, nullifiers & BIP-340 Schnorr
 │       ├── ProfileModal.qml        # Account identity switcher & profile drawer modal
-│       ├── SettingsModal.qml       # Comprehensive account config, renaming, deletion, password change, key export & permissions
+│       ├── SettingsModal.qml       # Comprehensive account config, renaming, deletion, password change & permissions
 │       ├── TxDetailModal.qml       # Detailed on-chain transaction telemetry & block inspector
 │       ├── AddTokenModal.qml       # Custom Logos Token Program holding registration modal
 │       └── qmldir

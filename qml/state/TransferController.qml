@@ -504,7 +504,9 @@ Item {
             // Submit approval for internal wallet transfer execution
             bridge.invoke("submitApprovalDecision", [reqId, 1], function (decRes) {
                 var pollAttempts = 0;
-                var maxAttempts = 240;
+                // Private routes invoke real zkVM proving (which can take several minutes on low-end CPUs).
+                var isPrivateRoute = (controller.transferMode !== "pub_to_pub");
+                var maxAttempts = isPrivateRoute ? 3600 : 240;
 
                 function pollStatus() {
                     bridge.invoke("getRequestStatus", [reqId], function (statusRes) {

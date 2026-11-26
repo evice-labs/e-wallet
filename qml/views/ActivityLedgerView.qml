@@ -445,6 +445,10 @@ Card {
         setTransactionStatus(txHash, "Drop from mempool", false, true);
     }
 
+    function markTxStalled(txHash) {
+        setTransactionStatus(txHash, "Stalled >10m", true, false);
+    }
+
     function reconcilePendingTransactions() {
         if (isReconciling)
             return;
@@ -491,10 +495,10 @@ Card {
                         ledgerCard.markTxDropped(txHash);
                     }
                 } else if (!wasAlreadyDropped && ageMs > 600000 && (!res || res.status === "pending" || !res.block_id)) {
-                    // Aligned with logos-blockchain mempool retention (REMOVED_ITEM_GRACE_PERIOD = 10 mins):
-                    // If an active pending tx has not been included in any block after 10 minutes and sequencer returns pending/null,
-                    // the transaction has officially expired and dropped from mempool.
-                    ledgerCard.markTxDropped(txHash);
+                    // Keep reconciling stalled transactions while surfacing a non-destructive delay indicator.
+                    if (candBlock !== "Stalled >10m") {
+                        ledgerCard.markTxStalled(txHash);
+                    }
                 }
                 step();
             });
@@ -684,6 +688,9 @@ Card {
                                             if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || modelData.isFailed === true) {
                                                 return "DROP FROM MEMPOOL";
                                             }
+                                            if (bStr === "Stalled >10m") {
+                                                return "STALLED >10M";
+                                            }
                                             if (modelData.isPending === true || bStr === "Pending" || bStr === "Pending Block" || bStr === "Sequencer Pending") {
                                                 return "PENDING";
                                             }
@@ -694,7 +701,7 @@ Card {
                                             if (bStr.indexOf("Drop") !== -1 || bStr.indexOf("Failed") !== -1 || modelData.isFailed === true) {
                                                 return theme.statusDanger;
                                             }
-                                            if (modelData.isPending === true || bStr === "Pending" || bStr === "Pending Block" || bStr === "Sequencer Pending") {
+                                            if (modelData.isPending === true || bStr === "Stalled >10m" || bStr === "Pending" || bStr === "Pending Block" || bStr === "Sequencer Pending") {
                                                 return theme.accentOrange;
                                             }
                                             return ledgerCard.statusColor(modelData.status);
