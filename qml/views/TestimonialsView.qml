@@ -22,7 +22,7 @@ Card {
                 var senderId = (accountStore && accountStore.activeAccount) ? accountStore.activeAccount.account_id : "";
                 var gasInfo = (testimonialCtrl && testimonialCtrl.calculateGas) ? testimonialCtrl.calculateGas(message) : null;
                 var gasUsedStr = gasInfo ? gasInfo.displayStr : "3,778";
-                var gasLimitStr = gasInfo ? gasInfo.gasLimitFormatted : "34,000";
+                var gasLimitStr = gasInfo ? gasInfo.gasLimitFormatted : "10,000,000";
                 testimonialCard.ledgerViewRef.addActivity(testimonialCtrl ? testimonialCtrl.activeAuthor : "Active Account", "Ledger", "Testimonials", previewText, "On-Chain Broadcast", false, txHash, gasUsedStr, "Pending", "Public ➝ zkVM Contract", senderId, gasLimitStr);
             }
         }

@@ -92,7 +92,7 @@ Rectangle {
                                 spacing: 12
 
                                 Text {
-                                    text: "LOGOS LEZ TESTNET"
+                                    text: "LOGOS LEZ TESTNET 0.4"
                                     color: theme.statusSuccess
                                     font.family: theme.fontFamily
                                     font.pixelSize: theme.fontSizeTiny

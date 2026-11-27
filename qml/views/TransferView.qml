@@ -47,7 +47,7 @@ Card {
                 var isToken = transferCtrl.selectedAsset === "token";
                 var gasInfo = transferCtrl.calculateGas ? transferCtrl.calculateGas(transferCtrl.transferMode, isToken) : null;
                 var gasFeeStr = gasInfo ? gasInfo.displayStr : "2,968";
-                var gasLimitStr = gasInfo ? gasInfo.gasLimitFormatted : "34,000";
+                var gasLimitStr = gasInfo ? gasInfo.gasLimitFormatted : "10,000,000";
 
                 var senderIsPriv = transferCtrl.transferMode === "priv_to_pub" || transferCtrl.transferMode === "priv_to_priv";
                 var destIsPriv = transferCtrl.transferMode === "pub_to_priv" || transferCtrl.transferMode === "priv_to_priv";

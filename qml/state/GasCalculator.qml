@@ -11,19 +11,19 @@ QtObject {
     // Execution Cycles benchmarks (RISC-V zkVM cycles)
     readonly property int gasPublicNative: 2968    // Standard native transparent transfer
     readonly property int gasPublicToken: 3450     // Standard fungible token transfer
-    readonly property int gasShield: 12400         // Note commitment + sparse Merkle tree insertion
+    readonly property int gasShield: 409764        // market::PRIVATE_VERIFY_GAS (PrivacyPreserving shield verification)
     readonly property int gasPrivateVerify: 409764 // market::PRIVATE_VERIFY_GAS (Succinct receipt verification)
     readonly property int gasContractBase: 2968    // Base smart contract invocation overhead
 
     // Storage byte sizes (wire serialized message length)
     readonly property int storPublicNative: 280
     readonly property int storPublicToken: 320
-    readonly property int storShield: 512
-    readonly property int storPrivate: 224063      // market::PRIVATE_GAS_STOR (PROOF_BYTES: 223551 + PAD: 512)
+    readonly property int storShield: 235661       // market::PROOF_BYTES (223047) + shield message/context bytes
+    readonly property int storPrivate: 237302      // market::PROOF_BYTES (223047) + private tx message/context bytes
     readonly property int storContractBase: 430
 
     // Standard Declared Gas Limits
-    readonly property int limitStandard: 34000
+    readonly property int limitStandard: 10000000  // wallet::DEFAULT_GAS_LIMIT (fee_core::market::MAX_GAS_EXEC)
     readonly property int limitPrivate: 500000
 
     function calculateTransferGas(transferMode, isToken) {
@@ -34,7 +34,7 @@ QtObject {
         if (transferMode === "pub_to_priv") {
             execCycles = gasShield;
             storBytes = storShield;
-            limit = limitStandard;
+            limit = limitPrivate;
         } else if (transferMode === "priv_to_pub") {
             execCycles = gasPrivateVerify;
             storBytes = storPrivate;
