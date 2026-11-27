@@ -46,10 +46,10 @@ It presents a tactile, secure, and intuitive graphical interface that integrates
 ### 3. 4-Way Asset Transfers & Instant LNS Domain Resolution
 - **Inline Route Indicator.** Positioned directly beneath the Amount & Max button row, displaying a clean white `"Route:"` label with status-colored route paths (`Public ➝ Public`, `Public ➝ Shield`, `Shield ➝ Public`, `Shield ➝ Shield`).
 - **Automated Privacy Route Detection.** `TransferController.qml` automatically inspects the sender's account privacy and recipient identifier prefix (`Private/...` vs `Public/...` vs `.lez`) to configure the route mode (`pub_to_pub`, `pub_to_priv`, `priv_to_pub`, `priv_to_priv`) with zero manual toggle overhead.
-- **Fresh Shielded Recipient Safety Notice.** Built-in validation checks inform the user when shielding (`Public ➝ Private`) to a freshly created private account with 0 balance, ensuring the amount exceeds the required private fee reserve (`> 5,070,616 raw units`) to prevent execution errors.
+- **Shielding Fee Reserve Validation.** Built-in validation checks verify that the public sender covers both the transfer amount and the LEZ `v0.4.0` shielding proof fee reserve (`~5,163,400 raw units` at base fee `8`) during `Public ➝ Private` transfers.
 - **"Your Accounts" 1-Click Quick Selector.** `TransferView.qml` automatically displays 1-click chip buttons for user's other accounts in the wallet, eliminating manual address typing or copy-pasting for intra-wallet transfers and shielding operations.
 - **Clean-Room LNS Resolver.** Resolves human-readable `.lez` names (e.g. `alice.lez`, `bob.lez`) asynchronously via debounced queries to the sequencer LNS registry, displaying real-time verification indicators.
-- **Automatic Gas & Max Spend Calculation.** Dynamically queries gas limit seeds (`getGasLimit`, default: `34,000 units`) from the Core Module and calculates spendable maximum balances accordingly.
+- **Automatic Gas & Max Spend Calculation.** Dynamically queries gas limit seeds (`getGasLimit`, default: `10,000,000 units` aligned with `wallet::DEFAULT_GAS_LIMIT`) from the Core Module and calculates spendable maximum balances using estimated dual-market fees (`GasCalculator.qml`).
 
 ### 4. Canonical Funding Path: EmPoWer PoW Mining & L1 → LEZ Bridge
 *Directly integrated with Logos Blockchain node architecture and canonical EmPoWer bridging via `e-wallet-core` & `lez-wallet-sdk`:*

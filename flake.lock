@@ -5,11 +5,11 @@
         "logos-module-builder": "logos-module-builder"
       },
       "locked": {
-        "lastModified": 1794216703,
-        "narHash": "sha256-qrR1FTgo/ljBtJPqDbohRFT/Th3JWCef3b7tEzzjN3g=",
+        "lastModified": 1795800668,
+        "narHash": "sha256-yozeslXhYymqjN8mQ7aIEfRovUxSxMDq4hLOIR0kuDw=",
         "owner": "evice-labs",
         "repo": "e-wallet-core",
-        "rev": "9bd5dae0a1b5145944ccfacd6cc3a2c8c7cb798a",
+        "rev": "f1f01b69a7dc09b51861f727f98d8d59504134ea",
         "type": "github"
       },
       "original": {
