@@ -235,7 +235,7 @@ Card {
         var cleanActiveId = String(activeId || "").replace(/^public\//i, "").replace(/^private\//i, "");
 
         var defaultGasUsed = isIncoming ? "0 (Paid by Sender)" : gasCalc.formatGasResult(gasCalc.gasPublicNative, gasCalc.storPublicNative, gasCalc.limitStandard).displayStr;
-        var defaultGasLimit = isIncoming ? "0" : "34,000";
+        var defaultGasLimit = isIncoming ? "0" : "10,000,000";
 
         var isPend = (block === "Pending" || block === "Pending Block" || block === "Sequencer Pending");
         var item = {

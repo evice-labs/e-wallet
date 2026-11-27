@@ -711,7 +711,7 @@ ModalOverlay {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: "Logos LEZ Testnet"
+                        text: "Logos LEZ Testnet 0.4"
                         color: theme.textSecondary
                         font.family: theme.fontFamily
                         font.pixelSize: theme.fontSizeSmall

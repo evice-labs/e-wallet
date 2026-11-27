@@ -14,8 +14,8 @@ Item {
     property string resolvedTargetId: ""
     property string lnsStatus: "idle" // "idle", "resolving", "resolved", "invalid"
     property string lnsMessage: ""
-    property int gasLimitValue: 34000
-    property string estimatedGas: "34,000"
+    property int gasLimitValue: 10000000
+    property string estimatedGas: "10,000,000"
     property bool isSubmitting: false
     property string lastRequestId: ""
     property string lastTxHash: ""
@@ -37,7 +37,7 @@ Item {
         if (isPriv) {
             controller.estimatedGas = "500,000";
         } else {
-            var limit = controller.gasLimitValue > 0 ? controller.gasLimitValue : 34000;
+            var limit = controller.gasLimitValue > 0 ? controller.gasLimitValue : 10000000;
             controller.estimatedGas = Number(limit).toLocaleString();
         }
     }
@@ -297,8 +297,9 @@ Item {
             var isSenderPriv = (transferMode === "priv_to_pub" || transferMode === "priv_to_priv");
             var poolBalStr = isSenderPriv ? accountStore.activeShieldedBalance : accountStore.activePublicBalance;
             var bal = parseFloat(poolBalStr ? String(poolBalStr).replace(/,/g, "") : "0") || 0;
-            var limit = controller.gasLimitValue > 0 ? controller.gasLimitValue : 34000;
-            var spendable = isSenderPriv ? bal : Math.max(0, bal - limit);
+            var gasInfo = gasCalc.calculateTransferGas(transferMode, false);
+            var feeReserve = isSenderPriv ? Math.ceil(gasInfo.atomicFee * 1.65) : gasInfo.atomicFee;
+            var spendable = Math.max(0, bal - feeReserve);
             amountInput = spendable > 0 ? Math.floor(spendable).toString() : "0";
         }
     }
@@ -366,12 +367,12 @@ Item {
         }
 
         if (selectedAsset !== "token" && isDestPrivMode && !isSenderPrivMode) {
-            var localDest = findLocalAccount(cleanDestId);
-            var destExistingBal = localDest ? (parseFloat(localDest.balance || "0") || 0) : 0;
-            if (localDest && (localDest.is_private === true || localDest.privacy === "private") && (destExistingBal + amt <= 5070616)) {
+            var senderBal = parseFloat(accountStore.activePublicBalance ? String(accountStore.activePublicBalance).replace(/,/g, "") : "0") || 0;
+            var shieldFee = gasCalc.calculateTransferGas("pub_to_priv", false).atomicFee;
+            if (senderBal < amt + shieldFee) {
                 return {
                     valid: false,
-                    message: "Shielding to a 0-balance private account requires > 5,070,616 LGO raw units to cover the private execution fee reserve."
+                    message: "Insufficient public balance to cover shield amount + private execution fee reserve (" + shieldFee.toLocaleString() + " LGO raw units)."
                 };
             }
         }
